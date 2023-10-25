@@ -241,6 +241,7 @@ public:
 	class IServerBrowser *ServerBrowser() const { return m_pServerBrowser; }
 	class CRenderTools *RenderTools() { return &m_RenderTools; }
 	class CLayers *Layers() { return &m_Layers; }
+	const CMapItemLayerTilemap *LayerSize() const { return m_MapLayersForeground.Layers()->GameLayer(); } // TODO strip out everything but w & h
 	CCollision *Collision() { return &m_Collision; }
 	class IEditor *Editor() { return m_pEditor; }
 	class IFriends *Friends() { return m_pFriends; }

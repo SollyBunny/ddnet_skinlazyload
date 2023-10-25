@@ -17,7 +17,11 @@
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
+#include "base/system.h"
+#include "base/vmath.h"
 #include "chat.h"
+#include "game/client/component.h"
+#include "game/mapitems.h"
 
 char CChat::ms_aDisplayText[MAX_LINE_LENGTH] = {'\0'};
 
@@ -182,6 +186,101 @@ void CChat::Echo(const char *pString)
 	AddLine(CLIENT_MSG, 0, pString);
 }
 
+void CChat::ConLocation(IConsole::IResult *pResult, void *pUserData) {
+	static CChat *pChat;
+	pChat = (CChat*)pUserData;
+
+	// Check whether team or global message
+	static int mode;
+	{
+		const char *pMode = pResult->GetString(0);
+		if(strlen(pMode) == 0 || str_comp(pMode, "all") == 0)
+			mode = 0;
+		else if(str_comp(pMode, "team") == 0)
+			mode = 1;
+		else {
+			pChat->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", "expected all or team as mode");
+			return;
+		}
+	}
+	// Get coords from -1 to 1, where 0, 0 is the center
+	static float x, y;
+	{
+		x = pChat->GameClient()->m_Camera.m_Center.x;
+		y = pChat->GameClient()->m_Camera.m_Center.y;
+		static const CMapItemLayerTilemap *layer;
+		layer = pChat->GameClient()->LayerSize();
+		#define normalize(x, w) ((x) / 16.f / (float)(w) - 1.f) // x(units) / UNITSPERTILE / w(tiles) * 2 - 1
+		x = normalize(x, layer->m_Width);
+		y = normalize(y, layer->m_Height);
+		#undef normalize
+	}
+
+	// Get direction
+	static const char* dir;
+	{
+		dir = NULL;
+		const char *pDir = pResult->GetString(1);
+		static const char *dirs[] = {"NW", "N", "NE", "W", "M", "E", "SW", "S", "SE"};
+		static const char *text[] = {
+			"↖ Top Left",
+			"↑ Top Middle",
+			"↗ Top Right",
+			"← Middle Left",
+			"✥ Middle",
+			"→ Middle Right",
+			"↙ Bottom Left",
+			"↓ Bottom Middle",
+			"↘ Bottom Right",
+		};
+		if (strlen(pDir) == 0) { // auto
+			const char **p = text;
+			if (x < -0.3)
+				p += 0;
+			else if (x < 0.3)
+				p += 1;
+			else
+				p += 2;
+			if (y < -0.3)
+				p += 0;
+			else if (y < 0.3)
+				p += 3;
+			else
+				p += 6;
+			dir = *p;
+		} else {
+			for (unsigned int i = 0; i < sizeof(dirs) / sizeof(dirs[0]); i++) {
+				if (str_comp_nocase(pDir, dirs[i]) == 0) {
+					dir = text[i];
+					break;
+				}
+			}
+		}
+		if (dir == NULL) {
+			pChat->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "console", "expected valid direction");
+			return;
+		}
+	}
+
+	// Say it
+	static char aBuf[256];
+	static const char* text;
+	text = g_Config.m_ClLocationMsg;
+	if (strlen(text)) {
+		str_format(aBuf, sizeof(aBuf), "%s: %s @ %0.2f %0.2f", 
+			dir,
+			text,
+			x, y
+		);
+	} else {
+		str_format(aBuf, sizeof(aBuf), "%s @ %0.2f %0.2f", 
+			dir,
+			x, y
+		);
+	}
+	((CChat *)pUserData)->Say(mode, aBuf);
+}
+
 void CChat::OnConsoleInit()
 {
 	Console()->Register("say", "r[message]", CFGFLAG_CLIENT, ConSay, this, "Say in chat");
@@ -189,6 +288,7 @@ void CChat::OnConsoleInit()
 	Console()->Register("chat", "s['team'|'all'] ?r[message]", CFGFLAG_CLIENT, ConChat, this, "Enable chat with all/team mode");
 	Console()->Register("+show_chat", "", CFGFLAG_CLIENT, ConShowChat, this, "Show chat");
 	Console()->Register("echo", "r[message]", CFGFLAG_CLIENT | CFGFLAG_STORE, ConEcho, this, "Echo the text in chat window");
+	Console()->Register("location", "?s['team'|'all'] ?s['M'|'N'|'NE'|'E'|'SE'|'S'|'SW'|'W'|'NW']", CFGFLAG_CLIENT, ConLocation, this, "Say your location");
 }
 
 void CChat::OnInit()
