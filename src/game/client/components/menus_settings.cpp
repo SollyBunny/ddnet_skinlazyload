@@ -3201,7 +3201,7 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 	UI()->DoLabel(&Label, Localize("Run on join"), 14.0f, TEXTALIGN_ML);
 	Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
 	static CLineInput s_RunOnJoinInput(g_Config.m_ClRunOnJoin, sizeof(g_Config.m_ClRunOnJoin));
-	s_RunOnJoinInput.SetEmptyText(Localize("Chat command (e.g. showall 1)"));
+	s_RunOnJoinInput.SetEmptyText(Localize("Command (e.g. say showall 1)"));
 	UI()->DoEditBox(&s_RunOnJoinInput, &Button, 14.0f);
 
 #if defined(CONF_FAMILY_WINDOWS)
