@@ -112,7 +112,6 @@ void CGameClient::OnConsoleInit()
 					      &m_Effects, // doesn't render anything, just updates effects
 					      &m_Binds,
 					      &m_Binds.m_SpecialBinds,
-					      &m_Binds.m_ChordBinds,
 					      &m_Controls,
 					      &m_Camera,
 					      &m_Sounds,
@@ -158,7 +157,6 @@ void CGameClient::OnConsoleInit()
 						  &m_Menus,
 						  &m_Spectator,
 						  &m_Emoticon,
-						  &m_Binds.m_ChordBinds,
 						  &m_Controls,
 						  &m_Binds});
 

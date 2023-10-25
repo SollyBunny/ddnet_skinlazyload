@@ -147,24 +147,16 @@ class CConsole : public IConsole
 		int GetVictim() const override;
 	};
 
-	enum ParseArgsError
-	{
-		None = 0,
-		UnmatchedQuote,
-		MissingArgument,
-	};
-	const char *ParseArgsString(enum ParseArgsError error)
-	{
-		switch(error)
-		{
-		case UnmatchedQuote: return "Unmatched Quote";
-		case MissingArgument: return "Missing Argument";
-		default: return "No error";
-		}
-	}
+	int ParseStart(CResult *pResult, const char *pString, int Length);
+	int ParseArgs(CResult *pResult, const char *pFormat);
 
-	void ParseStart(CResult *pResult, const char *pString, int Length);
-	enum ParseArgsError ParseArgs(CResult *pResult, const char *pFormat);
+	/*
+	this function will set pFormat to the next parameter (i,s,r,v,?) it contains and
+	return the parameter; descriptions in brackets like [file] will be skipped;
+	returns '\0' if there is no next parameter; expects pFormat to point at a
+	parameter
+	*/
+	char NextParam(const char *&pFormat);
 
 	class CExecutionQueue
 	{
@@ -176,7 +168,7 @@ class CConsole : public IConsole
 			CQueueEntry *m_pNext;
 			CCommand *m_pCommand;
 			CResult m_Result;
-		} *m_pFirst, *m_pLast;
+		} * m_pFirst, *m_pLast;
 
 		void AddEntry()
 		{
