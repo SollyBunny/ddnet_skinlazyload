@@ -189,12 +189,11 @@ void CChat::Echo(const char *pString)
 void CChat::ConLocation(IConsole::IResult *pResult, void *pUserData) {
 	static CChat *pChat;
 	pChat = (CChat*)pUserData;
-
 	// Check whether team or global message
 	static int mode;
 	{
 		const char *pMode = pResult->GetString(0);
-		if(strlen(pMode) == 0 || str_comp(pMode, "all") == 0)
+		if(str_length(pMode) == 0 || str_comp(pMode, "all") == 0)
 			mode = 0;
 		else if(str_comp(pMode, "team") == 0)
 			mode = 1;
@@ -210,6 +209,7 @@ void CChat::ConLocation(IConsole::IResult *pResult, void *pUserData) {
 		y = pChat->GameClient()->m_Camera.m_Center.y;
 		static const CMapItemLayerTilemap *layer;
 		layer = pChat->GameClient()->LayerSize();
+		if (!layer) return;
 		#define normalize(x, w) ((x) / 16.f / (float)(w) - 1.f) // x(units) / UNITSPERTILE / w(tiles) * 2 - 1
 		x = normalize(x, layer->m_Width);
 		y = normalize(y, layer->m_Height);
@@ -266,7 +266,7 @@ void CChat::ConLocation(IConsole::IResult *pResult, void *pUserData) {
 	static char aBuf[256];
 	static const char* text;
 	text = g_Config.m_ClLocationMsg;
-	if (strlen(text)) {
+	if (str_length(text)) {
 		str_format(aBuf, sizeof(aBuf), "%s: %s @ %0.2f %0.2f", 
 			dir,
 			text,
