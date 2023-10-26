@@ -20,6 +20,8 @@
 #include <game/client/components/skins.h>
 #include <game/client/components/sounds.h>
 
+#include "base/vmath.h"
+#include "engine/client/graphics_threaded.h"
 #include "players.h"
 
 #include <base/color.h>
@@ -163,81 +165,64 @@ void CPlayers::RenderHookCollLine(
 #if defined(CONF_VIDEORECORDER)
 		RenderHookCollVideo = !IVideo::Current() || g_Config.m_ClVideoShowHookCollOther || Local;
 #endif
-		if((AlwaysRenderHookColl || RenderHookCollPlayer) && RenderHookCollVideo)
+		if((AlwaysRenderHookColl || RenderHookCollPlayer) && RenderHookCollVideo && m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookFireSpeed > 0.1)
 		{
 			vec2 ExDirection = Direction;
-
 			if(Local && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 			{
-				ExDirection = normalize(vec2((int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].x, (int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].y));
-
 				// fix direction if mouse is exactly in the center
-				if(!(int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].x && !(int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].y)
+				if(!(int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].x && !(int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].y) {
 					ExDirection = vec2(1, 0);
+				} else {
+					ExDirection = normalize(vec2((int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].x, (int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].y));
+					ExDirection.x = round_to_int(ExDirection.x * 256.0f) / 256.0f;
+					ExDirection.y = round_to_int(ExDirection.y * 256.0f) / 256.0f;
+				}
 			}
-			Graphics()->TextureClear();
-			vec2 InitPos = Position;
-			vec2 FinishPos = InitPos + ExDirection * (m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength - 42.0f);
+			vec2 ExDif = ExDirection * m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookFireSpeed;
 
-			if(g_Config.m_ClHookCollSize > 0)
-				Graphics()->QuadsBegin();
-			else
-				Graphics()->LinesBegin();
+			vec2 InitPos = Position;
+			vec2 OldPos = InitPos + ExDirection * CCharacterCore::PhysicalSize() * 1.5f;
+			vec2 NewPos = OldPos;
+			vec2 FinishPos;
 
 			ColorRGBA HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl));
 
-			vec2 OldPos = InitPos + ExDirection * CCharacterCore::PhysicalSize() * 1.5f;
-			vec2 NewPos = OldPos;
-
-			bool DoBreak = false;
-
-			do
+			while(1)
 			{
+
 				OldPos = NewPos;
-				NewPos = OldPos + ExDirection * m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookFireSpeed;
+				NewPos = OldPos + ExDif;
 
 				if(distance(InitPos, NewPos) > m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength)
 				{
-					NewPos = InitPos + normalize(NewPos - InitPos) * m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength;
-					DoBreak = true;
+					FinishPos = NewPos;
+					break;
 				}
 
 				int TeleNr = 0;
 				int Hit = Collision()->IntersectLineTeleHook(OldPos, NewPos, &FinishPos, 0x0, &TeleNr);
-
-				if(!DoBreak && Hit)
+				if(Hit)
 				{
-					if(Hit != TILE_NOHOOK)
-					{
+					if (Hit != TILE_NOHOOK)
 						HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
-					}
+					break;
 				}
 
-				if(m_pClient->IntersectCharacter(OldPos, FinishPos, FinishPos, ClientID) != -1)
+				if(m_pClient->IntersectCharacter(OldPos, NewPos, FinishPos, ClientID) != -1)
 				{
 					HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl));
 					break;
 				}
 
-				if(Hit)
-					break;
-
-				NewPos.x = round_to_int(NewPos.x);
-				NewPos.y = round_to_int(NewPos.y);
-
-				if(OldPos == NewPos)
-					break;
-
-				ExDirection.x = round_to_int(ExDirection.x * 256.0f) / 256.0f;
-				ExDirection.y = round_to_int(ExDirection.y * 256.0f) / 256.0f;
-			} while(!DoBreak);
-
-			if(AlwaysRenderHookColl && RenderHookCollPlayer)
-			{
-				// invert the hook coll colors when using cl_show_hook_coll_always and +showhookcoll is pressed
-				HookCollColor = color_invert(HookCollColor);
 			}
-			Graphics()->SetColor(HookCollColor.WithAlpha(Alpha));
+
+			// invert the hook coll colors when using cl_show_hook_coll_always and +showhookcoll is pressed
+			if(RenderHookCollPlayer)
+				HookCollColor = color_invert(HookCollColor);
+
+			Graphics()->TextureClear();
+			HookCollColor = HookCollColor.WithAlpha(Alpha);
 			if(g_Config.m_ClHookCollSize > 0)
 			{
 				float LineWidth = 0.5f + (float)(g_Config.m_ClHookCollSize - 1) * 0.25f;
@@ -247,15 +232,32 @@ void CPlayers::RenderHookCollLine(
 				vec2 Pos2 = InitPos + PerpToAngle * -LineWidth;
 				vec2 Pos3 = InitPos + PerpToAngle * LineWidth;
 				IGraphics::CFreeformItem FreeformItem(Pos0.x, Pos0.y, Pos1.x, Pos1.y, Pos2.x, Pos2.y, Pos3.x, Pos3.y);
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(HookCollColor);
 				Graphics()->QuadsDrawFreeform(&FreeformItem, 1);
 				Graphics()->QuadsEnd();
 			}
 			else
 			{
-				IGraphics::CLineItem LineItem(InitPos.x, InitPos.y, FinishPos.x, FinishPos.y);
+				IGraphics::CLineItem LineItem(InitPos.x, InitPos.y, NewPos.x, NewPos.y);
+				Graphics()->LinesBegin();
+				Graphics()->SetColor(HookCollColor);
 				Graphics()->LinesDraw(&LineItem, 1);
 				Graphics()->LinesEnd();
 			}
+			InitPos = FinishPos + (ExDirection * (
+				m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength * 2 - distance(InitPos, FinishPos)
+			));
+			IGraphics::CLineItem LineItem(FinishPos.x, FinishPos.y, InitPos.x, InitPos.y);
+			static ColorRGBA HookExtendCollColor = ColorRGBA();
+			HookExtendCollColor.r = 0;
+			HookExtendCollColor.g = 0;
+			HookExtendCollColor.b = 0;
+			HookExtendCollColor.a = Alpha;
+			Graphics()->LinesBegin();
+			Graphics()->SetColor(HookExtendCollColor);
+			Graphics()->LinesDraw(&LineItem, 1);
+			Graphics()->LinesEnd();
 		}
 	}
 }
