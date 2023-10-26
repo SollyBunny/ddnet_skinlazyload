@@ -1936,7 +1936,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 
 					if(m_aReceivedSnapshots[Conn] > 50 && !m_aCodeRunAfterJoin[Conn])
 					{
-						if (g_Config.m_ClRunOnJoin[0]) 
+						if (str_length(g_Config.m_ClRunOnJoin))
 							m_pConsole->ExecuteLine(g_Config.m_ClRunOnJoin);
 						if(m_ServerCapabilities.m_ChatTimeoutCode)
 						{
