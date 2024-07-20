@@ -143,3 +143,5 @@ tags
 *.user
 *.vcxproj
 *.zip
+
+integration_test.sh
