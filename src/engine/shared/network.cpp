@@ -8,16 +8,26 @@
 
 const unsigned char SECURITY_TOKEN_MAGIC[4] = {'T', 'K', 'E', 'N'};
 
+SECURITY_TOKEN ToSecurityToken(const unsigned char *pData)
+{
+	return bytes_be_to_uint(pData);
+}
+
+void WriteSecurityToken(unsigned char *pData, SECURITY_TOKEN Token)
+{
+	uint_to_bytes_be(pData, Token);
+}
+
 void CNetRecvUnpacker::Clear()
 {
 	m_Valid = false;
 }
 
-void CNetRecvUnpacker::Start(const NETADDR *pAddr, CNetConnection *pConnection, int ClientID)
+void CNetRecvUnpacker::Start(const NETADDR *pAddr, CNetConnection *pConnection, int ClientId)
 {
 	m_Addr = *pAddr;
 	m_pConnection = pConnection;
-	m_ClientID = ClientID;
+	m_ClientId = ClientId;
 	m_CurrentChunk = 0;
 	m_Valid = true;
 }
@@ -82,7 +92,7 @@ int CNetRecvUnpacker::FetchChunk(CNetChunk *pChunk)
 		}
 
 		// fill in the info
-		pChunk->m_ClientID = m_ClientID;
+		pChunk->m_ClientId = m_ClientId;
 		pChunk->m_Address = m_Addr;
 		pChunk->m_Flags = Header.m_Flags;
 		pChunk->m_DataSize = Header.m_Size;
@@ -131,13 +141,13 @@ void CNetBase::SendPacket(NETSOCKET Socket, NETADDR *pAddr, CNetPacketConstruct 
 	if(Sixup)
 	{
 		HeaderSize += sizeof(SecurityToken);
-		mem_copy(&aBuffer[3], &SecurityToken, sizeof(SecurityToken));
+		WriteSecurityToken(aBuffer + 3, SecurityToken);
 	}
 	else if(SecurityToken != NET_SECURITY_TOKEN_UNSUPPORTED)
 	{
 		// append security token
 		// if SecurityToken is NET_SECURITY_TOKEN_UNKNOWN we will still append it hoping to negotiate it
-		mem_copy(&pPacket->m_aChunkData[pPacket->m_DataSize], &SecurityToken, sizeof(SecurityToken));
+		WriteSecurityToken(pPacket->m_aChunkData + pPacket->m_DataSize, SecurityToken);
 		pPacket->m_DataSize += sizeof(SecurityToken);
 	}
 
@@ -223,8 +233,8 @@ int CNetBase::UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct
 
 		if(Sixup)
 		{
-			mem_copy(pSecurityToken, &pBuffer[1], sizeof(*pSecurityToken));
-			mem_copy(pResponseToken, &pBuffer[5], sizeof(*pResponseToken));
+			*pSecurityToken = ToSecurityToken(pBuffer + 1);
+			*pResponseToken = ToSecurityToken(pBuffer + 5);
 		}
 
 		pPacket->m_Flags = NET_PACKETFLAG_CONNLESS;
@@ -264,7 +274,7 @@ int CNetBase::UnpackPacket(unsigned char *pBuffer, int Size, CNetPacketConstruct
 				Flags |= NET_PACKETFLAG_COMPRESSION;
 			pPacket->m_Flags = Flags;
 
-			mem_copy(pSecurityToken, &pBuffer[3], sizeof(*pSecurityToken));
+			*pSecurityToken = ToSecurityToken(pBuffer + 3);
 		}
 
 		if(pPacket->m_Flags & NET_PACKETFLAG_COMPRESSION)
@@ -317,7 +327,7 @@ void CNetBase::SendControlMsg(NETSOCKET Socket, NETADDR *pAddr, int Ack, int Con
 	CNetBase::SendPacket(Socket, pAddr, &Construct, SecurityToken, Sixup, true);
 }
 
-unsigned char *CNetChunkHeader::Pack(unsigned char *pData, int Split)
+unsigned char *CNetChunkHeader::Pack(unsigned char *pData, int Split) const
 {
 	pData[0] = ((m_Flags & 3) << 6) | ((m_Size >> Split) & 0x3f);
 	pData[1] = (m_Size & ((1 << Split) - 1));

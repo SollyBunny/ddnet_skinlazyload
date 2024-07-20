@@ -6,8 +6,9 @@
 #include <base/vmath.h>
 #include <engine/map.h>
 #include <engine/shared/protocol.h>
+#include <game/server/teams.h>
 
-#include <vector>
+struct CScoreLoadBestTimeResult;
 
 /*
 	Class: Game Controller
@@ -23,6 +24,8 @@ class IGameController
 	class CGameContext *m_pGameServer;
 	class CConfig *m_pConfig;
 	class IServer *m_pServer;
+
+	CGameTeams m_Teams;
 
 protected:
 	CGameContext *GameServer() const { return m_pGameServer; }
@@ -124,7 +127,7 @@ public:
 	/*
 
 	*/
-	virtual bool CanBeMovedOnBalance(int ClientID);
+	virtual bool CanBeMovedOnBalance(int ClientId);
 
 	virtual void Tick();
 
@@ -138,15 +141,18 @@ public:
 
 	*/
 	virtual const char *GetTeamName(int Team);
-	virtual int GetAutoTeam(int NotThisID);
-	virtual bool CanJoinTeam(int Team, int NotThisID);
+	virtual int GetAutoTeam(int NotThisId);
+	virtual bool CanJoinTeam(int Team, int NotThisId, char *pErrorReason, int ErrorReasonSize);
 	int ClampTeam(int Team);
 
-	virtual CClientMask GetMaskForPlayerWorldEvent(int Asker, int ExceptID = -1);
+	CClientMask GetMaskForPlayerWorldEvent(int Asker, int ExceptID = -1);
 
+	bool IsTeamPlay() { return m_GameFlags & GAMEFLAG_TEAMS; }
 	// DDRace
 
 	float m_CurrentRecord;
+	CGameTeams &Teams() { return m_Teams; }
+	std::shared_ptr<CScoreLoadBestTimeResult> m_pLoadBestTimeResult;
 };
 
 #endif

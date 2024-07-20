@@ -40,50 +40,30 @@ void CMenus::LoadEntities(SCustomEntities *pEntitiesItem, void *pUser)
 	auto *pRealUser = (SMenuAssetScanUser *)pUser;
 	auto *pThis = (CMenus *)pRealUser->m_pUser;
 
-	char aBuff[IO_MAX_PATH_LENGTH];
-
+	char aPath[IO_MAX_PATH_LENGTH];
 	if(str_comp(pEntitiesItem->m_aName, "default") == 0)
 	{
 		for(int i = 0; i < MAP_IMAGE_MOD_TYPE_COUNT; ++i)
 		{
-			str_format(aBuff, sizeof(aBuff), "editor/entities_clear/%s.png", gs_apModEntitiesNames[i]);
-			CImageInfo ImgInfo;
-			if(pThis->Graphics()->LoadPNG(&ImgInfo, aBuff, IStorage::TYPE_ALL))
-			{
-				pEntitiesItem->m_aImages[i].m_Texture = pThis->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, ImgInfo.m_Format, 0);
-				pThis->Graphics()->FreePNG(&ImgInfo);
-
-				if(!pEntitiesItem->m_RenderTexture.IsValid())
-					pEntitiesItem->m_RenderTexture = pEntitiesItem->m_aImages[i].m_Texture;
-			}
+			str_format(aPath, sizeof(aPath), "editor/entities_clear/%s.png", gs_apModEntitiesNames[i]);
+			pEntitiesItem->m_aImages[i].m_Texture = pThis->Graphics()->LoadTexture(aPath, IStorage::TYPE_ALL);
+			if(!pEntitiesItem->m_RenderTexture.IsValid() || pEntitiesItem->m_RenderTexture.IsNullTexture())
+				pEntitiesItem->m_RenderTexture = pEntitiesItem->m_aImages[i].m_Texture;
 		}
 	}
 	else
 	{
 		for(int i = 0; i < MAP_IMAGE_MOD_TYPE_COUNT; ++i)
 		{
-			str_format(aBuff, sizeof(aBuff), "assets/entities/%s/%s.png", pEntitiesItem->m_aName, gs_apModEntitiesNames[i]);
-			CImageInfo ImgInfo;
-			if(pThis->Graphics()->LoadPNG(&ImgInfo, aBuff, IStorage::TYPE_ALL))
+			str_format(aPath, sizeof(aPath), "assets/entities/%s/%s.png", pEntitiesItem->m_aName, gs_apModEntitiesNames[i]);
+			pEntitiesItem->m_aImages[i].m_Texture = pThis->Graphics()->LoadTexture(aPath, IStorage::TYPE_ALL);
+			if(pEntitiesItem->m_aImages[i].m_Texture.IsNullTexture())
 			{
-				pEntitiesItem->m_aImages[i].m_Texture = pThis->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, ImgInfo.m_Format, 0);
-				pThis->Graphics()->FreePNG(&ImgInfo);
-
-				if(!pEntitiesItem->m_RenderTexture.IsValid())
-					pEntitiesItem->m_RenderTexture = pEntitiesItem->m_aImages[i].m_Texture;
+				str_format(aPath, sizeof(aPath), "assets/entities/%s.png", pEntitiesItem->m_aName);
+				pEntitiesItem->m_aImages[i].m_Texture = pThis->Graphics()->LoadTexture(aPath, IStorage::TYPE_ALL);
 			}
-			else
-			{
-				str_format(aBuff, sizeof(aBuff), "assets/entities/%s.png", pEntitiesItem->m_aName);
-				if(pThis->Graphics()->LoadPNG(&ImgInfo, aBuff, IStorage::TYPE_ALL))
-				{
-					pEntitiesItem->m_aImages[i].m_Texture = pThis->Graphics()->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, ImgInfo.m_Format, 0);
-					pThis->Graphics()->FreePNG(&ImgInfo);
-
-					if(!pEntitiesItem->m_RenderTexture.IsValid())
-						pEntitiesItem->m_RenderTexture = pEntitiesItem->m_aImages[i].m_Texture;
-				}
-			}
+			if(!pEntitiesItem->m_RenderTexture.IsValid() || pEntitiesItem->m_RenderTexture.IsNullTexture())
+				pEntitiesItem->m_RenderTexture = pEntitiesItem->m_aImages[i].m_Texture;
 		}
 	}
 }
@@ -129,37 +109,22 @@ int CMenus::EntitiesScan(const char *pName, int IsDir, int DirType, void *pUser)
 }
 
 template<typename TName>
-static void LoadAsset(TName *pAssetItem, const char *pAssetName, IGraphics *pGraphics, void *pUser)
+static void LoadAsset(TName *pAssetItem, const char *pAssetName, IGraphics *pGraphics)
 {
-	char aBuff[IO_MAX_PATH_LENGTH];
-
+	char aPath[IO_MAX_PATH_LENGTH];
 	if(str_comp(pAssetItem->m_aName, "default") == 0)
 	{
-		str_format(aBuff, sizeof(aBuff), "%s.png", pAssetName);
-		CImageInfo ImgInfo;
-		if(pGraphics->LoadPNG(&ImgInfo, aBuff, IStorage::TYPE_ALL))
-		{
-			pAssetItem->m_RenderTexture = pGraphics->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, ImgInfo.m_Format, 0);
-			pGraphics->FreePNG(&ImgInfo);
-		}
+		str_format(aPath, sizeof(aPath), "%s.png", pAssetName);
+		pAssetItem->m_RenderTexture = pGraphics->LoadTexture(aPath, IStorage::TYPE_ALL);
 	}
 	else
 	{
-		str_format(aBuff, sizeof(aBuff), "assets/%s/%s.png", pAssetName, pAssetItem->m_aName);
-		CImageInfo ImgInfo;
-		if(pGraphics->LoadPNG(&ImgInfo, aBuff, IStorage::TYPE_ALL))
+		str_format(aPath, sizeof(aPath), "assets/%s/%s.png", pAssetName, pAssetItem->m_aName);
+		pAssetItem->m_RenderTexture = pGraphics->LoadTexture(aPath, IStorage::TYPE_ALL);
+		if(pAssetItem->m_RenderTexture.IsNullTexture())
 		{
-			pAssetItem->m_RenderTexture = pGraphics->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, ImgInfo.m_Format, 0);
-			pGraphics->FreePNG(&ImgInfo);
-		}
-		else
-		{
-			str_format(aBuff, sizeof(aBuff), "assets/%s/%s/%s.png", pAssetName, pAssetItem->m_aName, pAssetName);
-			if(pGraphics->LoadPNG(&ImgInfo, aBuff, IStorage::TYPE_ALL))
-			{
-				pAssetItem->m_RenderTexture = pGraphics->LoadTextureRaw(ImgInfo.m_Width, ImgInfo.m_Height, ImgInfo.m_Format, ImgInfo.m_pData, ImgInfo.m_Format, 0);
-				pGraphics->FreePNG(&ImgInfo);
-			}
+			str_format(aPath, sizeof(aPath), "assets/%s/%s/%s.png", pAssetName, pAssetItem->m_aName, pAssetName);
+			pAssetItem->m_RenderTexture = pGraphics->LoadTexture(aPath, IStorage::TYPE_ALL);
 		}
 	}
 }
@@ -179,7 +144,7 @@ static int AssetScan(const char *pName, int IsDir, int DirType, std::vector<TNam
 
 		TName AssetItem;
 		str_copy(AssetItem.m_aName, pName);
-		LoadAsset(&AssetItem, pAssetName, pGraphics, pUser);
+		LoadAsset(&AssetItem, pAssetName, pGraphics);
 		vAssetList.push_back(AssetItem);
 	}
 	else
@@ -194,7 +159,7 @@ static int AssetScan(const char *pName, int IsDir, int DirType, std::vector<TNam
 
 			TName AssetItem;
 			str_copy(AssetItem.m_aName, aName);
-			LoadAsset(&AssetItem, pAssetName, pGraphics, pUser);
+			LoadAsset(&AssetItem, pAssetName, pGraphics);
 			vAssetList.push_back(AssetItem);
 		}
 	}
@@ -356,7 +321,7 @@ void InitAssetList(std::vector<TName> &vAssetList, const char *pAssetPath, const
 	{
 		TName AssetItem;
 		str_copy(AssetItem.m_aName, "default");
-		LoadAsset(&AssetItem, pAssetName, pGraphics, Caller);
+		LoadAsset(&AssetItem, pAssetName, pGraphics);
 		vAssetList.push_back(AssetItem);
 
 		// load assets
@@ -387,30 +352,29 @@ int InitSearchList(std::vector<const TName *> &vpSearchList, std::vector<TName> 
 
 void CMenus::RenderSettingsCustom(CUIRect MainView)
 {
-	CUIRect TabBar, CustomList, QuickSearch, QuickSearchClearButton, DirectoryButton, Page1Tab, Page2Tab, Page3Tab, Page4Tab, Page5Tab, Page6Tab, ReloadButton;
+	CUIRect TabBar, CustomList, QuickSearch, QuickSearchClearButton, DirectoryButton, ReloadButton;
 
-	MainView.HSplitTop(20, &TabBar, &MainView);
-	float TabsW = TabBar.w;
-	TabBar.VSplitLeft(TabsW / NUMBER_OF_ASSETS_TABS, &Page1Tab, &Page2Tab);
-	Page2Tab.VSplitLeft(TabsW / NUMBER_OF_ASSETS_TABS, &Page2Tab, &Page3Tab);
-	Page3Tab.VSplitLeft(TabsW / NUMBER_OF_ASSETS_TABS, &Page3Tab, &Page4Tab);
-	Page4Tab.VSplitLeft(TabsW / NUMBER_OF_ASSETS_TABS, &Page4Tab, &Page5Tab);
-	Page5Tab.VSplitLeft(TabsW / NUMBER_OF_ASSETS_TABS, &Page5Tab, &Page6Tab);
-
+	MainView.HSplitTop(20.0f, &TabBar, &MainView);
+	const float TabWidth = TabBar.w / NUMBER_OF_ASSETS_TABS;
 	static CButtonContainer s_aPageTabs[NUMBER_OF_ASSETS_TABS] = {};
+	const char *apTabNames[NUMBER_OF_ASSETS_TABS] = {
+		Localize("Entities"),
+		Localize("Game"),
+		Localize("Emoticons"),
+		Localize("Particles"),
+		Localize("HUD"),
+		Localize("Extras")};
 
-	if(DoButton_MenuTab((CButtonContainer *)&s_aPageTabs[ASSETS_TAB_ENTITIES], Localize("Entities"), s_CurCustomTab == ASSETS_TAB_ENTITIES, &Page1Tab, IGraphics::CORNER_L, NULL, NULL, NULL, NULL, 4))
-		s_CurCustomTab = ASSETS_TAB_ENTITIES;
-	if(DoButton_MenuTab((CButtonContainer *)&s_aPageTabs[ASSETS_TAB_GAME], Localize("Game"), s_CurCustomTab == ASSETS_TAB_GAME, &Page2Tab, 0, NULL, NULL, NULL, NULL, 4))
-		s_CurCustomTab = ASSETS_TAB_GAME;
-	if(DoButton_MenuTab((CButtonContainer *)&s_aPageTabs[ASSETS_TAB_EMOTICONS], Localize("Emoticons"), s_CurCustomTab == ASSETS_TAB_EMOTICONS, &Page3Tab, 0, NULL, NULL, NULL, NULL, 4))
-		s_CurCustomTab = ASSETS_TAB_EMOTICONS;
-	if(DoButton_MenuTab((CButtonContainer *)&s_aPageTabs[ASSETS_TAB_PARTICLES], Localize("Particles"), s_CurCustomTab == ASSETS_TAB_PARTICLES, &Page4Tab, 0, NULL, NULL, NULL, NULL, 4))
-		s_CurCustomTab = ASSETS_TAB_PARTICLES;
-	if(DoButton_MenuTab((CButtonContainer *)&s_aPageTabs[ASSETS_TAB_HUD], Localize("HUD"), s_CurCustomTab == ASSETS_TAB_HUD, &Page5Tab, 0, NULL, NULL, NULL, NULL, 4))
-		s_CurCustomTab = ASSETS_TAB_HUD;
-	if(DoButton_MenuTab((CButtonContainer *)&s_aPageTabs[ASSETS_TAB_EXTRAS], Localize("Extras"), s_CurCustomTab == ASSETS_TAB_EXTRAS, &Page6Tab, IGraphics::CORNER_R, NULL, NULL, NULL, NULL, 4))
-		s_CurCustomTab = ASSETS_TAB_EXTRAS;
+	for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
+	{
+		CUIRect Button;
+		TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
+		const int Corners = Tab == ASSETS_TAB_ENTITIES ? IGraphics::CORNER_L : Tab == NUMBER_OF_ASSETS_TABS - 1 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE;
+		if(DoButton_MenuTab(&s_aPageTabs[Tab], apTabNames[Tab], s_CurCustomTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f))
+		{
+			s_CurCustomTab = Tab;
+		}
+	}
 
 	auto LoadStartTime = time_get_nanoseconds();
 	SMenuAssetScanUser User;
@@ -583,7 +547,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		CUIRect TextureRect;
 		ItemRect.HSplitTop(15, &ItemRect, &TextureRect);
 		TextureRect.HSplitTop(10, NULL, &TextureRect);
-		UI()->DoLabel(&ItemRect, pItem->m_aName, ItemRect.h - 2, TEXTALIGN_MC);
+		Ui()->DoLabel(&ItemRect, pItem->m_aName, ItemRect.h - 2, TEXTALIGN_MC);
 		if(pItem->m_RenderTexture.IsValid())
 		{
 			Graphics()->WrapClamp();
@@ -643,20 +607,20 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 
-		UI()->DoLabel(&QuickSearch, FONT_ICON_MAGNIFYING_GLASS, 14.0f, TEXTALIGN_ML);
-		float wSearch = TextRender()->TextWidth(14.0f, FONT_ICON_MAGNIFYING_GLASS, -1, -1.0f);
+		Ui()->DoLabel(&QuickSearch, FONT_ICON_MAGNIFYING_GLASS, 14.0f, TEXTALIGN_ML);
+		float SearchWidth = TextRender()->TextWidth(14.0f, FONT_ICON_MAGNIFYING_GLASS, -1, -1.0f);
 		TextRender()->SetRenderFlags(0);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		QuickSearch.VSplitLeft(wSearch, 0, &QuickSearch);
+		QuickSearch.VSplitLeft(SearchWidth, 0, &QuickSearch);
 		QuickSearch.VSplitLeft(5.0f, 0, &QuickSearch);
-		QuickSearch.VSplitLeft(QuickSearch.w - 15.0f, &QuickSearch, &QuickSearchClearButton);
+		QuickSearch.VSplitLeft(QuickSearch.w - 10.0f, &QuickSearch, &QuickSearchClearButton);
 		if(Input()->KeyPress(KEY_F) && Input()->ModifierIsPressed())
 		{
-			UI()->SetActiveItem(&s_aFilterInputs[s_CurCustomTab]);
+			Ui()->SetActiveItem(&s_aFilterInputs[s_CurCustomTab]);
 			s_aFilterInputs[s_CurCustomTab].SelectAll();
 		}
 		s_aFilterInputs[s_CurCustomTab].SetEmptyText(Localize("Search"));
-		if(UI()->DoClearableEditBox(&s_aFilterInputs[s_CurCustomTab], &QuickSearch, 14.0f))
+		if(Ui()->DoClearableEditBox(&s_aFilterInputs[s_CurCustomTab], &QuickSearch, 14.0f))
 			gs_aInitCustomList[s_CurCustomTab] = true;
 	}
 
@@ -664,8 +628,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	DirectoryButton.VSplitRight(175.0f, 0, &DirectoryButton);
 	DirectoryButton.VSplitRight(25.0f, &DirectoryButton, &ReloadButton);
 	DirectoryButton.VSplitRight(10.0f, &DirectoryButton, 0);
-	static CButtonContainer s_AssetsDirID;
-	if(DoButton_Menu(&s_AssetsDirID, Localize("Assets directory"), 0, &DirectoryButton))
+	static CButtonContainer s_AssetsDirId;
+	if(DoButton_Menu(&s_AssetsDirId, Localize("Assets directory"), 0, &DirectoryButton))
 	{
 		char aBuf[IO_MAX_PATH_LENGTH];
 		char aBufFull[IO_MAX_PATH_LENGTH + 7];
@@ -684,17 +648,14 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		Storage()->GetCompletePath(IStorage::TYPE_SAVE, aBufFull, aBuf, sizeof(aBuf));
 		Storage()->CreateFolder("assets", IStorage::TYPE_SAVE);
 		Storage()->CreateFolder(aBufFull, IStorage::TYPE_SAVE);
-		if(!open_file(aBuf))
-		{
-			dbg_msg("menus", "couldn't open file '%s'", aBuf);
-		}
+		Client()->ViewFile(aBuf);
 	}
-	GameClient()->m_Tooltips.DoToolTip(&s_AssetsDirID, &DirectoryButton, Localize("Open the directory to add custom assets"));
+	GameClient()->m_Tooltips.DoToolTip(&s_AssetsDirId, &DirectoryButton, Localize("Open the directory to add custom assets"));
 
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	static CButtonContainer s_AssetsReloadBtnID;
-	if(DoButton_Menu(&s_AssetsReloadBtnID, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton, nullptr, IGraphics::CORNER_ALL, 5, 0, vec4(1.0f, 1.0f, 1.0f, 0.75f), vec4(1, 1, 1, 0.5f)))
+	static CButtonContainer s_AssetsReloadBtnId;
+	if(DoButton_Menu(&s_AssetsReloadBtnId, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ReloadButton) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
 	{
 		ClearCustomItems(s_CurCustomTab);
 	}

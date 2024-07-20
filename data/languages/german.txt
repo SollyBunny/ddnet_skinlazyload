@@ -21,6 +21,7 @@
 #	timakro			2014-06-30 18:26:59
 #	deen			2020-06-26 18:32:00
 #	bluesky			2022-07-05 21:00:00
+# BlaiZephyr 2024-03-23 20:55:00
 ##### /authors #####
 
 ##### translated strings #####
@@ -42,9 +43,6 @@
 
 %s wins!
 == %s gewinnt!
-
--Page %d-
-== -Seite %d-
 
 Abort
 == Abbrechen
@@ -97,8 +95,8 @@ Colors of the hook collision line, in case of a possible collision with:
 Connecting to
 == Verbinden mit
 
-Connection Problems...
-== Verbindungsprobleme...
+Connection Problems…
+== Verbindungsprobleme…
 
 Console
 == Konsole
@@ -120,9 +118,6 @@ Delete
 
 Delete demo
 == Aufnahme löschen
-
-Demo details
-== Aufnahmedetails:
 
 Demofile: %s
 == Aufnahmedatei: %s
@@ -280,9 +275,6 @@ No servers match your filter criteria
 Ok
 == OK
 
-Open
-== Öffnen
-
 Parent Folder
 == Übergeordneter Ordner
 
@@ -297,10 +289,6 @@ Ping
 
 Pistol
 == Pistole
-
-[Demo browser]
-Play
-== Abspielen
 
 Play background music
 == Hintergrundmusik abspielen
@@ -335,9 +323,6 @@ Red team
 Red team wins!
 == Rotes Team gewinnt!
 
-Refresh
-== Aktualisieren
-
 Remote console
 == Remote-Konsole
 
@@ -346,9 +331,6 @@ Remove
 
 Remove friend
 == Freund entfernen
-
-Rename
-== Umbenennen
 
 Rename demo
 == Aufnahme umbenennen
@@ -394,9 +376,6 @@ Show friends only
 
 Show health, shields and ammo
 == Leben, Schilde und Munition anzeigen
-
-Show hook strength indicator
-== Indikator für Hakenstärke anzeigen
 
 Show ingame HUD
 == Spiel-HUD anzeigen
@@ -451,9 +430,6 @@ The audio device couldn't be initialised.
 
 The server is running a non-standard tuning on a pure game type.
 == Der Server läuft nicht mit Standardeinstellungen.
-
-There's an unsaved map in the editor, you might want to save it before you quit the game.
-== Im Editor ist noch eine ungespeicherte Karte. Vielleicht möchtest du sie speichern.
 
 Time limit
 == Zeitlimit
@@ -539,20 +515,8 @@ FSAA samples
 Sound volume
 == Lautstärke
 
-Created:
-== Erstellt:
-
 Max Screenshots
 == Maximale Anzahl an Bildschirmfotos
-
-Length:
-== Länge:
-
-Netversion:
-== Netzwerkversion:
-
-Map:
-== Karte:
 
 Hue
 == Farb.
@@ -563,29 +527,14 @@ Record demo
 Your skin
 == Dein Skin
 
-Size:
-== Größe:
-
 Reset to defaults
 == Standardeinstellung
-
-Quit anyway?
-== Trotzdem beenden?
-
-Version:
-== Version:
-
-Round
-== Runde
 
 Lht.
 == Hell.
 
 UI Color
 == Menüfarbe
-
-Crc:
-== Prüfsumme:
 
 Alpha
 == Alpha
@@ -596,14 +545,8 @@ LAN
 Name plates size
 == Größe der Spielernamen
 
-Type:
-== Typ:
-
 Ratio
 == Verhältnis
-
-Dummy settings
-== Dummy-Einstellungen
 
 AntiPing
 == Anti-Ping
@@ -704,20 +647,17 @@ System message
 DDNet %s is available:
 == DDNet %s verfügbar:
 
-Updating...
-== Aktualisieren...
+Updating…
+== Aktualisieren…
 
 Overlay entities
-== Overlay-Entities
+== Overlay-Entitäten
 
 Messages
 == Nachrichten
 
 %.2f MiB
 == %.2f MiB
-
-Use DDRace Scoreboard
-== DDRace-Punktetafel benutzen
 
 Loading DDNet Client
 == DDNet-Client laden
@@ -741,7 +681,7 @@ Normal message
 == Normale Nachricht
 
 AntiPing: predict grenade paths
-== AntiPing: Granatenflugkurve vorberechnen
+== Anti-Ping: Granatenflugkurve vorberechnen
 
 Search
 == Suche
@@ -759,7 +699,7 @@ Enable highlighted chat sound
 == Ton für Nachrichten an dich aktivieren
 
 AntiPing: predict weapons
-== AntiPing: Waffen vorberechnen
+== Anti-Ping: Waffen vorberechnen
 
 Highlighted message
 == Hervorgehobene Nachricht
@@ -772,9 +712,6 @@ Grabs
 
 Automatically take game over screenshot
 == Automatisches Bildschirmfoto am Spielende
-
-Please use a different name
-== Bitte anderen Namen wählen
 
 Gameplay
 == Gameplay
@@ -906,7 +843,7 @@ Length
 == Länge
 
 Show text entities
-== Entities-Text
+== Entitäten-Text
 
 Hook collisions
 == Hakenkollisionen
@@ -948,7 +885,7 @@ Downloading %s:
 == Herunterladen %s:
 
 Show entities
-== Entities anzeigen
+== Entitäten anzeigen
 
 Zoom in
 == Hineinzoomen
@@ -956,8 +893,8 @@ Zoom in
 Disconnect Dummy
 == Dummy trennen
 
-Update failed! Check log...
-== Update fehlgeschlagen! Siehe log...
+Update failed! Check log…
+== Update fehlgeschlagen! Siehe log…
 
 Markers
 == Markierungen
@@ -967,9 +904,6 @@ Enable replays
 
 Toggle dummy
 == Dummy wechseln
-
-Markers:
-== Markierungen:
 
 Converse
 == Unterhalten
@@ -1030,9 +964,6 @@ Kill
 
 Please enter your nickname below.
 == Bitte gib deinen Spitznamen unten ein.
-
-Render
-== Rendern
 
 It's recommended that you check the settings to adjust them to your liking before joining a server.
 == Es wird empfohlen die Einstellungen nach deinem Geschmack anzupassen bevor du einem Server beitrittst.
@@ -1126,7 +1057,7 @@ Assets
 == Assets
 
 Entities
-== Entities
+== Entitäten
 
 Emoticons
 == Emoticons
@@ -1139,9 +1070,6 @@ Assets directory
 
 https://wiki.ddnet.org/
 == https://wiki.ddnet.org/wiki/Main_Page/de
-
-Saving ddnet-settings.cfg failed
-== ddnet-settings.cfg zu speichern ist fehlgeschlagen
 
 Use current map as background
 == Aktuelle Karte als Hintergrund benutzen
@@ -1193,12 +1121,6 @@ Preview
 
 Background
 == Hintergrund
-
-Entities Background color
-== Entities-Hintergrundfarbe
-
-Regular Background Color
-== Normale Hintergrundfarbe
 
 Chat command
 == Chat-Befehl
@@ -1257,9 +1179,6 @@ A Tee
 Are you sure that you want to disconnect and switch to a different server?
 == Bist du sicher, dass du die Verbindung trennen und zu einem anderen Server wechseln möchtest?
 
-Kill Messages
-== Kill-Nachrichten
-
 Show local player's key presses
 == Tastendrücke des eigenen Spielers anzeigen
 
@@ -1305,9 +1224,6 @@ Tutorial
 Can't find a Tutorial server
 == Kein Tutorial-Server wurde gefunden
 
-Toggle to edit your dummy settings
-== Umschalten, um Dummy-Einstellungen zu bearbeiten
-
 Choose default eyes when joining a server
 == Standard-Augen beim Betreten eines Servers auswählen
 
@@ -1333,7 +1249,7 @@ Team %d
 == Team %d
 
 Adjust the opacity of entities belonging to other teams, such as tees and nameplates
-== Deckkraft von Entities die zu einem anderen Team gehören, z.B. Tees und Namensschilder
+== Deckkraft von Entitäten die zu einem anderen Team gehören, z.B. Tees und Namensschilder
 
 Position:
 == Position:
@@ -1344,8 +1260,8 @@ Speed:
 Angle:
 == Winkel:
 
-Trying to determine UDP connectivity...
-== Versuche UDP-Verbindungsfähigkeit festzustellen...
+Trying to determine UDP connectivity…
+== Versuche UDP-Verbindungsfähigkeit festzustellen…
 
 UDP seems to be filtered.
 == UDP scheint gefiltert zu werden.
@@ -1586,7 +1502,7 @@ Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in s
 
 [Graphics error]
 Out of VRAM. Try removing custom assets (skins, entities, etc.), especially those with high resolution.
-== Kein VRAM mehr verfügbar. Versuch eigene Assets (Skins, Entities, usw.) zu löschen, insbesondere solche mit hoher Auflösung.
+== Kein VRAM mehr verfügbar. Versuch eigene Assets (Skins, Entitäten, usw.) zu löschen, insbesondere solche mit hoher Auflösung.
 
 [Graphics error]
 An error during command recording occurred. Try to update your GPU drivers.
@@ -1765,3 +1681,211 @@ Go forward the specified duration
 
 Render cut to video
 == Schnitt zu Video rendern
+
+Error playing demo
+== Fehler beim Abspielen der Demo
+
+Some map images could not be loaded. Check the local console for details.
+== Einige Karten-Bilder konnten nicht geladen werden. Prüf die lokale Konsole für Details.
+
+Some map sounds could not be loaded. Check the local console for details.
+== Einige Karten-Töne konnten nicht geladen werden. Prüf die lokale Konsole für Details.
+
+Loading menu themes
+== Menü-Themes laden
+
+Render complete
+== Fertig gerendert
+
+Videos directory
+== Video-Ordner
+
+Video was saved to '%s'
+== Video wurde gespeichert als '%s'
+
+No demo selected
+== Keine Demo ausgewählt
+
+Created
+== Erstellt
+
+Netversion
+== Netz-Version
+
+[Demo details]
+map not included
+== Karte nicht inbegriffen
+
+Ghosts directory
+== Geister-Ordner
+
+Activate all
+== Alle aktivieren
+
+Deactivate all
+== Alle deaktivieren
+
+Enable ghost
+== Geist aktivieren
+
+Only save improvements
+== Nur Verbesserungen speichern
+
+Regular background color
+== Normale Hintergrundfarbe
+
+Entities background color
+== Entitäten-Hintergrundfarbe
+
+Saving settings to '%s' failed
+== Einstellungen als '%s' speichern fehlgeschlagen
+
+Searching
+== Suche
+
+Enter Username
+== Benutzername eingeben
+
+Enter Password
+== Passwort eingeben
+
+NOT CONNECTED
+== NICHT VERBUNDEN
+
+Match %d of %d
+== Treffer %d von %d
+
+No results
+== Keine Ergebnisse
+
+Lines %d - %d (%s)
+== Zeilen %d - %d (%s)
+
+Locked
+== Gesperrt
+
+Following
+== Folgen
+
+Press a key…
+== Drück eine Taste…
+
+Are you sure that you want to restart?
+== Bist du sicher dass du neustarten willst?
+
+There's an unsaved map in the editor, you might want to save it.
+== Es gibt eine ungespeicherte Karte im Editor, du könntest sie speichern wollen.
+
+Continue anyway?
+== Trotzdem fortfahren?
+
+Communities
+== Gemeinschaften
+
+Please use a different filename
+== Bitte nutz einen anderen Dateinamen
+
+Info Messages
+== Info-Nachrichten
+
+Show local time always
+== Immer lokale Zeit anzeigen
+
+Chat font size
+== Chat-Schriftgröße
+
+Chat width
+== Chat-Breite
+
+Authed name color in scoreboard
+== Authorisierte Namensfarbe in der Punktetafel
+
+Same clan color in scoreboard
+== Gleicher-Clan-Farbe in der Punktetafel
+
+Show finish messages
+== Siegnachrichten anzeigen
+
+Failed saving the replay!
+== Speichern der Wiederholung fehlgeschlagen!
+
+Error saving settings
+== Fehler beim Speichern der Einstellungen
+
+Loading commands…
+== Befehle laden…
+
+Main menu
+== Hauptmenü
+
+Server filter
+== Serverfilter
+
+Friends
+== Freunde
+
+Loading…
+== Laden…
+
+Loading demo file from storage
+== Lade Demo-Datei von Platte
+
+No login required
+== Kein Login erforderlich
+
+Player info change cooldown
+== Abklingzeit Änderung Spieler-Info
+
+Always show chat
+== Immer Chat anzeigen
+
+Show friend mark (♥) in name plates
+== Freund-Zeichen (♥) im Namen anzeigen
+
+Show hook strength icon indicator
+== Hakenstärke Icon anzeigen
+
+Show hook strength number indicator
+== Hakenstärke Zahl anzeigen
+
+Show own player's hook collision line
+== Eigene Hakenkollisionslinie anzeigen
+
+Always show own player's hook collision line
+== Immer eigene Hakenkollisionslinie anzeigen
+
+Always show other players' hook collision lines
+== Immer Hakenkollisionslinie anderer Spieler anzeigen
+
+%d/%d KiB (%.1f KiB/s)
+== %d/%d KiB (%.1f KiB/s)
+
+Tee
+== Tee
+
+Show only chat messages from team members
+== Nur Nachrichten von Teammitgliedern anzeigen
+
+[Spectating]
+Following %s
+== %s folgen
+
+Example of usage
+== Beispielnutzung
+
+Round %d/%d
+== Runde %d/%d
+
+[Spectators]
+%d others…
+== %d andere…
+
+[Team and size]
+%d\n(%d/%d)
+== %d\n(%d/%d)
+
+Team %d (%d/%d)
+== Team %d (%d/%d)
+
+https://wiki.ddnet.org/wiki/Mapping
+== 

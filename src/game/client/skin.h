@@ -37,6 +37,18 @@ public:
 			for(auto &Eye : m_aEyes)
 				Eye = IGraphics::CTextureHandle();
 		}
+
+		void Unload(IGraphics *pGraphics)
+		{
+			pGraphics->UnloadTexture(&m_Body);
+			pGraphics->UnloadTexture(&m_BodyOutline);
+			pGraphics->UnloadTexture(&m_Feet);
+			pGraphics->UnloadTexture(&m_FeetOutline);
+			pGraphics->UnloadTexture(&m_Hands);
+			pGraphics->UnloadTexture(&m_HandsOutline);
+			for(auto &Eye : m_aEyes)
+				pGraphics->UnloadTexture(&Eye);
+		}
 	};
 
 	SSkinTextures m_OriginalSkin;
@@ -142,6 +154,25 @@ public:
 	CSkin &operator=(CSkin &&) = default;
 
 	const char *GetName() const { return m_aName; }
+
+	// has to be kept in sync with m_aSkinNameRestrictions
+	static bool IsValidName(const char *pName)
+	{
+		if(pName[0] == '\0' || str_length(pName) >= (int)sizeof(CSkin("").m_aName))
+		{
+			return false;
+		}
+
+		for(int i = 0; pName[i] != '\0'; ++i)
+		{
+			if(pName[i] == '"' || pName[i] == '/' || pName[i] == '\\')
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+	static constexpr char m_aSkinNameRestrictions[] = "Skin names must be valid filenames shorter than 24 characters.";
 };
 
 #endif

@@ -45,9 +45,9 @@ int CMap::GetItemSize(int Index)
 	return m_DataFile.GetItemSize(Index);
 }
 
-void *CMap::GetItem(int Index, int *pType, int *pID)
+void *CMap::GetItem(int Index, int *pType, int *pId)
 {
-	return m_DataFile.GetItem(Index, pType, pID);
+	return m_DataFile.GetItem(Index, pType, pId);
 }
 
 void CMap::GetType(int Type, int *pStart, int *pNum)
@@ -55,14 +55,14 @@ void CMap::GetType(int Type, int *pStart, int *pNum)
 	m_DataFile.GetType(Type, pStart, pNum);
 }
 
-int CMap::FindItemIndex(int Type, int ID)
+int CMap::FindItemIndex(int Type, int Id)
 {
-	return m_DataFile.FindItemIndex(Type, ID);
+	return m_DataFile.FindItemIndex(Type, Id);
 }
 
-void *CMap::FindItem(int Type, int ID)
+void *CMap::FindItem(int Type, int Id)
 {
-	return m_DataFile.FindItem(Type, ID);
+	return m_DataFile.FindItem(Type, Id);
 }
 
 int CMap::NumItems() const
@@ -106,8 +106,17 @@ bool CMap::Load(const char *pMapName)
 				CMapItemLayerTilemap *pTilemap = reinterpret_cast<CMapItemLayerTilemap *>(pLayer);
 				if(pTilemap->m_Version >= CMapItemLayerTilemap::TILE_SKIP_MIN_VERSION)
 				{
-					const size_t TilemapSize = (size_t)pTilemap->m_Width * pTilemap->m_Height * sizeof(CTile);
+					const size_t TilemapCount = (size_t)pTilemap->m_Width * pTilemap->m_Height;
+					const size_t TilemapSize = TilemapCount * sizeof(CTile);
+
+					if(((int)TilemapCount / pTilemap->m_Width != pTilemap->m_Height) || (TilemapSize / sizeof(CTile) != TilemapCount))
+					{
+						log_error("map/load", "map layer too big (%d * %d * %d causes an integer overflow)", pTilemap->m_Width, pTilemap->m_Height, sizeof(CTile));
+						return false;
+					}
 					CTile *pTiles = static_cast<CTile *>(malloc(TilemapSize));
+					if(!pTiles)
+						return false;
 					ExtractTiles(pTiles, (size_t)pTilemap->m_Width * pTilemap->m_Height, static_cast<CTile *>(NewDataFile.GetData(pTilemap->m_Data)), NewDataFile.GetDataSize(pTilemap->m_Data) / sizeof(CTile));
 					NewDataFile.ReplaceData(pTilemap->m_Data, reinterpret_cast<char *>(pTiles), TilemapSize);
 				}

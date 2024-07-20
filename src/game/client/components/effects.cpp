@@ -190,11 +190,11 @@ void CEffects::PlayerSpawn(vec2 Pos, float Alpha)
 		m_pClient->m_Sounds.PlayAt(CSounds::CHN_WORLD, SOUND_PLAYER_SPAWN, 1.0f, Pos);
 }
 
-void CEffects::PlayerDeath(vec2 Pos, int ClientID, float Alpha)
+void CEffects::PlayerDeath(vec2 Pos, int ClientId, float Alpha)
 {
 	ColorRGBA BloodColor(1.0f, 1.0f, 1.0f);
 
-	if(ClientID >= 0)
+	if(ClientId >= 0)
 	{
 		// Use m_RenderInfo.m_CustomColoredSkin instead of m_UseCustomColor
 		// m_UseCustomColor says if the player's skin has a custom color (value sent from the client side)
@@ -202,11 +202,11 @@ void CEffects::PlayerDeath(vec2 Pos, int ClientID, float Alpha)
 		// m_RenderInfo.m_CustomColoredSkin Defines if in the context of the game the color is being customized,
 		// Using this value if the game is teams (red and blue), this value will be true even if the skin is with the normal color.
 		// And will use the team body color to create player death effect instead of tee color
-		if(m_pClient->m_aClients[ClientID].m_RenderInfo.m_CustomColoredSkin)
-			BloodColor = m_pClient->m_aClients[ClientID].m_RenderInfo.m_ColorBody;
+		if(m_pClient->m_aClients[ClientId].m_RenderInfo.m_CustomColoredSkin)
+			BloodColor = m_pClient->m_aClients[ClientId].m_RenderInfo.m_ColorBody;
 		else
 		{
-			BloodColor = m_pClient->m_aClients[ClientID].m_RenderInfo.m_BloodColor;
+			BloodColor = m_pClient->m_aClients[ClientId].m_RenderInfo.m_BloodColor;
 		}
 	}
 
@@ -226,6 +226,60 @@ void CEffects::PlayerDeath(vec2 Pos, int ClientID, float Alpha)
 		p.m_Friction = 0.8f;
 		ColorRGBA c = BloodColor.v4() * random_float(0.75f, 1.0f);
 		p.m_Color = ColorRGBA(c.r, c.g, c.b, 0.75f * Alpha);
+		p.m_StartAlpha = Alpha;
+		m_pClient->m_Particles.Add(CParticles::GROUP_GENERAL, &p);
+	}
+}
+
+void CEffects::FinishConfetti(vec2 Pos, float Alpha)
+{
+	ColorRGBA Red(1.0f, 0.4f, 0.4f);
+	ColorRGBA Green(0.4f, 1.0f, 0.4f);
+	ColorRGBA Blue(0.4f, 0.4f, 1.0f);
+	ColorRGBA Yellow(1.0f, 1.0f, 0.4f);
+	ColorRGBA Cyan(0.4f, 1.0f, 1.0f);
+	ColorRGBA Magenta(1.0f, 0.4f, 1.0f);
+
+	ColorRGBA aConfettiColors[] = {Red, Green, Blue, Yellow, Cyan, Magenta};
+
+	// powerful confettis
+	for(int i = 0; i < 32; i++)
+	{
+		CParticle p;
+		p.SetDefault();
+		p.m_Spr = SPRITE_PART_SPLAT01 + (rand() % 3);
+		p.m_Pos = Pos;
+		p.m_Vel = direction(-0.5f * pi + random_float(-0.2f, 0.2f)) * random_float(0.01f, 1.0f) * 2000.0f;
+		p.m_LifeSpan = random_float(1.0f, 1.2f);
+		p.m_StartSize = random_float(12.0f, 24.0f);
+		p.m_EndSize = 0;
+		p.m_Rot = random_angle();
+		p.m_Rotspeed = random_float(-0.5f, 0.5f) * pi;
+		p.m_Gravity = -700.0f;
+		p.m_Friction = 0.6f;
+		ColorRGBA c = aConfettiColors[(rand() % std::size(aConfettiColors))];
+		p.m_Color = c.WithMultipliedAlpha(0.75f * Alpha);
+		p.m_StartAlpha = Alpha;
+		m_pClient->m_Particles.Add(CParticles::GROUP_GENERAL, &p);
+	}
+
+	// broader confettis
+	for(int i = 0; i < 32; i++)
+	{
+		CParticle p;
+		p.SetDefault();
+		p.m_Spr = SPRITE_PART_SPLAT01 + (rand() % 3);
+		p.m_Pos = Pos;
+		p.m_Vel = direction(-0.5f * pi + random_float(-0.8f, 0.8f)) * random_float(0.01f, 1.0f) * 1500.0f;
+		p.m_LifeSpan = random_float(0.8f, 1.0f);
+		p.m_StartSize = random_float(12.0f, 24.0f);
+		p.m_EndSize = 0;
+		p.m_Rot = random_angle();
+		p.m_Rotspeed = random_float(-0.5f, 0.5f) * pi;
+		p.m_Gravity = -700.0f;
+		p.m_Friction = 0.6f;
+		ColorRGBA c = aConfettiColors[(rand() % std::size(aConfettiColors))];
+		p.m_Color = c.WithMultipliedAlpha(0.75f * Alpha);
 		p.m_StartAlpha = Alpha;
 		m_pClient->m_Particles.Add(CParticles::GROUP_GENERAL, &p);
 	}
@@ -256,6 +310,28 @@ void CEffects::Explosion(vec2 Pos, float Alpha)
 	p.m_Color.a = Alpha;
 	p.m_StartAlpha = Alpha;
 	m_pClient->m_Particles.Add(CParticles::GROUP_EXPLOSIONS, &p);
+
+	// Nudge position slightly to edge of closest tile so the
+	// smoke doesn't get stuck inside the tile.
+	if(Collision()->CheckPoint(Pos))
+	{
+		const vec2 DistanceToTopLeft = Pos - vec2(round_truncate(Pos.x / 32), round_truncate(Pos.y / 32)) * 32;
+
+		vec2 CheckOffset;
+		CheckOffset.x = (DistanceToTopLeft.x > 16 ? 32 : -1);
+		CheckOffset.y = (DistanceToTopLeft.y > 16 ? 32 : -1);
+		CheckOffset -= DistanceToTopLeft;
+
+		for(vec2 Mask : {vec2(1.0f, 0.0f), vec2(0.0f, 1.0f), vec2(1.0f, 1.0f)})
+		{
+			const vec2 NewPos = Pos + CheckOffset * Mask;
+			if(!Collision()->CheckPoint(NewPos))
+			{
+				Pos = NewPos;
+				break;
+			}
+		}
+	}
 
 	// add the smoke
 	for(int i = 0; i < 24; i++)

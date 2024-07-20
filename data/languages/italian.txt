@@ -32,9 +32,6 @@
 %s wins!
 == %s ha vinto!
 
--Page %d-
-== -Pagina %d-
-
 Abort
 == Annulla
 
@@ -86,8 +83,8 @@ Client
 Connecting to
 == Connessione a
 
-Connection Problems...
-== Problemi di connessione...
+Connection Problems…
+== Problemi di connessione…
 
 Console
 == Console
@@ -109,9 +106,6 @@ Delete
 
 Delete demo
 == Elimina demo
-
-Demo details
-== Dettagli demo
 
 Demofile: %s
 == Demo: %s
@@ -266,9 +260,6 @@ No servers match your filter criteria
 Ok
 == Ok
 
-Open
-== Apri
-
 Parent Folder
 == Cartella superiore
 
@@ -283,10 +274,6 @@ Ping
 
 Pistol
 == Pistola
-
-[Demo browser]
-Play
-== Riproduci
 
 Play background music
 == Riproduci musica di sottofondo
@@ -321,9 +308,6 @@ Red team
 Red team wins!
 == La squadra rossa ha vinto!
 
-Refresh
-== Aggiorna
-
 Remote console
 == Console remota
 
@@ -332,9 +316,6 @@ Remove
 
 Remove friend
 == Rimuovi amico
-
-Rename
-== Rinomina
 
 Rename demo
 == Rinomina demo
@@ -423,9 +404,6 @@ The audio device couldn't be initialised.
 The server is running a non-standard tuning on a pure game type.
 == Il server presenta impostazioni non standard in un tipo di gioco normale.
 
-There's an unsaved map in the editor, you might want to save it before you quit the game.
-== C'è una mappa non salvata nell'editor, probabilmente vuoi salvarla prima di uscire.
-
 Time limit
 == Limite di tempo
 
@@ -509,20 +487,8 @@ FSAA samples
 Sound volume
 == Volume suono
 
-Created:
-== Creata:
-
 Max Screenshots
 == Numero massimo di catture
-
-Length:
-== Durata:
-
-Netversion:
-== Versione net
-
-Map:
-== Mappa:
 
 Hue
 == Tinta
@@ -533,31 +499,14 @@ Record demo
 Your skin
 == La tua skin
 
-Size:
-== Dimensione:
-
-##### translated strings #####
-
 Reset to defaults
 == Reimposta predefinito
-
-Quit anyway?
-== Vuoi chiudere comunque?
-
-Version:
-== Versione:
-
-Round
-== Turno
 
 Lht.
 == Luminosità
 
 UI Color
 == Colore interfaccia
-
-Crc:
-== Crc:
 
 Alpha
 == Alpha
@@ -567,9 +516,6 @@ LAN
 
 Name plates size
 == Dimensione nomi
-
-Type:
-== Tipo:
 
 DDNet %s is out!
 == DDNet %s è uscito!
@@ -607,8 +553,8 @@ Length
 Downloading %s:
 == Scaricando %s:
 
-Update failed! Check log...
-== Aggiornamento non riuscito! Controlla registro...
+Update failed! Check log…
+== Aggiornamento non riuscito! Controlla registro…
 
 Filter connecting players
 == Filtra i giocatori in conness.
@@ -627,9 +573,6 @@ Are you sure that you want to disconnect your dummy?
 
 Successfully saved the replay!
 == Hai salvato il replay con successo!
-
-Saving ddnet-settings.cfg failed
-== Salvataggio di ddnet-settings.cfg non riuscito
 
 Replay feature is disabled!
 == Il replay è disabilitato!
@@ -742,9 +685,6 @@ Countries
 Types
 == Tipi
 
-Please use a different name
-== Per favore usa un nome differente
-
 Remove chat
 == Rimuovi chat
 
@@ -756,9 +696,6 @@ Date
 
 Demos directory
 == Cartella delle demo
-
-Render
-== Renderizza
 
 Connecting dummy
 == Connettendo dummy
@@ -816,9 +753,6 @@ Automatically create statboard csv
 
 Max CSVs
 == Massimo valore separato da virgole (CSV)
-
-Dummy settings
-== Impostazioni Dummy
 
 Download skins
 == Scarica skin
@@ -940,9 +874,6 @@ Assets
 DDNet Client needs to be restarted to complete update!
 == Il Client DDNet deve essere riavviato per completare l'aggiornamento!
 
-Use DDRace Scoreboard
-== Usa il tabellone segnapunti DDRace
-
 Show score
 == Mostra punteggio/tempo
 
@@ -1042,8 +973,8 @@ DDNet %s is available:
 Update now
 == Aggiorna ora
 
-Updating...
-== Aggiornamento in corso...
+Updating…
+== Aggiornamento in corso…
 
 DDNet Client updated!
 == Client DDNet aggiornato!
@@ -1174,10 +1105,10 @@ Sending initial client info
 == Inviando le informazioni del client
 
 Quitting. Please wait…
-== Uscendo. Perfavore aspetta...
+== Uscendo. Perfavore aspetta…
 
 Restarting. Please wait…
-== Riavviando. Perfavore aspetta...
+== Riavviando. Perfavore aspetta…
 
 Position:
 == Posizione:
@@ -1197,8 +1128,8 @@ Team %d
 Uploading map data to GPU
 == Caricando dati mappa alla GPU
 
-Trying to determine UDP connectivity...
-== Provando a determinare l'UDP connectivity...
+Trying to determine UDP connectivity…
+== Provando a determinare l'UDP connectivity…
 
 UDP seems to be filtered.
 == UDP sembra essere filtrato.
@@ -1372,9 +1303,6 @@ Opacity of freeze bars inside freeze
 Preview
 == Anteprima
 
-Show hook strength indicator
-== Mostra l'indicatore della forza del gancio
-
 Show local player's key presses
 == Mostra le pressioni dei tasti del giocatore locale
 
@@ -1419,12 +1347,6 @@ Tries to predict other entities to give a feel of low latency
 
 Background
 == Sfondo
-
-Entities Background color
-== Colore sfondo entities
-
-Regular Background Color
-== Colore sfondo normale
 
 Run on join
 == Esegui quando entri
@@ -1492,13 +1414,101 @@ Could not initialize the given graphics backend, this is probably because you di
 Could not save downloaded map. Try manually deleting this file: %s
 == 
 
+Error playing demo
+== 
+
+Failed saving the replay!
+== 
+
+Saving settings to '%s' failed
+== 
+
+Error saving settings
+== 
+
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 
 
 The format of texture %s is not RGBA which will cause visual bugs.
 == 
 
+Loading demo file from storage
+== 
+
 Why are you slowmo replaying to read this?
+== 
+
+Loading skin files
+== 
+
+Searching
+== 
+
+Enter Username
+== 
+
+Enter Password
+== 
+
+NOT CONNECTED
+== 
+
+Match %d of %d
+== 
+
+No results
+== 
+
+Lines %d - %d (%s)
+== 
+
+Locked
+== 
+
+Following
+== 
+
+Loading commands…
+== 
+
+[Spectating]
+Following %s
+== 
+
+Some map images could not be loaded. Check the local console for details.
+== 
+
+Some map sounds could not be loaded. Check the local console for details.
+== 
+
+Loading menu themes
+== 
+
+Press a key…
+== 
+
+Main menu
+== 
+
+Render complete
+== 
+
+Are you sure that you want to restart?
+== 
+
+There's an unsaved map in the editor, you might want to save it.
+== 
+
+Continue anyway?
+== 
+
+Videos directory
+== 
+
+Video was saved to '%s'
+== 
+
+%d/%d KiB (%.1f KiB/s)
 == 
 
 Loading menu images
@@ -1525,6 +1535,15 @@ SA
 CHN
 == 
 
+Example of usage
+== 
+
+No login required
+== 
+
+Communities
+== 
+
 Copy info
 == 
 
@@ -1536,6 +1555,12 @@ Online players (%d)
 
 [friends (server browser)]
 Offline (%d)
+== 
+
+Server filter
+== 
+
+Friends
 == 
 
 Play the current demo
@@ -1609,16 +1634,29 @@ Cut length
 Render cut to video
 == 
 
+Please use a different filename
+== 
+
 Loading demo files
 == 
 
 All combined
 == 
 
+No demo selected
+== 
+
 Folder Link
 == 
 
-Markers:
+Created
+== 
+
+Netversion
+== 
+
+[Demo details]
+map not included
 == 
 
 %.2f MiB
@@ -1642,7 +1680,19 @@ Unable to delete the demo '%s'
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Loading…
+== 
+
 Loading ghost files
+== 
+
+Ghosts directory
+== 
+
+Activate all
+== 
+
+Deactivate all
 == 
 
 Menu opened. Press Esc key again to close menu.
@@ -1666,10 +1716,10 @@ Open the directory that contains the configuration and user files
 Open the directory to add custom themes
 == 
 
-Toggle to edit your dummy settings
+Dummy
 == 
 
-Loading skin files
+Player info change cooldown
 == 
 
 Converse
@@ -1700,9 +1750,6 @@ Aim bind
 Mouse
 == 
 
-Dummy
-== 
-
 Allows maps to render with more detail
 == 
 
@@ -1718,19 +1765,64 @@ custom
 auto
 == 
 
+Tee
+== 
+
 Appearance
 == 
 
 Name Plate
 == 
 
-Kill Messages
+Info Messages
+== 
+
+Show local time always
 == 
 
 DDRace HUD
 == 
 
+Always show chat
+== 
+
+Show only chat messages from team members
+== 
+
+Chat font size
+== 
+
+Chat width
+== 
+
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
+== 
+
+Authed name color in scoreboard
+== 
+
+Same clan color in scoreboard
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
+== 
+
 A Tee
+== 
+
+Show finish messages
 == 
 
 Normal Color
@@ -1766,7 +1858,19 @@ Freeze Laser Inner Color
 Set all to Rifle
 == 
 
+Enable ghost
+== 
+
+Only save improvements
+== 
+
 Overlay entities
+== 
+
+Regular background color
+== 
+
+Entities background color
 == 
 
 Extras
@@ -1781,8 +1885,25 @@ https://ddnet.org/discord
 Tutorial
 == 
 
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
 Super
 == 
 
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
+== 
+
 FPM
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

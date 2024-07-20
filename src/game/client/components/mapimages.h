@@ -6,6 +6,7 @@
 #include <engine/graphics.h>
 
 #include <game/client/component.h>
+#include <game/mapitems.h>
 
 enum EMapImageEntityLayerType
 {
@@ -35,17 +36,11 @@ class CMapImages : public CComponent
 	friend class CBackground;
 	friend class CMenuBackground;
 
-	IGraphics::CTextureHandle m_aTextures[64];
-	int m_aTextureUsedByTileOrQuadLayerFlag[64]; // 0: nothing, 1(as flag): tile layer, 2(as flag): quad layer
+	IGraphics::CTextureHandle m_aTextures[MAX_MAPIMAGES];
+	int m_aTextureUsedByTileOrQuadLayerFlag[MAX_MAPIMAGES]; // 0: nothing, 1(as flag): tile layer, 2(as flag): quad layer
 	int m_Count;
 
 	char m_aEntitiesPath[IO_MAX_PATH_LENGTH];
-
-	bool HasFrontLayer(EMapImageModType ModType);
-	bool HasSpeedupLayer(EMapImageModType ModType);
-	bool HasSwitchLayer(EMapImageModType ModType);
-	bool HasTeleLayer(EMapImageModType ModType);
-	bool HasTuneLayer(EMapImageModType ModType);
 
 public:
 	CMapImages();
@@ -69,7 +64,7 @@ public:
 	IGraphics::CTextureHandle GetOverlayCenter();
 
 	void SetTextureScale(int Scale);
-	int GetTextureScale();
+	int GetTextureScale() const;
 
 	void ChangeEntitiesPath(const char *pPath);
 
@@ -81,12 +76,11 @@ private:
 	IGraphics::CTextureHandle m_OverlayBottomTexture;
 	IGraphics::CTextureHandle m_OverlayTopTexture;
 	IGraphics::CTextureHandle m_OverlayCenterTexture;
-	IGraphics::CTextureHandle m_TransparentTexture;
 	int m_TextureScale;
 
 	void InitOverlayTextures();
 	IGraphics::CTextureHandle UploadEntityLayerText(int TextureSize, int MaxWidth, int YOffset);
-	void UpdateEntityLayerText(void *pTexBuffer, size_t PixelSize, size_t TexWidth, size_t TexHeight, int TextureSize, int MaxWidth, int YOffset, int NumbersPower, int MaxNumber = -1);
+	void UpdateEntityLayerText(CImageInfo &TextImage, int TextureSize, int MaxWidth, int YOffset, int NumbersPower, int MaxNumber = -1);
 };
 
 #endif

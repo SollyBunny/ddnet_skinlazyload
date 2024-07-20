@@ -4,15 +4,11 @@
 #include "network.h"
 #include <base/system.h>
 
-SECURITY_TOKEN ToSecurityToken(unsigned char *pData)
-{
-	return (int)pData[0] | (pData[1] << 8) | (pData[2] << 16) | (pData[3] << 24);
-}
-
 void CNetConnection::ResetStats()
 {
 	mem_zero(&m_Stats, sizeof(m_Stats));
 	mem_zero(&m_PeerAddr, sizeof(m_PeerAddr));
+	m_aPeerAddrStr[0] = '\0';
 	m_LastUpdateTime = 0;
 }
 
@@ -201,6 +197,8 @@ int CNetConnection::Connect(const NETADDR *pAddr, int NumAddrs)
 	// init connection
 	Reset();
 	mem_zero(&m_PeerAddr, sizeof(m_PeerAddr));
+	m_aPeerAddrStr[0] = '\0';
+
 	for(int i = 0; i < NumAddrs; i++)
 	{
 		m_aConnectAddrs[i] = pAddr[i];
@@ -245,6 +243,7 @@ void CNetConnection::DirectInit(const NETADDR &Addr, SECURITY_TOKEN SecurityToke
 	m_State = NET_CONNSTATE_ONLINE;
 
 	m_PeerAddr = Addr;
+	net_addr_str(&Addr, m_aPeerAddrStr, sizeof(m_aPeerAddrStr), true);
 	mem_zero(m_aErrorString, sizeof(m_aErrorString));
 
 	int64_t Now = time_get();
@@ -326,10 +325,10 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 				m_State = NET_CONNSTATE_ERROR;
 				m_RemoteClosed = 1;
 
-				char aStr[128] = {0};
+				char aStr[256] = {0};
 				if(pPacket->m_DataSize > 1)
 				{
-					// make sure to sanitize the error string form the other party
+					// make sure to sanitize the error string from the other party
 					str_copy(aStr, (char *)&pPacket->m_aChunkData[1], minimum(pPacket->m_DataSize, (int)sizeof(aStr)));
 					str_sanitize_cc(aStr);
 				}
@@ -358,6 +357,7 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 					Reset();
 					m_State = NET_CONNSTATE_PENDING;
 					m_PeerAddr = *pAddr;
+					net_addr_str(pAddr, m_aPeerAddrStr, sizeof(m_aPeerAddrStr), true);
 					mem_zero(m_aErrorString, sizeof(m_aErrorString));
 					m_LastSendTime = Now;
 					m_LastRecvTime = Now;
@@ -385,6 +385,7 @@ int CNetConnection::Feed(CNetPacketConstruct *pPacket, NETADDR *pAddr, SECURITY_
 				if(CtrlMsg == NET_CTRLMSG_CONNECTACCEPT)
 				{
 					m_PeerAddr = *pAddr;
+					net_addr_str(pAddr, m_aPeerAddrStr, sizeof(m_aPeerAddrStr), true);
 					if(m_SecurityToken == NET_SECURITY_TOKEN_UNKNOWN && pPacket->m_DataSize >= (int)(1 + sizeof(SECURITY_TOKEN_MAGIC) + sizeof(m_SecurityToken)) && !mem_comp(&pPacket->m_aChunkData[1], SECURITY_TOKEN_MAGIC, sizeof(SECURITY_TOKEN_MAGIC)))
 					{
 						m_SecurityToken = ToSecurityToken(&pPacket->m_aChunkData[1 + sizeof(SECURITY_TOKEN_MAGIC)]);
@@ -460,7 +461,7 @@ int CNetConnection::Update()
 		if(Now - pResend->m_FirstSendTime > time_freq() * g_Config.m_ConnTimeout)
 		{
 			m_State = NET_CONNSTATE_ERROR;
-			char aBuf[512];
+			char aBuf[128];
 			str_format(aBuf, sizeof(aBuf), "Too weak connection (not acked for %d seconds)", g_Config.m_ConnTimeout);
 			SetError(aBuf);
 			m_TimeoutSituation = true;
@@ -510,6 +511,7 @@ void CNetConnection::SetTimedOut(const NETADDR *pAddr, int Sequence, int Ack, SE
 
 	m_State = NET_CONNSTATE_ONLINE;
 	m_PeerAddr = *pAddr;
+	net_addr_str(pAddr, m_aPeerAddrStr, sizeof(m_aPeerAddrStr), true);
 	mem_zero(m_aErrorString, sizeof(m_aErrorString));
 	m_LastSendTime = Now;
 	m_LastRecvTime = Now;

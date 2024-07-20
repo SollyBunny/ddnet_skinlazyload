@@ -408,7 +408,7 @@ impl Servers {
                 });
             }
             hash_map::Entry::Occupied(mut o) => {
-                let mut server = &mut o.get_mut();
+                let server = &mut o.get_mut();
                 if insert_addr {
                     server.addresses.push(addr);
                     server.addresses.sort_unstable();
@@ -823,8 +823,9 @@ fn register_from_headers(
         challenge_token: parse_opt(headers, "Challenge-Token")?,
         info_serial: parse(headers, "Info-Serial")?,
         info: if !info.is_empty() {
-            if headers.typed_get() != Some(headers::ContentType::json()) {
-                return Err(RegisterError::unsupported_media_type());
+            match headers.typed_get::<headers::ContentType>().map(mime::Mime::from) {
+                Some(mime) if mime.essence_str() == mime::APPLICATION_JSON => {}
+                _ => return Err(RegisterError::unsupported_media_type()),
             }
             Some(json::from_slice(info).map_err(|e| {
                 RegisterError::new(format!("Request body deserialize error: {}", e))
@@ -897,7 +898,7 @@ async fn main() {
         .arg(Arg::with_name("locations")
             .long("locations")
             .value_name("LOCATIONS")
-            .help("IP to continent locations database filename (CSV file with network,continent_code header).")
+            .help("IP to continent locations database filename (libloc format, can be obtained from https://location.ipfire.org/databases/1/location.db.xz).")
         )
         .arg(Arg::with_name("write-addresses")
             .long("write-addresses")

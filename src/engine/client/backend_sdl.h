@@ -48,7 +48,7 @@ class CGraphicsBackend_Threaded : public IGraphicsBackend
 {
 private:
 	TTranslateFunc m_TranslateFunc;
-	SGFXWarningContainer m_Warning;
+	SGfxWarningContainer m_Warning;
 
 public:
 	// constructed on the main thread, the rest of the functions is run on the render thread
@@ -58,20 +58,10 @@ public:
 		virtual ~ICommandProcessor() = default;
 		virtual void RunBuffer(CCommandBuffer *pBuffer) = 0;
 
-		virtual SGFXErrorContainer &GetError() = 0;
+		virtual const SGfxErrorContainer &GetError() const = 0;
 		virtual void ErroneousCleanup() = 0;
 
-		virtual SGFXWarningContainer &GetWarning() = 0;
-
-		bool HasError()
-		{
-			return GetError().m_ErrorType != GFX_ERROR_TYPE_NONE;
-		}
-
-		bool HasWarning()
-		{
-			return GetWarning().m_WarningType != GFX_WARNING_TYPE_NONE;
-		}
+		virtual const SGfxWarningContainer &GetWarning() const = 0;
 	};
 
 	CGraphicsBackend_Threaded(TTranslateFunc &&TranslateFunc);
@@ -81,7 +71,7 @@ public:
 	bool IsIdle() const override;
 	void WaitForIdle() override;
 
-	void ProcessError();
+	void ProcessError(const SGfxErrorContainer &Error);
 
 protected:
 	void StartProcessor(ICommandProcessor *pProcessor);
@@ -191,24 +181,24 @@ class CCommandProcessor_SDL_GL : public CGraphicsBackend_Threaded::ICommandProce
 
 	EBackendType m_BackendType;
 
-	SGFXErrorContainer m_Error;
-	SGFXWarningContainer m_Warning;
+	SGfxErrorContainer m_Error;
+	SGfxWarningContainer m_Warning;
 
 public:
 	CCommandProcessor_SDL_GL(EBackendType BackendType, int GLMajor, int GLMinor, int GLPatch);
 	virtual ~CCommandProcessor_SDL_GL();
 	void RunBuffer(CCommandBuffer *pBuffer) override;
 
-	SGFXErrorContainer &GetError() override;
+	const SGfxErrorContainer &GetError() const override;
 	void ErroneousCleanup() override;
 
-	SGFXWarningContainer &GetWarning() override;
+	const SGfxWarningContainer &GetWarning() const override;
 
 	void HandleError();
 	void HandleWarning();
 };
 
-static constexpr size_t gs_GPUInfoStringSize = 256;
+static constexpr size_t gs_GpuInfoStringSize = 256;
 
 // graphics backend implemented with SDL and the graphics library @see EBackendType
 class CGraphicsBackend_SDL_GL : public CGraphicsBackend_Threaded
@@ -221,7 +211,7 @@ class CGraphicsBackend_SDL_GL : public CGraphicsBackend_Threaded
 	std::atomic<uint64_t> m_StreamMemoryUsage{0};
 	std::atomic<uint64_t> m_StagingMemoryUsage{0};
 
-	TTWGraphicsGPUList m_GPUList;
+	TTwGraphicsGpuList m_GpuList;
 
 	TGLBackendReadPresentedImageData m_ReadPresentedImageDataFunc;
 
@@ -229,9 +219,9 @@ class CGraphicsBackend_SDL_GL : public CGraphicsBackend_Threaded
 
 	SBackendCapabilites m_Capabilites;
 
-	char m_aVendorString[gs_GPUInfoStringSize] = {};
-	char m_aVersionString[gs_GPUInfoStringSize] = {};
-	char m_aRendererString[gs_GPUInfoStringSize] = {};
+	char m_aVendorString[gs_GpuInfoStringSize] = {};
+	char m_aVersionString[gs_GpuInfoStringSize] = {};
+	char m_aRendererString[gs_GpuInfoStringSize] = {};
 
 	EBackendType m_BackendType = BACKEND_TYPE_AUTO;
 
@@ -250,17 +240,17 @@ public:
 	uint64_t StreamedMemoryUsage() const override;
 	uint64_t StagingMemoryUsage() const override;
 
-	const TTWGraphicsGPUList &GetGPUs() const override;
+	const TTwGraphicsGpuList &GetGpus() const override;
 
 	int GetNumScreens() const override { return m_NumScreens; }
 	const char *GetScreenName(int Screen) const override;
 
-	void GetVideoModes(CVideoMode *pModes, int MaxModes, int *pNumModes, int HiDPIScale, int MaxWindowWidth, int MaxWindowHeight, int ScreenID) override;
-	void GetCurrentVideoMode(CVideoMode &CurMode, int HiDPIScale, int MaxWindowWidth, int MaxWindowHeight, int ScreenID) override;
+	void GetVideoModes(CVideoMode *pModes, int MaxModes, int *pNumModes, int HiDPIScale, int MaxWindowWidth, int MaxWindowHeight, int ScreenId) override;
+	void GetCurrentVideoMode(CVideoMode &CurMode, int HiDPIScale, int MaxWindowWidth, int MaxWindowHeight, int ScreenId) override;
 
 	void Minimize() override;
 	void Maximize() override;
-	void SetWindowParams(int FullscreenMode, bool IsBorderless, bool AllowResizing) override;
+	void SetWindowParams(int FullscreenMode, bool IsBorderless) override;
 	bool SetWindowScreen(int Index) override;
 	bool UpdateDisplayMode(int Index) override;
 	int GetWindowScreen() override;
@@ -271,8 +261,8 @@ public:
 	void GetViewportSize(int &w, int &h) override;
 	void NotifyWindow() override;
 
-	void WindowDestroyNtf(uint32_t WindowID) override;
-	void WindowCreateNtf(uint32_t WindowID) override;
+	void WindowDestroyNtf(uint32_t WindowId) override;
+	void WindowCreateNtf(uint32_t WindowId) override;
 
 	bool GetDriverVersion(EGraphicsDriverAgeType DriverAgeType, int &Major, int &Minor, int &Patch, const char *&pName, EBackendType BackendType) override;
 	bool IsConfigModernAPI() override { return IsModernAPI(m_BackendType); }
@@ -281,7 +271,8 @@ public:
 	bool HasQuadBuffering() override { return m_Capabilites.m_QuadBuffering; }
 	bool HasTextBuffering() override { return m_Capabilites.m_TextBuffering; }
 	bool HasQuadContainerBuffering() override { return m_Capabilites.m_QuadContainerBuffering; }
-	bool Has2DTextureArrays() override { return m_Capabilites.m_2DArrayTextures; }
+	bool Uses2DTextureArrays() override { return m_Capabilites.m_2DArrayTextures; }
+	bool HasTextureArraysSupport() override { return m_Capabilites.m_2DArrayTextures || m_Capabilites.m_3DTextures; }
 
 	const char *GetErrorString() override
 	{

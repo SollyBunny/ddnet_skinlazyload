@@ -1,5 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#include <base/hash_ctxt.h>
+#include <base/log.h>
 #include <base/math.h>
 #include <base/system.h>
 
@@ -12,6 +14,8 @@
 #ifdef CONF_PLATFORM_HAIKU
 #include <cstdlib>
 #endif
+
+#include <zlib.h>
 
 class CStorage : public IStorage
 {
@@ -27,21 +31,36 @@ public:
 	{
 		mem_zero(m_aaStoragePaths, sizeof(m_aaStoragePaths));
 		m_NumPaths = 0;
-		m_aDatadir[0] = 0;
-		m_aUserdir[0] = 0;
+		m_aDatadir[0] = '\0';
+		m_aUserdir[0] = '\0';
+		m_aCurrentdir[0] = '\0';
+		m_aBinarydir[0] = '\0';
 	}
 
 	int Init(int StorageType, int NumArgs, const char **ppArguments)
 	{
+#if defined(CONF_PLATFORM_ANDROID)
+		// See InitAndroid in android_main.cpp for details about Android storage handling.
+		// The current working directory is set to the app specific external storage location
+		// on Android. The user data is stored within a folder "user" in the external storage.
+		str_copy(m_aUserdir, "user");
+#else
 		// get userdir
 		char aFallbackUserdir[IO_MAX_PATH_LENGTH];
-		fs_storage_path("DDNet", m_aUserdir, sizeof(m_aUserdir));
-		fs_storage_path("Teeworlds", aFallbackUserdir, sizeof(aFallbackUserdir));
+		if(fs_storage_path("DDNet", m_aUserdir, sizeof(m_aUserdir)))
+		{
+			log_error("storage", "could not determine user directory");
+		}
+		if(fs_storage_path("Teeworlds", aFallbackUserdir, sizeof(aFallbackUserdir)))
+		{
+			log_error("storage", "could not determine fallback user directory");
+		}
 
-		if(!fs_is_dir(m_aUserdir) && fs_is_dir(aFallbackUserdir))
+		if((m_aUserdir[0] == '\0' || !fs_is_dir(m_aUserdir)) && aFallbackUserdir[0] != '\0' && fs_is_dir(aFallbackUserdir))
 		{
 			str_copy(m_aUserdir, aFallbackUserdir);
 		}
+#endif
 
 		// get datadir
 		FindDatadir(ppArguments[0]);
@@ -51,7 +70,9 @@ public:
 
 		// get currentdir
 		if(!fs_getcwd(m_aCurrentdir, sizeof(m_aCurrentdir)))
-			m_aCurrentdir[0] = 0;
+		{
+			log_error("storage", "could not determine current directory");
+		}
 
 		// load paths from storage.cfg
 		LoadPaths(ppArguments[0]);
@@ -77,6 +98,7 @@ public:
 				CreateFolder("skins", TYPE_SAVE);
 				CreateFolder("downloadedskins", TYPE_SAVE);
 				CreateFolder("themes", TYPE_SAVE);
+				CreateFolder("communityicons", TYPE_SAVE);
 				CreateFolder("assets", TYPE_SAVE);
 				CreateFolder("assets/emoticons", TYPE_SAVE);
 				CreateFolder("assets/entities", TYPE_SAVE);
@@ -92,6 +114,7 @@ public:
 			CreateFolder("demos", TYPE_SAVE);
 			CreateFolder("demos/auto", TYPE_SAVE);
 			CreateFolder("demos/auto/race", TYPE_SAVE);
+			CreateFolder("demos/auto/server", TYPE_SAVE);
 			CreateFolder("demos/replays", TYPE_SAVE);
 			CreateFolder("editor", TYPE_SAVE);
 			CreateFolder("ghosts", TYPE_SAVE);
@@ -104,7 +127,7 @@ public:
 	void LoadPaths(const char *pArgv0)
 	{
 		// check current directory
-		IOHANDLE File = io_open("storage.cfg", IOFLAG_READ | IOFLAG_SKIP_BOM);
+		IOHANDLE File = io_open("storage.cfg", IOFLAG_READ);
 		if(!File)
 		{
 			// check usable path in argv[0]
@@ -117,7 +140,7 @@ public:
 				char aBuffer[IO_MAX_PATH_LENGTH];
 				str_copy(aBuffer, pArgv0, Pos + 1);
 				str_append(aBuffer, "/storage.cfg");
-				File = io_open(aBuffer, IOFLAG_READ | IOFLAG_SKIP_BOM);
+				File = io_open(aBuffer, IOFLAG_READ);
 			}
 
 			if(Pos >= IO_MAX_PATH_LENGTH || !File)
@@ -128,10 +151,12 @@ public:
 		}
 
 		CLineReader LineReader;
-		LineReader.Init(File);
-
-		char *pLine;
-		while((pLine = LineReader.Get()))
+		if(!LineReader.OpenFile(File))
+		{
+			dbg_msg("storage", "couldn't open storage.cfg");
+			return;
+		}
+		while(const char *pLine = LineReader.Get())
 		{
 			const char *pLineWithoutPrefix = str_startswith(pLine, "add_path ");
 			if(pLineWithoutPrefix)
@@ -139,8 +164,6 @@ public:
 				AddPath(pLineWithoutPrefix);
 			}
 		}
-
-		io_close(File);
 
 		if(!m_NumPaths)
 			dbg_msg("storage", "no paths found in storage.cfg");
@@ -157,12 +180,12 @@ public:
 	{
 		if(!pPath[0])
 		{
-			dbg_msg("storage", "cannot add empty path");
+			log_error("storage", "cannot add empty path");
 			return;
 		}
 		if(m_NumPaths >= MAX_PATHS)
 		{
-			dbg_msg("storage", "cannot add path '%s', the maximum number of paths is %d", pPath, MAX_PATHS);
+			log_error("storage", "cannot add path '%s', the maximum number of paths is %d", pPath, MAX_PATHS);
 			return;
 		}
 
@@ -173,6 +196,10 @@ public:
 				str_copy(m_aaStoragePaths[m_NumPaths++], m_aUserdir);
 				dbg_msg("storage", "added path '$USERDIR' ('%s')", m_aUserdir);
 			}
+			else
+			{
+				log_error("storage", "cannot add path '$USERDIR' because it could not be determined");
+			}
 		}
 		else if(!str_comp(pPath, "$DATADIR"))
 		{
@@ -181,13 +208,17 @@ public:
 				str_copy(m_aaStoragePaths[m_NumPaths++], m_aDatadir);
 				dbg_msg("storage", "added path '$DATADIR' ('%s')", m_aDatadir);
 			}
+			else
+			{
+				log_error("storage", "cannot add path '$DATADIR' because it could not be determined");
+			}
 		}
 		else if(!str_comp(pPath, "$CURRENTDIR"))
 		{
-			m_aaStoragePaths[m_NumPaths++][0] = 0;
+			m_aaStoragePaths[m_NumPaths++][0] = '\0';
 			dbg_msg("storage", "added path '$CURRENTDIR' ('%s')", m_aCurrentdir);
 		}
-		else
+		else if(str_utf8_check(pPath))
 		{
 			if(fs_is_dir(pPath))
 			{
@@ -196,8 +227,12 @@ public:
 			}
 			else
 			{
-				dbg_msg("storage", "cannot add path '%s', which is not a directory", pPath);
+				log_error("storage", "cannot add path '%s', which is not a directory", pPath);
 			}
+		}
+		else
+		{
+			log_error("storage", "cannot add path containing invalid UTF-8");
 		}
 	}
 
@@ -530,12 +565,43 @@ public:
 
 	char *ReadFileStr(const char *pFilename, int Type) override
 	{
-		IOHANDLE File = OpenFile(pFilename, IOFLAG_READ | IOFLAG_SKIP_BOM, Type);
+		IOHANDLE File = OpenFile(pFilename, IOFLAG_READ, Type);
 		if(!File)
 			return nullptr;
 		char *pResult = io_read_all_str(File);
 		io_close(File);
 		return pResult;
+	}
+
+	bool CalculateHashes(const char *pFilename, int Type, SHA256_DIGEST *pSha256, unsigned *pCrc) override
+	{
+		dbg_assert(pSha256 != nullptr || pCrc != nullptr, "At least one output argument required");
+
+		IOHANDLE File = OpenFile(pFilename, IOFLAG_READ, Type);
+		if(!File)
+			return false;
+
+		SHA256_CTX Sha256Ctxt;
+		if(pSha256 != nullptr)
+			sha256_init(&Sha256Ctxt);
+		if(pCrc != nullptr)
+			*pCrc = 0;
+		unsigned char aBuffer[64 * 1024];
+		while(true)
+		{
+			unsigned Bytes = io_read(File, aBuffer, sizeof(aBuffer));
+			if(Bytes == 0)
+				break;
+			if(pSha256 != nullptr)
+				sha256_update(&Sha256Ctxt, aBuffer, Bytes);
+			if(pCrc != nullptr)
+				*pCrc = crc32(*pCrc, aBuffer, Bytes);
+		}
+		if(pSha256 != nullptr)
+			*pSha256 = sha256_finish(&Sha256Ctxt);
+
+		io_close(File);
+		return true;
 	}
 
 	struct CFindCBData
@@ -782,8 +848,6 @@ public:
 				str_append(pBuffer, "/", BufferSize);
 				str_append(pBuffer, aBinaryPath, BufferSize);
 			}
-			else
-				pBuffer[0] = '\0';
 		}
 		else
 			str_copy(pBuffer, aBinaryPath, BufferSize);

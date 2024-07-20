@@ -6,6 +6,7 @@
 #include <base/vmath.h>
 #include <engine/shared/protocol.h>
 
+#include <map>
 #include <vector>
 
 enum
@@ -23,31 +24,27 @@ struct CAntibotMapData;
 
 class CCollision
 {
-	class CTile *m_pTiles;
-	int m_Width;
-	int m_Height;
-	class CLayers *m_pLayers;
-
 public:
 	CCollision();
 	~CCollision();
+
 	void Init(class CLayers *pLayers);
+	void Unload();
 	void FillAntibot(CAntibotMapData *pMapData);
+
 	bool CheckPoint(float x, float y) const { return IsSolid(round_to_int(x), round_to_int(y)); }
 	bool CheckPoint(vec2 Pos) const { return CheckPoint(Pos.x, Pos.y); }
 	int GetCollisionAt(float x, float y) const { return GetTile(round_to_int(x), round_to_int(y)); }
 	int GetWidth() const { return m_Width; }
 	int GetHeight() const { return m_Height; }
 	int IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const;
-	int IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const;
-	int IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr) const;
+	int IntersectLineTeleWeapon(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr = nullptr) const;
+	int IntersectLineTeleHook(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision, int *pTeleNr = nullptr) const;
 	void MovePoint(vec2 *pInoutPos, vec2 *pInoutVel, float Elasticity, int *pBounces) const;
 	void MoveBox(vec2 *pInoutPos, vec2 *pInoutVel, vec2 Size, vec2 Elasticity, bool *pGrounded = nullptr) const;
 	bool TestBox(vec2 Pos, vec2 Size) const;
 
 	// DDRace
-
-	void Dest();
 	void SetCollisionAt(float x, float y, int id);
 	void SetDTile(float x, float y, bool State);
 	void SetDCollisionAt(float x, float y, int Type, int Flags, int Number);
@@ -62,7 +59,7 @@ public:
 	int GetIndex(vec2 PrevPos, vec2 Pos) const;
 	int GetFIndex(int x, int y) const;
 
-	int GetMoveRestrictions(CALLBACK_SWITCHACTIVE pfnSwitchActive, void *pUser, vec2 Pos, float Distance = 18.0f, int OverrideCenterTileIndex = -1);
+	int GetMoveRestrictions(CALLBACK_SWITCHACTIVE pfnSwitchActive, void *pUser, vec2 Pos, float Distance = 18.0f, int OverrideCenterTileIndex = -1) const;
 	int GetMoveRestrictions(vec2 Pos, float Distance = 18.0f)
 	{
 		return GetMoveRestrictions(nullptr, nullptr, Pos, Distance);
@@ -116,7 +113,44 @@ public:
 	class CLayers *Layers() { return m_pLayers; }
 	int m_HighestSwitchNumber;
 
+	/**
+	 * Index all teleporter types (in, out and checkpoints)
+	 * as one consecutive list.
+	 *
+	 * @param Number is the teleporter number (one less than what is shown in game)
+	 * @param Offset picks the n'th occurence of that teleporter in the map
+	 *
+	 * @return The coordinates of the teleporter in the map
+	 *         or (-1, -1) if not found
+	 */
+	vec2 TeleAllGet(int Number, size_t Offset);
+
+	/**
+	 * @param Number is the teleporter number (one less than what is shown in game)
+	 * @return The amount of occurences of that teleporter across all types (in, out, checkpoint)
+	 */
+	size_t TeleAllSize(int Number);
+
+	const std::vector<vec2> &TeleIns(int Number) { return m_TeleIns[Number]; }
+	const std::vector<vec2> &TeleOuts(int Number) { return m_TeleOuts[Number]; }
+	const std::vector<vec2> &TeleCheckOuts(int Number) { return m_TeleCheckOuts[Number]; }
+	const std::vector<vec2> &TeleOthers(int Number) { return m_TeleOthers[Number]; }
+
 private:
+	class CTile *m_pTiles;
+	int m_Width;
+	int m_Height;
+	class CLayers *m_pLayers;
+
+	// TILE_TELEIN
+	std::map<int, std::vector<vec2>> m_TeleIns;
+	// TILE_TELEOUT
+	std::map<int, std::vector<vec2>> m_TeleOuts;
+	// TILE_TELECHECKOUT
+	std::map<int, std::vector<vec2>> m_TeleCheckOuts;
+	// TILE_TELEINEVIL, TILE_TELECHECK, TILE_TELECHECKIN, TILE_TELECHECKINEVIL
+	std::map<int, std::vector<vec2>> m_TeleOthers;
+
 	class CTeleTile *m_pTele;
 	class CSpeedupTile *m_pSpeedup;
 	class CTile *m_pFront;

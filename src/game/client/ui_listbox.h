@@ -24,7 +24,6 @@ private:
 	int m_ListBoxNewSelected;
 	int m_ListBoxNewSelOffset;
 	bool m_ListBoxUpdateScroll;
-	bool m_ListBoxDoneEvents;
 	int m_ListBoxNumItems;
 	int m_ListBoxItemsPerRow;
 	bool m_ListBoxItemSelected;
@@ -54,7 +53,7 @@ public:
 	void DoFooter(const char *pBottomText, float FooterHeight = 20.0f); // call before DoStart to create a footer
 	void DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsPerScroll, int SelectedIndex, const CUIRect *pRect = nullptr, bool Background = true, int BackgroundCorners = IGraphics::CORNER_ALL, bool ForceShowScrollbar = false);
 	void ScrollToSelected() { m_ListBoxUpdateScroll = true; }
-	CListboxItem DoNextItem(const void *pID, bool Selected = false);
+	CListboxItem DoNextItem(const void *pId, bool Selected = false, float CornerRadius = 5.0f);
 	CListboxItem DoSubheader();
 	int DoEnd();
 

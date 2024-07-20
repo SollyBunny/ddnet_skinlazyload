@@ -18,17 +18,21 @@ typedef std::function<void()> TUpdateIntraTimesFunc;
 class CDemoRecorder : public IDemoRecorder
 {
 	class IConsole *m_pConsole;
+	class IStorage *m_pStorage;
+
 	IOHANDLE m_File;
 	char m_aCurrentFilename[IO_MAX_PATH_LENGTH];
 	int m_LastTickMarker;
 	int m_LastKeyFrame;
 	int m_FirstTick;
+
 	unsigned char m_aLastSnapshotData[CSnapshot::MAX_SIZE];
 	class CSnapshotDelta *m_pSnapshotDelta;
+
 	int m_NumTimelineMarkers;
 	int m_aTimelineMarkers[MAX_TIMELINE_MARKERS];
+
 	bool m_NoMapData;
-	unsigned char *m_pMapData;
 
 	DEMOFUNC_FILTER m_pfnFilter;
 	void *m_pUser;
@@ -42,7 +46,7 @@ public:
 	~CDemoRecorder() override;
 
 	int Start(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, const char *pNetversion, const char *pMap, const SHA256_DIGEST &Sha256, unsigned MapCrc, const char *pType, unsigned MapSize, unsigned char *pMapData, IOHANDLE MapFile = nullptr, DEMOFUNC_FILTER pfnFilter = nullptr, void *pUser = nullptr);
-	int Stop() override;
+	int Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilename = "") override;
 
 	void AddDemoMarker();
 	void AddDemoMarker(int Tick);
@@ -51,8 +55,7 @@ public:
 	void RecordMessage(const void *pData, int Size);
 
 	bool IsRecording() const override { return m_File != nullptr; }
-	char *GetCurrentFilename() override { return m_aCurrentFilename; }
-	void ClearCurrentFilename() { m_aCurrentFilename[0] = '\0'; }
+	const char *CurrentFilename() const override { return m_aCurrentFilename; }
 
 	int Length() const override { return (m_LastTickMarker - m_FirstTick) / SERVER_TICK_SPEED; }
 };
@@ -115,14 +118,21 @@ private:
 	CPlaybackInfo m_Info;
 	unsigned char m_aCompressedSnapshotData[CSnapshot::MAX_SIZE];
 	unsigned char m_aDecompressedSnapshotData[CSnapshot::MAX_SIZE];
-	unsigned char m_aCurrentSnapshotData[CSnapshot::MAX_SIZE];
-	unsigned char m_aDeltaSnapshotData[CSnapshot::MAX_SIZE];
+
+	// Depending on the chunk header
+	// this is either a full CSnapshot or a CSnapshotDelta.
+	unsigned char m_aChunkData[CSnapshot::MAX_SIZE];
+	// Storage for the full snapshot
+	// where the delta gets unpacked into.
+	unsigned char m_aSnapshot[CSnapshot::MAX_SIZE];
 	unsigned char m_aLastSnapshotData[CSnapshot::MAX_SIZE];
 	int m_LastSnapshotDataSize;
 	class CSnapshotDelta *m_pSnapshotDelta;
 
 	bool m_UseVideo;
+#if defined(CONF_VIDEORECORDER)
 	bool m_WasRecording = false;
+#endif
 
 	enum EReadChunkHeaderResult
 	{
@@ -162,8 +172,8 @@ public:
 	const CInfo *BaseInfo() const override { return &m_Info.m_Info; }
 	void GetDemoName(char *pBuffer, size_t BufferSize) const override;
 	bool GetDemoInfo(class IStorage *pStorage, class IConsole *pConsole, const char *pFilename, int StorageType, CDemoHeader *pDemoHeader, CTimelineMarkers *pTimelineMarkers, CMapInfo *pMapInfo, IOHANDLE *pFile = nullptr, char *pErrorMessage = nullptr, size_t ErrorMessageSize = 0) const override;
-	const char *Filename() { return m_aFilename; }
-	const char *ErrorMessage() { return m_aErrorMessage; }
+	const char *Filename() const { return m_aFilename; }
+	const char *ErrorMessage() const override { return m_aErrorMessage; }
 
 	int Update(bool RealTime = true);
 
@@ -181,7 +191,7 @@ class CDemoEditor : public IDemoEditor
 
 public:
 	virtual void Init(const char *pNetVersion, class CSnapshotDelta *pSnapshotDelta, class IConsole *pConsole, class IStorage *pStorage);
-	void Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser) override;
+	bool Slice(const char *pDemo, const char *pDst, int StartTick, int EndTick, DEMOFUNC_FILTER pfnFilter, void *pUser) override;
 };
 
 #endif

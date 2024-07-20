@@ -1,3 +1,5 @@
+#include "mapsounds.h"
+
 #include <base/log.h>
 
 #include <engine/demo.h>
@@ -7,9 +9,8 @@
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
 #include <game/layers.h>
+#include <game/localization.h>
 #include <game/mapitems.h>
-
-#include "mapsounds.h"
 
 CMapSounds::CMapSounds()
 {
@@ -22,11 +23,17 @@ void CMapSounds::OnMapLoad()
 
 	Clear();
 
+	if(!Sound()->IsSoundEnabled())
+		return;
+
 	// load samples
 	int Start;
 	pMap->GetType(MAPITEMTYPE_SOUND, &Start, &m_Count);
 
+	m_Count = clamp<int>(m_Count, 0, MAX_MAPSOUNDS);
+
 	// load new samples
+	bool ShowWarning = false;
 	for(int i = 0; i < m_Count; i++)
 	{
 		CMapItemSound *pSound = (CMapItemSound *)pMap->GetItem(Start + i);
@@ -36,6 +43,7 @@ void CMapSounds::OnMapLoad()
 			if(pName == nullptr || pName[0] == '\0')
 			{
 				log_error("mapsounds", "Failed to load map sound %d: failed to load name.", i);
+				ShowWarning = true;
 				continue;
 			}
 
@@ -46,14 +54,19 @@ void CMapSounds::OnMapLoad()
 		}
 		else
 		{
-			void *pData = pMap->GetData(pSound->m_SoundData);
-			m_aSounds[i] = Sound()->LoadOpusFromMem(pData, pSound->m_SoundDataSize);
+			const int SoundDataSize = pMap->GetDataSize(pSound->m_SoundData);
+			const void *pData = pMap->GetData(pSound->m_SoundData);
+			m_aSounds[i] = Sound()->LoadOpusFromMem(pData, SoundDataSize);
 			pMap->UnloadData(pSound->m_SoundData);
 		}
+		ShowWarning = ShowWarning || m_aSounds[i] == -1;
+	}
+	if(ShowWarning)
+	{
+		Client()->AddWarning(SWarning(Localize("Some map sounds could not be loaded. Check the local console for details.")));
 	}
 
 	// enqueue sound sources
-	m_vSourceQueue.clear();
 	for(int g = 0; g < Layers()->NumGroups(); g++)
 	{
 		CMapItemGroup *pGroup = Layers()->GetGroup(g);
@@ -85,15 +98,15 @@ void CMapSounds::OnMapLoad()
 
 				for(int i = 0; i < pSoundLayer->m_NumSources; i++)
 				{
-					CSourceQueueEntry source;
-					source.m_Sound = pSoundLayer->m_Sound;
-					source.m_pSource = &pSources[i];
-					source.m_HighDetail = pLayer->m_Flags & LAYERFLAG_DETAIL;
+					CSourceQueueEntry Source;
+					Source.m_Sound = pSoundLayer->m_Sound;
+					Source.m_pSource = &pSources[i];
+					Source.m_HighDetail = pLayer->m_Flags & LAYERFLAG_DETAIL;
 
-					if(!source.m_pSource || source.m_Sound == -1)
+					if(!Source.m_pSource || Source.m_Sound < 0 || Source.m_Sound >= m_Count)
 						continue;
 
-					m_vSourceQueue.push_back(source);
+					m_vSourceQueue.push_back(Source);
 				}
 			}
 		}
@@ -118,7 +131,7 @@ void CMapSounds::OnRender()
 				Client()->IntraGameTick(g_Config.m_ClDummy));
 		}
 		float Offset = s_Time - Source.m_pSource->m_TimeDelay;
-		if(!DemoPlayerPaused && Offset >= 0.0f && g_Config.m_SndEnable)
+		if(!DemoPlayerPaused && Offset >= 0.0f && g_Config.m_SndEnable && (g_Config.m_GfxHighDetail || !Source.m_HighDetail))
 		{
 			if(Source.m_Voice.IsValid())
 			{
@@ -198,18 +211,11 @@ void CMapSounds::OnRender()
 						if(!Voice.m_Voice.IsValid())
 							continue;
 
-						float OffsetX = 0, OffsetY = 0;
+						ColorRGBA Position = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f);
+						CMapLayers::EnvelopeEval(Voice.m_pSource->m_PosEnvOffset, Voice.m_pSource->m_PosEnv, Position, 2, &m_pClient->m_MapLayersBackground);
 
-						if(Voice.m_pSource->m_PosEnv >= 0)
-						{
-							ColorRGBA Channels;
-							CMapLayers::EnvelopeEval(Voice.m_pSource->m_PosEnvOffset, Voice.m_pSource->m_PosEnv, Channels, &m_pClient->m_MapLayersBackground);
-							OffsetX = Channels.r;
-							OffsetY = Channels.g;
-						}
-
-						float x = fx2f(Voice.m_pSource->m_Position.x) + OffsetX;
-						float y = fx2f(Voice.m_pSource->m_Position.y) + OffsetY;
+						float x = fx2f(Voice.m_pSource->m_Position.x) + Position.r;
+						float y = fx2f(Voice.m_pSource->m_Position.y) + Position.g;
 
 						x += Center.x * (1.0f - pGroup->m_ParallaxX / 100.0f);
 						y += Center.y * (1.0f - pGroup->m_ParallaxY / 100.0f);
@@ -219,13 +225,11 @@ void CMapSounds::OnRender()
 
 						Sound()->SetVoiceLocation(Voice.m_Voice, x, y);
 
-						if(Voice.m_pSource->m_SoundEnv >= 0)
+						ColorRGBA Volume = ColorRGBA(1.0f, 0.0f, 0.0f, 0.0f);
+						CMapLayers::EnvelopeEval(Voice.m_pSource->m_SoundEnvOffset, Voice.m_pSource->m_SoundEnv, Volume, 1, &m_pClient->m_MapLayersBackground);
+						if(Volume.r < 1.0f)
 						{
-							ColorRGBA Channels;
-							CMapLayers::EnvelopeEval(Voice.m_pSource->m_SoundEnvOffset, Voice.m_pSource->m_SoundEnv, Channels, &m_pClient->m_MapLayersBackground);
-							float Volume = clamp(Channels.r, 0.0f, 1.0f);
-
-							Sound()->SetVoiceVolume(Voice.m_Voice, Volume);
+							Sound()->SetVoiceVolume(Voice.m_Voice, Volume.r);
 						}
 					}
 				}
@@ -237,6 +241,7 @@ void CMapSounds::OnRender()
 void CMapSounds::Clear()
 {
 	// unload all samples
+	m_vSourceQueue.clear();
 	for(int i = 0; i < m_Count; i++)
 	{
 		Sound()->UnloadSample(m_aSounds[i]);

@@ -129,6 +129,19 @@ void CGameWorld::Snap(int SnappingClient)
 	}
 }
 
+void CGameWorld::PostSnap()
+{
+	for(auto *pEnt : m_apFirstEntityTypes)
+	{
+		for(; pEnt;)
+		{
+			m_pNextTraverseEntity = pEnt->m_pNextTypeEntity;
+			pEnt->PostSnap();
+			pEnt = m_pNextTraverseEntity;
+		}
+	}
+}
+
 void CGameWorld::Reset()
 {
 	// reset all entities
@@ -163,7 +176,7 @@ void CGameWorld::RemoveEntitiesFromPlayers(int PlayerIds[], int NumPlayers)
 			m_pNextTraverseEntity = pEnt->m_pNextTypeEntity;
 			for(int i = 0; i < NumPlayers; i++)
 			{
-				if(pEnt->GetOwnerID() == PlayerIds[i])
+				if(pEnt->GetOwnerId() == PlayerIds[i])
 				{
 					RemoveEntity(pEnt);
 					pEnt->Destroy();
@@ -199,7 +212,7 @@ void CGameWorld::Tick()
 	if(!m_Paused)
 	{
 		if(GameServer()->m_pController->IsForceBalanced())
-			GameServer()->SendChat(-1, CGameContext::CHAT_ALL, "Teams have been balanced");
+			GameServer()->SendChat(-1, TEAM_ALL, "Teams have been balanced");
 
 		// update all objects
 		for(int i = 0; i < NUM_ENTTYPES; i++)
@@ -249,11 +262,11 @@ void CGameWorld::Tick()
 	RemoveEntities();
 
 	// find the characters' strong/weak id
-	int StrongWeakID = 0;
+	int StrongWeakId = 0;
 	for(CCharacter *pChar = (CCharacter *)FindFirst(ENTTYPE_CHARACTER); pChar; pChar = (CCharacter *)pChar->TypeNext())
 	{
-		pChar->m_StrongWeakID = StrongWeakID;
-		StrongWeakID++;
+		pChar->m_StrongWeakId = StrongWeakId;
+		StrongWeakId++;
 	}
 }
 
@@ -349,7 +362,6 @@ std::vector<CCharacter *> CGameWorld::IntersectedCharacters(vec2 Pos0, vec2 Pos1
 			float Len = distance(pChr->m_Pos, IntersectPos);
 			if(Len < pChr->m_ProximityRadius + Radius)
 			{
-				pChr->m_Intersection = IntersectPos;
 				vpCharacters.push_back(pChr);
 			}
 		}
@@ -357,17 +369,14 @@ std::vector<CCharacter *> CGameWorld::IntersectedCharacters(vec2 Pos0, vec2 Pos1
 	return vpCharacters;
 }
 
-void CGameWorld::ReleaseHooked(int ClientID)
+void CGameWorld::ReleaseHooked(int ClientId)
 {
 	CCharacter *pChr = (CCharacter *)CGameWorld::FindFirst(CGameWorld::ENTTYPE_CHARACTER);
 	for(; pChr; pChr = (CCharacter *)pChr->TypeNext())
 	{
-		CCharacterCore *pCore = pChr->Core();
-		if(pCore->HookedPlayer() == ClientID && !pChr->IsSuper())
+		if(pChr->Core()->HookedPlayer() == ClientId && !pChr->IsSuper())
 		{
-			pCore->SetHookedPlayer(-1);
-			pCore->m_TriggeredEvents |= COREEVENT_HOOK_RETRACT;
-			pCore->m_HookState = HOOK_RETRACTED;
+			pChr->ReleaseHook();
 		}
 	}
 }

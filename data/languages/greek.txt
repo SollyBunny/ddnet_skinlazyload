@@ -25,9 +25,6 @@
 %s wins!
 == Ο/Η %s νίκησε!
 
--Page %d-
-== -Σελίδα %d-
-
 Abort
 == Ματαίωση
 
@@ -79,8 +76,8 @@ Client
 Connecting to
 == Σύνδεση με
 
-Connection Problems...
-== Προβλήματα Σύνδεσης...
+Connection Problems…
+== Προβλήματα Σύνδεσης…
 
 Console
 == Κονσόλα
@@ -102,9 +99,6 @@ Delete
 
 Delete demo
 == Διαγραφή επίδειξης
-
-Demo details
-== Λεπτομέρειες επίδειξης
 
 Demofile: %s
 == Αρχείο επίδειξης: %s
@@ -262,9 +256,6 @@ No servers match your filter criteria
 Ok
 == Εντάξει
 
-Open
-== Άνοιγμα
-
 Parent Folder
 == Επάνω
 
@@ -279,10 +270,6 @@ Ping
 
 Pistol
 == Πιστόλι
-
-[Demo browser]
-Play
-== Παίξτε
 
 Play background music
 == Αναπαραγωγή μουσικής υπόκρουσης
@@ -317,9 +304,6 @@ Red team
 Red team wins!
 == Η κόκκινη ομάδα νίκησε!
 
-Refresh
-== Ανανέωση
-
 Remote console
 == Απομακρ. κονσόλα
 
@@ -328,9 +312,6 @@ Remove
 
 Remove friend
 == Αφαίρεση φίλου
-
-Rename
-== Μετονομασία
 
 Rename demo
 == Μετονομασία επίδειξης
@@ -422,9 +403,6 @@ The audio device couldn't be initialised.
 The server is running a non-standard tuning on a pure game type.
 == Ο διακομιστής εκτελεί μη-κανονικές ρυθμίσεις σε κανονικό τύπο παιχνιδιού.
 
-There's an unsaved map in the editor, you might want to save it before you quit the game.
-== Υπαρχεί μη αποθηκευμένος χάρτης στον επεξεργαστή. Να γίνει αποθήκευση πριν την έξοδο;
-
 Time limit
 == Όριο χρόνου
 
@@ -508,23 +486,11 @@ FSAA samples
 Sound volume
 == Ένταση ήχου
 
-Created:
-== Δημιουργήθηκε:
-
 Max Screenshots
 == Μέγιστος αριθμός στιγμιότυπων
 
-Length:
-== Διάρκεια:
-
 Laser
 == Λέιζερ
-
-Netversion:
-== Έκδοση:
-
-Map:
-== Χάρτης:
 
 Hue
 == Απόχρωση
@@ -535,29 +501,14 @@ Record demo
 Your skin
 == Η στολή σας
 
-Size:
-== Μέγεθος:
-
 Reset to defaults
 == Επαναφορά προεπιλογών
-
-Quit anyway?
-== Έξοδος οπωσδήποτε;
-
-Version:
-== Έκδοση:
-
-Round
-== Γύρος
 
 Lht.
 == Φωτεινότ.
 
 UI Color
 == Χρώμα Μενού
-
-Crc:
-== Crc:
 
 Alpha
 == Άλφα
@@ -567,9 +518,6 @@ LAN
 
 Name plates size
 == Μήκος ψευδωνύμου
-
-Type:
-== Τύπος:
 
 [Graphics error]
 Failed during initialization. Try to change gfx_backend to OpenGL or Vulkan in settings_ddnet.cfg in the config directory and try again.
@@ -610,10 +558,19 @@ Could not initialize the given graphics backend, this is probably because you di
 Could not save downloaded map. Try manually deleting this file: %s
 == 
 
+Error playing demo
+== 
+
 Successfully saved the replay!
 == 
 
-Saving ddnet-settings.cfg failed
+Failed saving the replay!
+== 
+
+Saving settings to '%s' failed
+== 
+
+Error saving settings
 == 
 
 Replay feature is disabled!
@@ -634,13 +591,16 @@ Connected
 Loading map file from storage
 == 
 
+Loading demo file from storage
+== 
+
 Loading DDNet Client
 == 
 
-Why are you slowmo replaying to read this?
+Initializing components
 == 
 
-Initializing components
+Why are you slowmo replaying to read this?
 == 
 
 Initializing assets
@@ -661,6 +621,39 @@ Quitting. Please wait…
 Restarting. Please wait…
 == 
 
+Loading skin files
+== 
+
+Searching
+== 
+
+Enter Username
+== 
+
+Enter Password
+== 
+
+NOT CONNECTED
+== 
+
+Match %d of %d
+== 
+
+No results
+== 
+
+Lines %d - %d (%s)
+== 
+
+Locked
+== 
+
+Following
+== 
+
+Loading commands…
+== 
+
 Debug mode enabled. Press Ctrl+Shift+D to disable debug mode.
 == 
 
@@ -676,6 +669,10 @@ Angle:
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
 Server best:
 == 
 
@@ -685,34 +682,37 @@ Personal best:
 Team %d
 == 
 
+Some map images could not be loaded. Check the local console for details.
+== 
+
 Uploading map data to GPU
 == 
 
+Some map sounds could not be loaded. Check the local console for details.
+== 
+
+Loading menu themes
+== 
+
 Reset
+== 
+
+Press a key…
+== 
+
+Settings
+== 
+
+Editor
+== 
+
+Main menu
 == 
 
 Browser
 == 
 
 Ghost
-== 
-
-Trying to determine UDP connectivity...
-== 
-
-UDP seems to be filtered.
-== 
-
-UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
-== 
-
-No answer from server yet.
-== 
-
-Getting game info
-== 
-
-Requesting to join the game
 == 
 
 Reconnect in %d sec
@@ -722,6 +722,15 @@ Rename folder
 == 
 
 Render demo
+== 
+
+Render complete
+== 
+
+Restart
+== 
+
+Are you sure that you want to restart?
 == 
 
 Welcome to DDNet
@@ -748,6 +757,12 @@ Your nickname '%s' is already used (%d points). Do you still want to use it?
 Checking for existing player with your name
 == 
 
+There's an unsaved map in the editor, you might want to save it.
+== 
+
+Continue anyway?
+== 
+
 A demo with this name already exists
 == 
 
@@ -772,6 +787,12 @@ Speed
 Video name:
 == 
 
+Videos directory
+== 
+
+Video was saved to '%s'
+== 
+
 Join Tutorial Server
 == 
 
@@ -782,6 +803,27 @@ Show DDNet map finishes in server browser
 == 
 
 transmits your player name to info.ddnet.org
+== 
+
+Trying to determine UDP connectivity…
+== 
+
+UDP seems to be filtered.
+== 
+
+UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
+== 
+
+No answer from server yet.
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+Getting game info
+== 
+
+Requesting to join the game
 == 
 
 Theme
@@ -817,6 +859,9 @@ Getting server list from master server
 Search
 == 
 
+Example of usage
+== 
+
 Exclude
 == 
 
@@ -835,6 +880,9 @@ Exclude
 Are you sure that you want to disconnect and switch to a different server?
 == 
 
+No login required
+== 
+
 Filter connecting players
 == 
 
@@ -848,6 +896,9 @@ Countries
 == 
 
 Types
+== 
+
+Communities
 == 
 
 Copy info
@@ -888,6 +939,12 @@ Are you sure that you want to remove the clan '%s' from your friends list?
 == 
 
 Add Clan
+== 
+
+Server filter
+== 
+
+Friends
 == 
 
 Play the current demo
@@ -964,7 +1021,7 @@ Remove chat
 Render cut to video
 == 
 
-Please use a different name
+Please use a different filename
 == 
 
 File already exists, do you want to overwrite it?
@@ -976,28 +1033,41 @@ Loading demo files
 All combined
 == 
 
-Folder Link
-== 
-
-Markers:
-== 
-
-%.2f MiB
-== 
-
-%.2f KiB
-== 
-
 Demo
-== 
-
-Markers
 == 
 
 Length
 == 
 
 Date
+== 
+
+No demo selected
+== 
+
+Folder Link
+== 
+
+Created
+== 
+
+Markers
+== 
+
+Netversion
+== 
+
+Size
+== 
+
+[Demo details]
+map not included
+== 
+
+%.2f MiB
+== 
+
+%.2f KiB
 == 
 
 Fetch Info
@@ -1016,9 +1086,6 @@ Are you sure that you want to delete the demo '%s'?
 == 
 
 Delete folder
-== 
-
-Render
 == 
 
 Unable to delete the demo '%s'
@@ -1048,13 +1115,22 @@ Kill
 Pause
 == 
 
+Loading…
+== 
+
 Loading ghost files
 == 
 
 Time
 == 
 
-Reload
+Ghosts directory
+== 
+
+Activate all
+== 
+
+Deactivate all
 == 
 
 Deactivate
@@ -1111,13 +1187,10 @@ Automatically create statboard csv
 Max CSVs
 == 
 
-Dummy settings
+Dummy
 == 
 
-Toggle to edit your dummy settings
-== 
-
-Loading skin files
+Player info change cooldown
 == 
 
 Download skins
@@ -1135,10 +1208,10 @@ Fat skins (DDFat)
 Skin prefix
 == 
 
-Choose default eyes when joining a server
+Create a random skin
 == 
 
-Create a random skin
+Choose default eyes when joining a server
 == 
 
 Skin Database
@@ -1257,9 +1330,6 @@ Are you sure that you want to reset the controls to their defaults?
 Cancel
 == 
 
-Dummy
-== 
-
 Windowed
 == 
 
@@ -1332,6 +1402,9 @@ Map sound volume
 Background music volume
 == 
 
+Tee
+== 
+
 Appearance
 == 
 
@@ -1353,25 +1426,22 @@ Name Plate
 Hook Collisions
 == 
 
-Kill Messages
+Info Messages
 == 
 
 Show health, shields and ammo
 == 
 
-Show kill messages
+Show score
 == 
 
-Show score
+Show local time always
 == 
 
 Show votes window after voting
 == 
 
 DDRace HUD
-== 
-
-Use DDRace Scoreboard
 == 
 
 Show client IDs in scoreboard
@@ -1401,10 +1471,22 @@ Show freeze bars
 Opacity of freeze bars inside freeze
 == 
 
+Always show chat
+== 
+
 Show names in chat in team colors
 == 
 
+Show only chat messages from team members
+== 
+
 Use old chat style
+== 
+
+Chat font size
+== 
+
+Chat width
 == 
 
 Messages
@@ -1437,7 +1519,13 @@ Show clan above name plates
 Clan plates size
 == 
 
-Show hook strength indicator
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
 == 
 
 Show other players' key presses
@@ -1446,10 +1534,25 @@ Show other players' key presses
 Show local player's key presses
 == 
 
+Authed name color in scoreboard
+== 
+
+Same clan color in scoreboard
+== 
+
 Hook collision line
 == 
 
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
 Show other players' hook collision lines
+== 
+
+Always show other players' hook collision lines
 == 
 
 Hook collision line width
@@ -1471,6 +1574,12 @@ Something hookable
 == 
 
 A Tee
+== 
+
+Show kill messages
+== 
+
+Show finish messages
 == 
 
 Normal Color
@@ -1521,13 +1630,22 @@ Enable replays
 Default length
 == 
 
+Enable ghost
+== 
+
 When you cross the start line, show a ghost tee replicating the movements of your best time
 == 
 
 Show ghost
 == 
 
+Opacity
+== 
+
 Save ghost
+== 
+
+Only save improvements
 == 
 
 Gameplay
@@ -1537,12 +1655,6 @@ Overlay entities
 == 
 
 Show text entities
-== 
-
-Size
-== 
-
-Opacity
 == 
 
 Adjust the opacity of entities belonging to other teams, such as tees and nameplates
@@ -1575,16 +1687,19 @@ AntiPing: predict grenade paths
 Background
 == 
 
-Entities Background color
+Regular background color
+== 
+
+Entities background color
+== 
+
+Reload
 == 
 
 Use current map as background
 == 
 
 Show tiles layers from BG map
-== 
-
-Regular Background Color
 == 
 
 New random timeout code
@@ -1605,7 +1720,7 @@ DDNet %s is available:
 Update now
 == 
 
-Updating...
+Updating…
 == 
 
 DDNet Client updated!
@@ -1656,9 +1771,6 @@ Can't find a Tutorial server
 Website
 == 
 
-Settings
-== 
-
 Stop server
 == 
 
@@ -1666,9 +1778,6 @@ Run server
 == 
 
 Server executable not found, can't run server
-== 
-
-Editor
 == 
 
 [Start menu]
@@ -1681,16 +1790,27 @@ DDNet %s is out!
 Downloading %s:
 == 
 
-Update failed! Check log...
-== 
-
-Restart
+Update failed! Check log…
 == 
 
 Loading race demo files
 == 
 
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
 Super
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
 == 
 
 Manual
@@ -1748,4 +1868,7 @@ Grabs
 == 
 
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

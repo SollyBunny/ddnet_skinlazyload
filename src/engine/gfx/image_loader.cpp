@@ -59,12 +59,15 @@ static EImageFormat LibPNGGetImageFormat(int ColorChannelCount)
 	{
 	case 1:
 		return IMAGE_FORMAT_R;
+	case 2:
+		return IMAGE_FORMAT_RA;
 	case 3:
 		return IMAGE_FORMAT_RGB;
 	case 4:
 		return IMAGE_FORMAT_RGBA;
 	default:
-		return IMAGE_FORMAT_RGBA;
+		dbg_assert(false, "ColorChannelCount invalid");
+		dbg_break();
 	}
 }
 
@@ -121,7 +124,7 @@ static int PngliteIncompatibility(png_structp pPNGStruct, png_infop pPNGInfo)
 	return Result;
 }
 
-bool LoadPNG(SImageByteBuffer &ByteLoader, const char *pFileName, int &PngliteIncompatible, int &Width, int &Height, uint8_t *&pImageBuff, EImageFormat &ImageFormat)
+bool LoadPng(SImageByteBuffer &ByteLoader, const char *pFileName, int &PngliteIncompatible, size_t &Width, size_t &Height, uint8_t *&pImageBuff, EImageFormat &ImageFormat)
 {
 	SLibPNGWarningItem UserErrorStruct = {&ByteLoader, pFileName, {}};
 
@@ -140,7 +143,7 @@ bool LoadPNG(SImageByteBuffer &ByteLoader, const char *pFileName, int &PngliteIn
 	{
 		if(pRowPointers != nullptr)
 		{
-			for(int i = 0; i < Height; ++i)
+			for(size_t i = 0; i < Height; ++i)
 			{
 				delete[] pRowPointers[i];
 			}
@@ -217,12 +220,12 @@ bool LoadPNG(SImageByteBuffer &ByteLoader, const char *pFileName, int &PngliteIn
 
 	png_read_update_info(pPNGStruct, pPNGInfo);
 
-	const int ColorChannelCount = png_get_channels(pPNGStruct, pPNGInfo);
-	const int BytesInRow = png_get_rowbytes(pPNGStruct, pPNGInfo);
+	const size_t ColorChannelCount = png_get_channels(pPNGStruct, pPNGInfo);
+	const size_t BytesInRow = png_get_rowbytes(pPNGStruct, pPNGInfo);
 	dbg_assert(BytesInRow == Width * ColorChannelCount, "bytes in row incorrect.");
 
 	pRowPointers = new png_bytep[Height];
-	for(int y = 0; y < Height; ++y)
+	for(size_t y = 0; y < Height; ++y)
 	{
 		pRowPointers[y] = new png_byte[BytesInRow];
 	}
@@ -230,9 +233,9 @@ bool LoadPNG(SImageByteBuffer &ByteLoader, const char *pFileName, int &PngliteIn
 	png_read_image(pPNGStruct, pRowPointers);
 
 	if(ByteLoader.m_Err == 0)
-		pImageBuff = (uint8_t *)malloc((size_t)Height * (size_t)Width * (size_t)ColorChannelCount * sizeof(uint8_t));
+		pImageBuff = (uint8_t *)malloc(Height * Width * ColorChannelCount * sizeof(uint8_t));
 
-	for(int i = 0; i < Height; ++i)
+	for(size_t i = 0; i < Height; ++i)
 	{
 		if(ByteLoader.m_Err == 0)
 			mem_copy(&pImageBuff[i * BytesInRow], pRowPointers[i], BytesInRow);
@@ -274,19 +277,25 @@ static void WriteDataFromLoadedBytes(png_structp pPNGStruct, png_bytep pOutBytes
 
 static void FlushPNGWrite(png_structp png_ptr) {}
 
-static int ImageLoaderHelperFormatToColorChannel(EImageFormat Format)
+static size_t ImageLoaderHelperFormatToColorChannel(EImageFormat Format)
 {
-	if(Format == IMAGE_FORMAT_R)
+	switch(Format)
+	{
+	case IMAGE_FORMAT_R:
 		return 1;
-	else if(Format == IMAGE_FORMAT_RGB)
+	case IMAGE_FORMAT_RA:
+		return 2;
+	case IMAGE_FORMAT_RGB:
 		return 3;
-	else if(Format == IMAGE_FORMAT_RGBA)
+	case IMAGE_FORMAT_RGBA:
 		return 4;
-
-	return 4;
+	default:
+		dbg_assert(false, "Format invalid");
+		dbg_break();
+	}
 }
 
-bool SavePNG(EImageFormat ImageFormat, const uint8_t *pRawBuffer, SImageByteBuffer &WrittenBytes, int Width, int Height)
+bool SavePng(EImageFormat ImageFormat, const uint8_t *pRawBuffer, SImageByteBuffer &WrittenBytes, size_t Width, size_t Height)
 {
 	png_structp pPNGStruct = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 
@@ -311,7 +320,7 @@ bool SavePNG(EImageFormat ImageFormat, const uint8_t *pRawBuffer, SImageByteBuff
 	png_set_write_fn(pPNGStruct, (png_bytep)&WrittenBytes, WriteDataFromLoadedBytes, FlushPNGWrite);
 
 	int ColorType = PNG_COLOR_TYPE_RGB;
-	int WriteBytesPerPixel = ImageLoaderHelperFormatToColorChannel(ImageFormat);
+	size_t WriteBytesPerPixel = ImageLoaderHelperFormatToColorChannel(ImageFormat);
 	if(ImageFormat == IMAGE_FORMAT_R)
 	{
 		ColorType = PNG_COLOR_TYPE_GRAY;
@@ -326,9 +335,9 @@ bool SavePNG(EImageFormat ImageFormat, const uint8_t *pRawBuffer, SImageByteBuff
 	png_write_info(pPNGStruct, pPNGInfo);
 
 	png_bytepp pRowPointers = new png_bytep[Height];
-	int WidthBytes = Width * WriteBytesPerPixel;
+	size_t WidthBytes = Width * WriteBytesPerPixel;
 	ptrdiff_t BufferOffset = 0;
-	for(int y = 0; y < Height; ++y)
+	for(size_t y = 0; y < Height; ++y)
 	{
 		pRowPointers[y] = new png_byte[WidthBytes];
 		mem_copy(pRowPointers[y], pRawBuffer + BufferOffset, WidthBytes);
@@ -338,7 +347,7 @@ bool SavePNG(EImageFormat ImageFormat, const uint8_t *pRawBuffer, SImageByteBuff
 
 	png_write_end(pPNGStruct, pPNGInfo);
 
-	for(int y = 0; y < Height; ++y)
+	for(size_t y = 0; y < Height; ++y)
 	{
 		delete[](pRowPointers[y]);
 	}

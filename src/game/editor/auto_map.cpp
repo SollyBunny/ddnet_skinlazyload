@@ -5,10 +5,11 @@
 #include <engine/shared/linereader.h>
 #include <engine/storage.h>
 
+#include <game/editor/mapitems/layer_tiles.h>
 #include <game/mapitems.h>
 
 #include "auto_map.h"
-#include "editor.h" // TODO: only needs CLayerTiles
+#include "editor_actions.h"
 
 // Based on triple32inc from https://github.com/skeeto/hash-prospector/tree/79a6074062a84907df6e45b756134b74e2956760
 static uint32_t HashUInt32(uint32_t Num)
@@ -48,8 +49,8 @@ void CAutoMapper::Load(const char *pTileName)
 {
 	char aPath[IO_MAX_PATH_LENGTH];
 	str_format(aPath, sizeof(aPath), "editor/automap/%s.rules", pTileName);
-	IOHANDLE RulesFile = Storage()->OpenFile(aPath, IOFLAG_READ | IOFLAG_SKIP_BOM, IStorage::TYPE_ALL);
-	if(!RulesFile)
+	CLineReader LineReader;
+	if(!LineReader.OpenFile(Storage()->OpenFile(aPath, IOFLAG_READ, IStorage::TYPE_ALL)))
 	{
 		char aBuf[IO_MAX_PATH_LENGTH + 32];
 		str_format(aBuf, sizeof(aBuf), "failed to load %s", aPath);
@@ -57,15 +58,12 @@ void CAutoMapper::Load(const char *pTileName)
 		return;
 	}
 
-	CLineReader LineReader;
-	LineReader.Init(RulesFile);
-
 	CConfiguration *pCurrentConf = nullptr;
 	CRun *pCurrentRun = nullptr;
 	CIndexRule *pCurrentIndex = nullptr;
 
 	// read each line
-	while(char *pLine = LineReader.Get())
+	while(const char *pLine = LineReader.Get())
 	{
 		// skip blank/empty lines as well as comments
 		if(str_length(pLine) > 0 && pLine[0] != '#' && pLine[0] != '\n' && pLine[0] != '\r' && pLine[0] != '\t' && pLine[0] != '\v' && pLine[0] != ' ')
@@ -81,16 +79,16 @@ void CAutoMapper::Load(const char *pTileName)
 				NewConf.m_EndX = 0;
 				NewConf.m_EndY = 0;
 				m_vConfigs.push_back(NewConf);
-				int ConfigurationID = m_vConfigs.size() - 1;
-				pCurrentConf = &m_vConfigs[ConfigurationID];
+				int ConfigurationId = m_vConfigs.size() - 1;
+				pCurrentConf = &m_vConfigs[ConfigurationId];
 				str_copy(pCurrentConf->m_aName, pLine, minimum<int>(sizeof(pCurrentConf->m_aName), str_length(pLine)));
 
 				// add start run
 				CRun NewRun;
 				NewRun.m_AutomapCopy = true;
 				pCurrentConf->m_vRuns.push_back(NewRun);
-				int RunID = pCurrentConf->m_vRuns.size() - 1;
-				pCurrentRun = &pCurrentConf->m_vRuns[RunID];
+				int RunId = pCurrentConf->m_vRuns.size() - 1;
+				pCurrentRun = &pCurrentConf->m_vRuns[RunId];
 			}
 			else if(str_startswith(pLine, "NewRun") && pCurrentConf)
 			{
@@ -98,21 +96,21 @@ void CAutoMapper::Load(const char *pTileName)
 				CRun NewRun;
 				NewRun.m_AutomapCopy = true;
 				pCurrentConf->m_vRuns.push_back(NewRun);
-				int RunID = pCurrentConf->m_vRuns.size() - 1;
-				pCurrentRun = &pCurrentConf->m_vRuns[RunID];
+				int RunId = pCurrentConf->m_vRuns.size() - 1;
+				pCurrentRun = &pCurrentConf->m_vRuns[RunId];
 			}
 			else if(str_startswith(pLine, "Index") && pCurrentRun)
 			{
 				// new index
-				int ID = 0;
+				int Id = 0;
 				char aOrientation1[128] = "";
 				char aOrientation2[128] = "";
 				char aOrientation3[128] = "";
 
-				sscanf(pLine, "Index %d %127s %127s %127s", &ID, aOrientation1, aOrientation2, aOrientation3);
+				sscanf(pLine, "Index %d %127s %127s %127s", &Id, aOrientation1, aOrientation2, aOrientation3);
 
 				CIndexRule NewIndexRule;
-				NewIndexRule.m_ID = ID;
+				NewIndexRule.m_Id = Id;
 				NewIndexRule.m_Flag = 0;
 				NewIndexRule.m_RandomProbability = 1.0f;
 				NewIndexRule.m_DefaultRule = true;
@@ -151,8 +149,8 @@ void CAutoMapper::Load(const char *pTileName)
 
 				// add the index rule object and make it current
 				pCurrentRun->m_vIndexRules.push_back(NewIndexRule);
-				int IndexRuleID = pCurrentRun->m_vIndexRules.size() - 1;
-				pCurrentIndex = &pCurrentRun->m_vIndexRules[IndexRuleID];
+				int IndexRuleId = pCurrentRun->m_vIndexRules.size() - 1;
+				pCurrentIndex = &pCurrentRun->m_vIndexRules[IndexRuleId];
 			}
 			else if(str_startswith(pLine, "Pos") && pCurrentIndex)
 			{
@@ -173,9 +171,9 @@ void CAutoMapper::Load(const char *pTileName)
 				{
 					Value = CPosRule::NOTINDEX;
 					CIndexInfo NewIndexInfo1 = {0, 0, false};
-					//CIndexInfo NewIndexInfo2 = {-1, 0};
+					// CIndexInfo NewIndexInfo2 = {-1, 0};
 					vNewIndexList.push_back(NewIndexInfo1);
-					//vNewIndexList.push_back(NewIndexInfo2);
+					// vNewIndexList.push_back(NewIndexInfo2);
 				}
 				else if(!str_comp(aValue, "INDEX") || !str_comp(aValue, "NOTINDEX"))
 				{
@@ -187,15 +185,15 @@ void CAutoMapper::Load(const char *pTileName)
 					int pWord = 4;
 					while(true)
 					{
-						int ID = 0;
+						int Id = 0;
 						char aOrientation1[128] = "";
 						char aOrientation2[128] = "";
 						char aOrientation3[128] = "";
 						char aOrientation4[128] = "";
-						sscanf(str_trim_words(pLine, pWord), "%d %127s %127s %127s %127s", &ID, aOrientation1, aOrientation2, aOrientation3, aOrientation4);
+						sscanf(str_trim_words(pLine, pWord), "%d %127s %127s %127s %127s", &Id, aOrientation1, aOrientation2, aOrientation3, aOrientation4);
 
 						CIndexInfo NewIndexInfo;
-						NewIndexInfo.m_ID = ID;
+						NewIndexInfo.m_Id = Id;
 						NewIndexInfo.m_Flag = 0;
 						NewIndexInfo.m_TestFlag = false;
 
@@ -295,10 +293,18 @@ void CAutoMapper::Load(const char *pTileName)
 					{
 						for(const auto &Index : vNewIndexList)
 						{
-							if(Value == CPosRule::INDEX && Index.m_ID == 0)
+							if(Index.m_Id == 0 && Value == CPosRule::INDEX)
+							{
+								// Skip full tiles if we have a rule "POS 0 0 INDEX 0"
+								// because that forces the tile to be empty
 								pCurrentIndex->m_SkipFull = true;
-							else
+							}
+							else if((Index.m_Id > 0 && Value == CPosRule::INDEX) || (Index.m_Id == 0 && Value == CPosRule::NOTINDEX))
+							{
+								// Skip empty tiles if we have a rule "POS 0 0 INDEX i" where i > 0
+								// or if we have a rule "POS 0 0 NOTINDEX 0"
 								pCurrentIndex->m_SkipEmpty = true;
+							}
 						}
 					}
 				}
@@ -336,14 +342,25 @@ void CAutoMapper::Load(const char *pTileName)
 			for(auto &IndexRule : Run.m_vIndexRules)
 			{
 				bool Found = false;
+
+				// Search for the exact rule "POS 0 0 INDEX 0" which corresponds to the default rule
 				for(const auto &Rule : IndexRule.m_vRules)
 				{
-					if(Rule.m_X == 0 && Rule.m_Y == 0)
+					if(Rule.m_X == 0 && Rule.m_Y == 0 && Rule.m_Value == CPosRule::INDEX)
 					{
-						Found = true;
+						for(const auto &Index : Rule.m_vIndexList)
+						{
+							if(Index.m_Id == 0)
+								Found = true;
+						}
 						break;
 					}
+
+					if(Found)
+						break;
 				}
+
+				// If the default rule was not found, and we require it, then add it
 				if(!Found && IndexRule.m_DefaultRule)
 				{
 					std::vector<CIndexInfo> vNewIndexList;
@@ -355,6 +372,7 @@ void CAutoMapper::Load(const char *pTileName)
 					IndexRule.m_SkipEmpty = true;
 					IndexRule.m_SkipFull = false;
 				}
+
 				if(IndexRule.m_SkipEmpty && IndexRule.m_SkipFull)
 				{
 					IndexRule.m_SkipEmpty = false;
@@ -363,8 +381,6 @@ void CAutoMapper::Load(const char *pTileName)
 			}
 		}
 	}
-
-	io_close(RulesFile);
 
 	char aBuf[IO_MAX_PATH_LENGTH + 16];
 	str_format(aBuf, sizeof(aBuf), "loaded %s", aPath);
@@ -381,9 +397,9 @@ const char *CAutoMapper::GetConfigName(int Index)
 	return m_vConfigs[Index].m_aName;
 }
 
-void CAutoMapper::ProceedLocalized(CLayerTiles *pLayer, int ConfigID, int Seed, int X, int Y, int Width, int Height)
+void CAutoMapper::ProceedLocalized(CLayerTiles *pLayer, int ConfigId, int Seed, int X, int Y, int Width, int Height)
 {
-	if(!m_FileLoaded || pLayer->m_Readonly || ConfigID < 0 || ConfigID >= (int)m_vConfigs.size())
+	if(!m_FileLoaded || pLayer->m_Readonly || ConfigId < 0 || ConfigId >= (int)m_vConfigs.size())
 		return;
 
 	if(Width < 0)
@@ -392,7 +408,7 @@ void CAutoMapper::ProceedLocalized(CLayerTiles *pLayer, int ConfigID, int Seed, 
 	if(Height < 0)
 		Height = pLayer->m_Height;
 
-	CConfiguration *pConf = &m_vConfigs[ConfigID];
+	CConfiguration *pConf = &m_vConfigs[ConfigId];
 
 	int CommitFromX = clamp(X + pConf->m_StartX, 0, pLayer->m_Width);
 	int CommitFromY = clamp(Y + pConf->m_StartY, 0, pLayer->m_Height);
@@ -417,7 +433,7 @@ void CAutoMapper::ProceedLocalized(CLayerTiles *pLayer, int ConfigID, int Seed, 
 		}
 	}
 
-	Proceed(pUpdateLayer, ConfigID, Seed, UpdateFromX, UpdateFromY);
+	Proceed(pUpdateLayer, ConfigId, Seed, UpdateFromX, UpdateFromY);
 
 	for(int y = CommitFromY; y < CommitToY; y++)
 	{
@@ -425,23 +441,26 @@ void CAutoMapper::ProceedLocalized(CLayerTiles *pLayer, int ConfigID, int Seed, 
 		{
 			CTile *pIn = &pUpdateLayer->m_pTiles[(y - UpdateFromY) * pUpdateLayer->m_Width + x - UpdateFromX];
 			CTile *pOut = &pLayer->m_pTiles[y * pLayer->m_Width + x];
+			CTile Previous = *pOut;
 			pOut->m_Index = pIn->m_Index;
 			pOut->m_Flags = pIn->m_Flags;
+			pLayer->RecordStateChange(x, y, Previous, *pOut);
 		}
 	}
 
 	delete pUpdateLayer;
 }
 
-void CAutoMapper::Proceed(CLayerTiles *pLayer, int ConfigID, int Seed, int SeedOffsetX, int SeedOffsetY)
+void CAutoMapper::Proceed(CLayerTiles *pLayer, int ConfigId, int Seed, int SeedOffsetX, int SeedOffsetY)
 {
-	if(!m_FileLoaded || pLayer->m_Readonly || ConfigID < 0 || ConfigID >= (int)m_vConfigs.size())
+	if(!m_FileLoaded || pLayer->m_Readonly || ConfigId < 0 || ConfigId >= (int)m_vConfigs.size())
 		return;
 
 	if(Seed == 0)
 		Seed = rand();
 
-	CConfiguration *pConf = &m_vConfigs[ConfigID];
+	CConfiguration *pConf = &m_vConfigs[ConfigId];
+	pLayer->ClearHistory();
 
 	// for every run: copy tiles, automap, overwrite tiles
 	for(size_t h = 0; h < pConf->m_vRuns.size(); ++h)
@@ -476,14 +495,15 @@ void CAutoMapper::Proceed(CLayerTiles *pLayer, int ConfigID, int Seed, int SeedO
 			for(int x = 0; x < pLayer->m_Width; x++)
 			{
 				CTile *pTile = &(pLayer->m_pTiles[y * pLayer->m_Width + x]);
+				const CTile *pReadTile = &(pReadLayer->m_pTiles[y * pLayer->m_Width + x]);
 				Editor()->m_Map.OnModify();
 
 				for(size_t i = 0; i < pRun->m_vIndexRules.size(); ++i)
 				{
 					CIndexRule *pIndexRule = &pRun->m_vIndexRules[i];
-					if(pIndexRule->m_SkipEmpty && pTile->m_Index == 0) // skip empty tiles
+					if(pIndexRule->m_SkipEmpty && pReadTile->m_Index == 0) // skip empty tiles
 						continue;
-					if(pIndexRule->m_SkipFull && pTile->m_Index != 0) // skip full tiles
+					if(pIndexRule->m_SkipFull && pReadTile->m_Index != 0) // skip full tiles
 						continue;
 
 					bool RespectRules = true;
@@ -511,7 +531,7 @@ void CAutoMapper::Proceed(CLayerTiles *pLayer, int ConfigID, int Seed, int SeedO
 							RespectRules = false;
 							for(const auto &Index : pRule->m_vIndexList)
 							{
-								if(CheckIndex == Index.m_ID && (!Index.m_TestFlag || CheckFlags == Index.m_Flag))
+								if(CheckIndex == Index.m_Id && (!Index.m_TestFlag || CheckFlags == Index.m_Flag))
 								{
 									RespectRules = true;
 									break;
@@ -522,7 +542,7 @@ void CAutoMapper::Proceed(CLayerTiles *pLayer, int ConfigID, int Seed, int SeedO
 						{
 							for(const auto &Index : pRule->m_vIndexList)
 							{
-								if(CheckIndex == Index.m_ID && (!Index.m_TestFlag || CheckFlags == Index.m_Flag))
+								if(CheckIndex == Index.m_Id && (!Index.m_TestFlag || CheckFlags == Index.m_Flag))
 								{
 									RespectRules = false;
 									break;
@@ -534,8 +554,10 @@ void CAutoMapper::Proceed(CLayerTiles *pLayer, int ConfigID, int Seed, int SeedO
 					if(RespectRules &&
 						(pIndexRule->m_RandomProbability >= 1.0f || HashLocation(Seed, h, i, x + SeedOffsetX, y + SeedOffsetY) < HASH_MAX * pIndexRule->m_RandomProbability))
 					{
-						pTile->m_Index = pIndexRule->m_ID;
+						CTile Previous = *pTile;
+						pTile->m_Index = pIndexRule->m_Id;
 						pTile->m_Flags = pIndexRule->m_Flag;
+						pLayer->RecordStateChange(x, y, Previous, *pTile);
 					}
 				}
 			}

@@ -6,7 +6,10 @@
 #include "mapitems.h"
 #include "teamscore.h"
 
+#include <base/system.h>
 #include <engine/shared/config.h>
+
+#include <limits>
 
 const char *CTuningParams::ms_apNames[] =
 	{
@@ -48,20 +51,6 @@ bool CTuningParams::Get(const char *pName, float *pValue) const
 	return false;
 }
 
-int CTuningParams::PossibleTunings(const char *pStr, IConsole::FPossibleCallback pfnCallback, void *pUser)
-{
-	int Index = 0;
-	for(int i = 0; i < Num(); i++)
-	{
-		if(str_find_nocase(Name(i), pStr))
-		{
-			pfnCallback(Index, Name(i), pUser);
-			Index++;
-		}
-	}
-	return Index;
-}
-
 float CTuningParams::GetWeaponFireDelay(int Weapon) const
 {
 	switch(Weapon)
@@ -76,6 +65,59 @@ float CTuningParams::GetWeaponFireDelay(int Weapon) const
 	}
 }
 
+static_assert(std::numeric_limits<char>::is_signed, "char must be signed for StrToInts to work correctly");
+
+void StrToInts(int *pInts, size_t NumInts, const char *pStr)
+{
+	dbg_assert(NumInts > 0, "StrToInts: NumInts invalid");
+	const size_t StrSize = str_length(pStr) + 1;
+	dbg_assert(StrSize <= NumInts * sizeof(int), "StrToInts: string truncated");
+
+	for(size_t i = 0; i < NumInts; i++)
+	{
+		// Copy to temporary buffer to ensure we don't read past the end of the input string
+		char aBuf[sizeof(int)] = {0, 0, 0, 0};
+		for(size_t c = 0; c < sizeof(int) && i * sizeof(int) + c < StrSize; c++)
+		{
+			aBuf[c] = pStr[i * sizeof(int) + c];
+		}
+		pInts[i] = ((aBuf[0] + 128) << 24) | ((aBuf[1] + 128) << 16) | ((aBuf[2] + 128) << 8) | (aBuf[3] + 128);
+	}
+	// Last byte is always zero and unused in this format
+	pInts[NumInts - 1] &= 0xFFFFFF00;
+}
+
+bool IntsToStr(const int *pInts, size_t NumInts, char *pStr, size_t StrSize)
+{
+	dbg_assert(NumInts > 0, "IntsToStr: NumInts invalid");
+	dbg_assert(StrSize >= NumInts * sizeof(int), "IntsToStr: StrSize invalid");
+
+	// Unpack string without validation
+	size_t StrIndex = 0;
+	for(size_t IntIndex = 0; IntIndex < NumInts; IntIndex++)
+	{
+		const int CurrentInt = pInts[IntIndex];
+		pStr[StrIndex] = ((CurrentInt >> 24) & 0xff) - 128;
+		StrIndex++;
+		pStr[StrIndex] = ((CurrentInt >> 16) & 0xff) - 128;
+		StrIndex++;
+		pStr[StrIndex] = ((CurrentInt >> 8) & 0xff) - 128;
+		StrIndex++;
+		pStr[StrIndex] = (CurrentInt & 0xff) - 128;
+		StrIndex++;
+	}
+	// Ensure null-termination
+	pStr[StrIndex - 1] = '\0';
+
+	// Ensure valid UTF-8
+	if(str_utf8_check(pStr))
+	{
+		return true;
+	}
+	pStr[0] = '\0';
+	return false;
+}
+
 float VelocityRamp(float Value, float Start, float Range, float Curvature)
 {
 	if(Value < Start)
@@ -83,20 +125,16 @@ float VelocityRamp(float Value, float Start, float Range, float Curvature)
 	return 1.0f / std::pow(Curvature, (Value - Start) / Range);
 }
 
-void CCharacterCore::Init(CWorldCore *pWorld, CCollision *pCollision, CTeamsCore *pTeams, std::map<int, std::vector<vec2>> *pTeleOuts)
+void CCharacterCore::Init(CWorldCore *pWorld, CCollision *pCollision, CTeamsCore *pTeams)
 {
 	m_pWorld = pWorld;
 	m_pCollision = pCollision;
-	m_pTeleOuts = pTeleOuts;
 
 	m_pTeams = pTeams;
 	m_Id = -1;
 
 	// fail safe, if core's tuning didn't get updated at all, just fallback to world tuning.
-	if(m_pWorld)
-		m_Tuning = m_pWorld->m_aTuning[g_Config.m_ClDummy];
-
-	Reset();
+	m_Tuning = m_pWorld->m_aTuning[g_Config.m_ClDummy];
 }
 
 void CCharacterCore::SetCoreWorld(CWorldCore *pWorld, CCollision *pCollision, CTeamsCore *pTeams)
@@ -113,6 +151,7 @@ void CCharacterCore::Reset()
 	m_NewHook = false;
 	m_HookPos = vec2(0, 0);
 	m_HookDir = vec2(0, 0);
+	m_HookTeleBase = vec2(0, 0);
 	m_HookTick = 0;
 	m_HookState = HOOK_IDLE;
 	SetHookedPlayer(-1);
@@ -273,11 +312,16 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 	}
 	else if(m_HookState == HOOK_FLYING)
 	{
+		vec2 HookBase = m_Pos;
+		if(m_NewHook)
+		{
+			HookBase = m_HookTeleBase;
+		}
 		vec2 NewPos = m_HookPos + m_HookDir * m_Tuning.m_HookFireSpeed;
-		if((!m_NewHook && distance(m_Pos, NewPos) > m_Tuning.m_HookLength) || (m_NewHook && distance(m_HookTeleBase, NewPos) > m_Tuning.m_HookLength))
+		if(distance(HookBase, NewPos) > m_Tuning.m_HookLength)
 		{
 			m_HookState = HOOK_RETRACT_START;
-			NewPos = m_Pos + normalize(NewPos - m_Pos) * m_Tuning.m_HookLength;
+			NewPos = HookBase + normalize(NewPos - HookBase) * m_Tuning.m_HookLength;
 			m_Reset = true;
 		}
 
@@ -287,8 +331,6 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 		bool GoingThroughTele = false;
 		int teleNr = 0;
 		int Hit = m_pCollision->IntersectLineTeleHook(m_HookPos, NewPos, &NewPos, 0, &teleNr);
-
-		// m_NewHook = false;
 
 		if(Hit)
 		{
@@ -302,7 +344,7 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 		}
 
 		// Check against other players first
-		if(!this->m_HookHitDisabled && m_pWorld && m_Tuning.m_PlayerHooking)
+		if(!m_HookHitDisabled && m_pWorld && m_Tuning.m_PlayerHooking && (m_HookState == HOOK_FLYING || !m_NewHook))
 		{
 			float Distance = 0.0f;
 			for(int i = 0; i < MAX_CLIENTS; i++)
@@ -342,14 +384,14 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 				m_HookState = HOOK_RETRACT_START;
 			}
 
-			if(GoingThroughTele && m_pWorld && m_pTeleOuts && !m_pTeleOuts->empty() && !(*m_pTeleOuts)[teleNr - 1].empty())
+			if(GoingThroughTele && m_pWorld && !m_pCollision->TeleOuts(teleNr - 1).empty())
 			{
 				m_TriggeredEvents = 0;
 				SetHookedPlayer(-1);
 
 				m_NewHook = true;
-				int RandomOut = m_pWorld->RandomOr0((*m_pTeleOuts)[teleNr - 1].size());
-				m_HookPos = (*m_pTeleOuts)[teleNr - 1][RandomOut] + TargetDirection * PhysicalSize() * 1.5f;
+				int RandomOut = m_pWorld->RandomOr0(m_pCollision->TeleOuts(teleNr - 1).size());
+				m_HookPos = m_pCollision->TeleOuts(teleNr - 1)[RandomOut] + TargetDirection * PhysicalSize() * 1.5f;
 				m_HookDir = TargetDirection;
 				m_HookTeleBase = m_HookPos;
 			}
@@ -374,13 +416,9 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 				m_HookState = HOOK_RETRACTED;
 				m_HookPos = m_Pos;
 			}
-
-			// keep players hooked for a max of 1.5sec
-			// if(Server()->Tick() > hook_tick+(Server()->TickSpeed()*3)/2)
-			// release_hooked();
 		}
 
-		// don't do this hook rutine when we are hook to a player
+		// don't do this hook routine when we are already hooked to a player
 		if(m_HookedPlayer == -1 && distance(m_HookPos, m_Pos) > 46.0f)
 		{
 			vec2 HookVel = normalize(m_HookPos - m_Pos) * m_Tuning.m_HookDragAccel;
@@ -399,7 +437,8 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 			vec2 NewVel = m_Vel + HookVel;
 
 			// check if we are under the legal limit for the hook
-			if(length(NewVel) < m_Tuning.m_HookDragSpeed || length(NewVel) < length(m_Vel))
+			const float NewVelLength = length(NewVel);
+			if(NewVelLength < m_Tuning.m_HookDragSpeed || NewVelLength < length(m_Vel))
 				m_Vel = NewVel; // no problem. apply
 		}
 
@@ -427,9 +466,6 @@ void CCharacterCore::TickDeferred()
 			if(!pCharCore)
 				continue;
 
-			// player *p = (player*)ent;
-			// if(pCharCore == this) // || !(p->flags&FLAG_ALIVE)
-
 			if(pCharCore == this || (m_Id != -1 && !m_pTeams->CanCollide(m_Id, i)))
 				continue; // make sure that we don't nudge our self
 
@@ -444,7 +480,7 @@ void CCharacterCore::TickDeferred()
 
 				bool CanCollide = (m_Super || pCharCore->m_Super) || (!m_CollisionDisabled && !pCharCore->m_CollisionDisabled && m_Tuning.m_PlayerCollision);
 
-				if(CanCollide && Distance < PhysicalSize() * 1.25f && Distance > 0.0f)
+				if(CanCollide && Distance < PhysicalSize() * 1.25f)
 				{
 					float a = (PhysicalSize() * 1.45f - Distance);
 					float Velocity = 0.5f;
@@ -461,7 +497,7 @@ void CCharacterCore::TickDeferred()
 				// handle hook influence
 				if(!m_HookHitDisabled && m_HookedPlayer == i && m_Tuning.m_PlayerHooking)
 				{
-					if(Distance > PhysicalSize() * 1.50f) // TODO: fix tweakable variable
+					if(Distance > PhysicalSize() * 1.50f)
 					{
 						float HookAccel = m_Tuning.m_HookDragAccel * (Distance / m_Tuning.m_HookLength);
 						float DragSpeed = m_Tuning.m_HookDragSpeed;
@@ -545,7 +581,7 @@ void CCharacterCore::Move()
 					if((!(pCharCore->m_Super || m_Super) && (m_Solo || pCharCore->m_Solo || pCharCore->m_CollisionDisabled || (m_Id != -1 && !m_pTeams->CanCollide(m_Id, p)))))
 						continue;
 					float D = distance(Pos, pCharCore->m_Pos);
-					if(D < PhysicalSize() && D >= 0.0f)
+					if(D < PhysicalSize())
 					{
 						if(a > 0.0f)
 							m_Pos = LastPos;
@@ -562,7 +598,7 @@ void CCharacterCore::Move()
 	m_Pos = NewPos;
 }
 
-void CCharacterCore::Write(CNetObj_CharacterCore *pObjCore)
+void CCharacterCore::Write(CNetObj_CharacterCore *pObjCore) const
 {
 	pObjCore->m_X = round_to_int(m_Pos.x);
 	pObjCore->m_Y = round_to_int(m_Pos.y);
@@ -690,11 +726,6 @@ void CCharacterCore::SetHookedPlayer(int HookedPlayer)
 void CCharacterCore::SetTeamsCore(CTeamsCore *pTeams)
 {
 	m_pTeams = pTeams;
-}
-
-void CCharacterCore::SetTeleOuts(std::map<int, std::vector<vec2>> *pTeleOuts)
-{
-	m_pTeleOuts = pTeleOuts;
 }
 
 bool CCharacterCore::IsSwitchActiveCb(int Number, void *pUser)

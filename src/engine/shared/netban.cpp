@@ -211,13 +211,13 @@ template<class T>
 int CNetBan::Ban(T *pBanPool, const typename T::CDataType *pData, int Seconds, const char *pReason)
 {
 	// do not ban localhost
-	if(NetMatch(pData, &m_LocalhostIPV4) || NetMatch(pData, &m_LocalhostIPV6))
+	if(NetMatch(pData, &m_LocalhostIpV4) || NetMatch(pData, &m_LocalhostIpV6))
 	{
 		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_ban", "ban failed (localhost)");
 		return -1;
 	}
 
-	int Stamp = Seconds > 0 ? time_timestamp() + Seconds : CBanInfo::EXPIRES_NEVER;
+	int64_t Stamp = Seconds > 0 ? time_timestamp() + Seconds : static_cast<int64_t>(CBanInfo::EXPIRES_NEVER);
 
 	// set up info
 	CBanInfo Info = {0};
@@ -231,7 +231,7 @@ int CNetBan::Ban(T *pBanPool, const typename T::CDataType *pData, int Seconds, c
 	{
 		// adjust the ban
 		pBanPool->Update(pBan, &Info);
-		char aBuf[128];
+		char aBuf[256];
 		MakeBanInfo(pBan, aBuf, sizeof(aBuf), MSGTYPE_LIST);
 		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_ban", aBuf);
 		return 1;
@@ -241,7 +241,7 @@ int CNetBan::Ban(T *pBanPool, const typename T::CDataType *pData, int Seconds, c
 	pBan = pBanPool->Add(pData, &Info, &NetHash);
 	if(pBan)
 	{
-		char aBuf[128];
+		char aBuf[256];
 		MakeBanInfo(pBan, aBuf, sizeof(aBuf), MSGTYPE_BANADD);
 		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "net_ban", aBuf);
 		return 0;
@@ -276,8 +276,8 @@ void CNetBan::Init(IConsole *pConsole, IStorage *pStorage)
 	m_BanAddrPool.Reset();
 	m_BanRangePool.Reset();
 
-	net_host_lookup("localhost", &m_LocalhostIPV4, NETTYPE_IPV4);
-	net_host_lookup("localhost", &m_LocalhostIPV6, NETTYPE_IPV6);
+	net_host_lookup("localhost", &m_LocalhostIpV4, NETTYPE_IPV4);
+	net_host_lookup("localhost", &m_LocalhostIpV6, NETTYPE_IPV6);
 
 	Console()->Register("ban", "s[ip|id] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_MASTER | CFGFLAG_STORE, ConBan, this, "Ban ip for x minutes for any reason");
 	Console()->Register("ban_range", "s[first ip] s[last ip] ?i[minutes] r[reason]", CFGFLAG_SERVER | CFGFLAG_MASTER | CFGFLAG_STORE, ConBanRange, this, "Ban ip range for x minutes for any reason");
@@ -290,7 +290,7 @@ void CNetBan::Init(IConsole *pConsole, IStorage *pStorage)
 
 void CNetBan::Update()
 {
-	int Now = time_timestamp();
+	int64_t Now = time_timestamp();
 
 	// remove expired bans
 	char aBuf[256], aNetStr[256];
@@ -522,7 +522,7 @@ void CNetBan::ConBansSave(IConsole::IResult *pResult, void *pUser)
 		return;
 	}
 
-	int Now = time_timestamp();
+	int64_t Now = time_timestamp();
 	char aAddrStr1[NETADDR_MAXSTRSIZE], aAddrStr2[NETADDR_MAXSTRSIZE];
 	for(CBanAddr *pBan = pThis->m_BanAddrPool.First(); pBan; pBan = pBan->m_pNext)
 	{

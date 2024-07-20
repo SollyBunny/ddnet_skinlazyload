@@ -25,9 +25,6 @@
 %s wins!
 == %s ﺪﺷ ﻩﺪﻧﺮﺑ!
 
--Page %d-
-== ﻪﺤﻔﺻ- %d-
-
 Abort
 == ﻥﺩﺮﻛ ﺩﺭ
 
@@ -79,8 +76,8 @@ Client
 Connecting to
 == ﻪﺑ ﻥﺪﺷ ﻞﺻﻭ
 
-Connection Problems...
-== ...ﺪﺷ ﻪﺟﺍﻮﻣ ﻞﻜﺸﻣ ﺎﺑ ﻁﺎﺒﺗﺭﺍ
+Connection Problems…
+== …ﺪﺷ ﻪﺟﺍﻮﻣ ﻞﻜﺸﻣ ﺎﺑ ﻁﺎﺒﺗﺭﺍ
 
 Console
 == ﻝﻮﺴﻨﻛ
@@ -102,9 +99,6 @@ Delete
 
 Delete demo
 == ﻮﻣﺩ ﻥﺩﺮﻛ کﺎﭘ
-
-Demo details
-== ﻮﻣﺩ ﺕﺎﯿﺋﺰﺟ
 
 Demofile: %s
 == %s :ﻮﻣﺩ ﻞﯾﺎﻓ
@@ -262,9 +256,6 @@ No servers match your filter criteria
 Ok
 == ﻪﺷﺎﺑ
 
-Open
-== ﻥﺩﺮﻛﺯﺎﺑ
-
 Parent Folder
 == ﯽﻠﺻﺍ ﻪﺷﻮﭘ
 
@@ -279,10 +270,6 @@ Ping
 
 Pistol
 == ﺮﯿﺗ ﺖﻔﻫ
-
-[Demo browser]
-Play
-== ﺶﺨﭘ
 
 Successfully saved the replay!
 == !ﺪﺷ ﻩﺮﯿﺧﺫ ﺖﯿﻘﻓﻮﻣ ﺎﺑ ﺶﺨﭘﺯﺎﺑ
@@ -400,12 +387,6 @@ Checking for existing player with your name
 Are you sure that you want to disconnect and switch to a different server?
 == ؟ﻪﮕﯾﺩ ﺭﻭﺮﺳ ﻪﺑ ﯼﺮﺑ ﻭ ﯽﻨﮐ ﻊﻄﻗ ﯼﺍﻮﺨﯿﻣ ﯽﻨﺌﻤﻄﻣ
 
-There's an unsaved map in the editor, you might want to save it before you quit the game.
-== ؟ﯽﻨﮐ ﻩﺮﯿﺧﺫ ﻮﻧﻭﺍ ﯼﺍﻮﺨﯿﻣ ﺝﻭﺮﺧ ﻞﺒﻗ ﯼﺩﺮﮑﻧ ﻩﺮﯿﺧﺫ ﻮﻧﻭﺍ ﻭ ﯼﺭﺍﺩ ﺖﺧﺎﺳ ﻝﺎﺣﺭﺩ ﻪﺸﻘﻧ ﻪﯾ
-
-Quit anyway?
-== ﻮﺷ ﺝﺭﺎﺧ ﻝﺎﺣﺮﻫ ﻪﺑ
-
 Yes
 == ﻪﻠﺑ
 
@@ -463,9 +444,6 @@ Exclude
 Server address:
 == ﺭﻭﺮﺳ ﺱﺭﺩﺁ
 
-Refresh
-== ﯼﺯﺎﺳ ﻩﺯﺎﺗ
-
 Server not full
 == ﺪﺷﺎﺒﻧ ﺮﭘ ﺭﻭﺮﺳ
 
@@ -502,32 +480,8 @@ Scoreboard
 Remove
 == ﻥﺩﺮﮐ کﺎﭘ
 
-Please use a different name
-== ﻦﮐ ﻩﺩﺎﻔﺘﺳﺍ ﺕﻭﺎﻔﺘﻣ ﻡﺎﻧ ﮏﯾ ﺯﺍ ﺎﻔﻄﻟ
-
 Remove chat
 == ﺖﭼ ﻥﺩﺮﮐ کﺎﭘ
-
-Created:
-== :ﺖﺧﺎﺳ ﺦﯾﺭﺎﺗ
-
-Type:
-== :ﻉﻮﻧ
-
-Length:
-== :ﻝﻮﻃ
-
-Version:
-== :ﻪﺨﺴﻧ
-
-Markers:
-== :ﺎﻫ ﺮﮕﻧﺎﺸﻧ
-
-Map:
-== :ﭗﻣ
-
-Size:
-== :ﻢﺠﺣ
 
 Demo
 == ﻮﻣﺩ
@@ -543,9 +497,6 @@ Date
 
 Demos directory
 == ﺎﻫﻮﻣﺩ ﻪﺷﻮﭘ
-
-Rename
-== ﻡﺎﻧ ﺮﯿﯿﻐﺗ
 
 Connect Dummy
 == ﯽﻣﺍﺩ ﻝﺎﺼﺗﺍ
@@ -627,9 +578,6 @@ Max Screenshots
 
 Refresh Rate
 == ﯽﻧﺎﺳﺭﺯﻭﺮﺑ ﺥﺮﻧ
-
-Dummy settings
-== ﯽﻣﺍﺩ ﺕﺎﻤﯿﻈﻨﺗ
 
 Your skin
 == ﺎﻤﺷ ﻦﯿﮑﺳﺍ
@@ -754,9 +702,6 @@ Background music volume
 Sound
 == ﺍﺪﺻ
 
-Use DDRace Scoreboard
-== DDRace ﺕﺍﺯﺎﯿﺘﻣﺍ ﯼﻮﻠﺑﺎﺗ ﺯﺍ ﻩﺩﺎﻔﺘﺳﺍ
-
 Show score
 == ﺯﺎﯿﺘﻣﺍ ﺶﯾﺎﻤﻧ
 
@@ -790,7 +735,7 @@ Background
 Update now
 == ﻦﮐ ﯽﻧﺎﺳﺭﺯﻭﺮﺑ ﻥﻻﺍ ﻦﯿﻤﻫ
 
-Updating...
+Updating…
 == ﯽﻧﺎﺳﺭﺯﻭﺮﺑ ﻝﺎﺣﺭﺩ
 
 No updates available
@@ -827,8 +772,8 @@ Play
 Downloading %s:
 == %s :ﺩﻮﻠﻧﺍﺩ ﻝﺎﺣﺭﺩ
 
-Update failed! Check log...
-== ... ﺪﯿﻨﮐ ﮏﭼ ﺍﺭ گﻻ!ﻖﻓﻮﻣﺎﻧ ﯽﻧﺎﺳﺭﺯﻭﺮﺑ
+Update failed! Check log…
+== … ﺪﯿﻨﮐ ﮏﭼ ﺍﺭ گﻻ!ﻖﻓﻮﻣﺎﻧ ﯽﻧﺎﺳﺭﺯﻭﺮﺑ
 
 Restart
 == ﺩﺪﺠﻣ ﯼﺯﺍﺪﻧﺍ ﻩﺍﺭ
@@ -879,9 +824,6 @@ Failed to swap framebuffers. Try to update your GPU drivers.
 Unknown error. Try to change gfx_backend to OpenGL or Vulkan in settings_ddnet.cfg in the config directory and try again.
 == .ﺪﯿﻨﮐ ﺵﻼﺗ ﻩﺭﺎﺑﻭﺩ ﻭ ﺪﯿﻫﺩ ﺮﯿﯿﻐﺗ Vulkan ﺎﯾ OpenGL ﻪﺑ ﺍﺭ gfx_backend ، settings_ddnet.cfg ﺭﺩ ،ﮓﯿﻔﻧﺎﮐ ﻪﺷﻮﭘ ﺭﺩ ﺪﯿﻨﮐ ﯽﻌﺳ .ﺺﺨﺸﻣﺎﻧ ﯼﺎﻄﺧ
 
-Saving ddnet-settings.cfg failed
-== ﺪﺸﻧ ﻡﺎﺠﻧﺍ ddnet-settings.cfg ﻩﺮﯿﺧﺫ
-
 Preparing demo playback
 == ﻮﻣﺩ ﺶﺨﭘ ﯼﺯﺎﺳ ﻩﺩﺎﻣﺁ ﻝﺎﺣ ﺭﺩ
 
@@ -924,8 +866,8 @@ Uploading map data to GPU
 The audio device couldn't be initialised.
 == .ﺩﻮﺷ ﯼﺯﺍﺪﻧﺍ ﻩﺍﺭ ﺪﻧﺍﻮﺗ ﯽﻤﻧ ﯽﺗﻮﺻ ﻩﺎﮕﺘﺳﺩ
 
-Trying to determine UDP connectivity...
-== UDP... ﻝﺎﺼﺗﺍ ﻦﯿﯿﻌﺗ ﯼﺍﺮﺑ ﺵﻼﺗ
+Trying to determine UDP connectivity…
+== UDP… ﻝﺎﺼﺗﺍ ﻦﯿﯿﻌﺗ ﯼﺍﺮﺑ ﺵﻼﺗ
 
 UDP seems to be filtered.
 == .ﺖﺳﺍ ﻩﺪﺷ ﺮﺘﻠﯿﻓ UDP ﺪﺳﺭ ﯽﻣ ﺮﻈﻧ ﻪﺑ
@@ -1044,12 +986,6 @@ Loading demo files
 %.2f KiB
 == %.2f KiB
 
-Crc:
-== Crc
-
-Netversion:
-== ﻦﯾﻼﻧﺁ ﻪﺨﺴﻧ
-
 Fetch Info
 == ﺕﺎﻋﻼﻃﺍ ﯽﺸﮐﺍﻭ
 
@@ -1058,9 +994,6 @@ Open the directory that contains the demo files
 
 Are you sure that you want to delete the demo '%s'?
 == ؟ﺪﯿﻨﮐ ﻑﺬﺣ ﺍﺭ '%s' ﻮﻣﺩ ﺪﯿﻫﺍﻮﺧ ﯽﻣ ﻪﮐ ﺪﯿﺘﺴﻫ ﻦﺌﻤﻄﻣ ﺎﯾﺁ
-
-Render
-== ﺭﺪﻧﺭ
 
 Unable to delete the demo '%s'
 == ﺩﺭﺍﺪﻧ ﺩﻮﺟﻭ '%s' ﻮﻣﺩ ﻑﺬﺣ ﻥﺎﮑﻣﺍ
@@ -1103,9 +1036,6 @@ Max CSVs
 
 Loading skin files
 == ﻦﯿﮑﺳﺍ ﯼﺎﻫ ﻞﯾﺎﻓ ﻥﺩﺮﮐ ﻩﺩﺎﻣﺁ ﻝﺎﺣ ﺭﺩ
-
-Toggle to edit your dummy settings
-== ﺪﯿﻫﺩ ﺮﯿﯿﻐﺗ،ﯽﻣﺍﺩ ﺕﺎﻤﯿﻈﻨﺗ ﺶﯾﺍﺮﯾﻭ ﯼﺍﺮﺑ
 
 Download community skins
 == ﻦﻤﺠﻧﺍ ﯼﺎﻫ ﻦﯿﮑﺳﺍ ﺩﻮﻠﻧﺍﺩ
@@ -1280,9 +1210,6 @@ Name Plate
 Hook Collisions
 == ﺏﻼﻗ ﯼﺎﻫ ﺩﺭﻮﺧﺮﺑ
 
-Kill Messages
-== ﻥﺪﺷ ﻪﺘﺸﮐ ﯼﺎﻫ ﻡﺎﯿﭘ
-
 Show health, shields and ammo
 == ﺕﺎﻤﻬﻣ ﻭ ﺮﭙﺳ ،ﯽﺘﻣﻼﺳ ﺶﯾﺎﻤﻧ
 
@@ -1354,9 +1281,6 @@ Clan plates size
 
 Use team colors for name plates
 ==  ﻡﺎﻧ کﻼﭘ ﯼﺍﺮﺑ ﯽﻤﯿﺗ ﯼﺎﻫ ﮓﻧﺭ ﺯﺍ ﻩﺩﺎﻔﺘﺳﺍ
-
-Show hook strength indicator
-== ﺏﻼﻗ ﺕﺭﺪﻗ ﺮﮕﻧﺎﺸﻧ ﺶﯾﺎﻤﻧ
 
 Show other players' key presses
 == ﺮﮕﯾﺩ ﻥﺎﻨﮑﯾﺯﺎﺑ ﺪﯿﻠﮐ ﺭﺎﺸﻓ ﺶﯾﺎﻤﻧ
@@ -1478,17 +1402,11 @@ AntiPing: predict weapons
 AntiPing: predict grenade paths
 == ﺎﻫ ﮏﺠﻧﺭﺎﻧ ﺮﯿﺴﻣ ﯽﻨﯿﺑ‌ﺶﯿﭘ AntiPing:
 
-Entities Background color
-== ﺎﻫ ﺖﯾﺩﻮﺟﻮﻣ ﻪﻨﯿﻣﺯﺲﭘ ﮓﻧﺭ
-
 Use current map as background
 == ﺪﯿﻨﮐ ﻩﺩﺎﻔﺘﺳﺍ ﻪﻨﯿﻣﺯ ﺲﭘ ﻥﺍﻮﻨﻋ ﻪﺑ ﯽﻠﻌﻓ ﻪﺸﻘﻧ ﺯﺍ
 
 Show tiles layers from BG map
 == BG ﭗﻣ ﺯﺍﺎﻫ ﯽﺷﺎﮐ ﯼﺎﻫ ﻪﯾﻻ ﺶﯾﺎﻤﻧ
-
-Regular Background Color
-== ﯼﺩﺎﻋ ﻪﻨﯿﻣﺯ ﺲﭘ ﮓﻧﺭ
 
 New random timeout code
 == ﺪﯾﺪﺟ ﯽﻓﺩﺎﺼﺗ ﺕﻭﺍﻢﯾﺎﺗ ﺪﮐ
@@ -1547,9 +1465,6 @@ Loading race demo files
 Time limit: %d min
 == ﻪﻘﯿﻗﺩ %d :ﯽﻧﺎﻣﺯ ﺖﯾﺩﻭﺪﺤﻣ
 
-Round
-== ﺪﻧﺍﺭ
-
 Super
 == ﺮﭘﻮﺳ
 
@@ -1606,10 +1521,25 @@ Could not initialize the given graphics backend, this is probably because you di
 Could not save downloaded map. Try manually deleting this file: %s
 == 
 
+Error playing demo
+== 
+
+Failed saving the replay!
+== 
+
+Saving settings to '%s' failed
+== 
+
+Error saving settings
+== 
+
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 
 
 The format of texture %s is not RGBA which will cause visual bugs.
+== 
+
+Loading demo file from storage
 == 
 
 Initializing map logic
@@ -1621,10 +1551,71 @@ Quitting. Please wait…
 Restarting. Please wait…
 == 
 
+Searching
+== 
+
+Enter Username
+== 
+
+Enter Password
+== 
+
+NOT CONNECTED
+== 
+
+Match %d of %d
+== 
+
+No results
+== 
+
+Lines %d - %d (%s)
+== 
+
+Locked
+== 
+
+Following
+== 
+
+Loading commands…
+== 
+
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
+Some map images could not be loaded. Check the local console for details.
+== 
+
+Some map sounds could not be loaded. Check the local console for details.
+== 
+
+Loading menu themes
+== 
+
+Press a key…
+== 
+
+Main menu
+== 
+
 Rename folder
+== 
+
+Render complete
+== 
+
+Are you sure that you want to restart?
+== 
+
+There's an unsaved map in the editor, you might want to save it.
+== 
+
+Continue anyway?
 == 
 
 A demo with this name already exists
@@ -1637,6 +1628,24 @@ Unable to rename the folder
 == 
 
 (paused)
+== 
+
+Videos directory
+== 
+
+Video was saved to '%s'
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+Example of usage
+== 
+
+No login required
+== 
+
+Communities
 == 
 
 Copy info
@@ -1668,6 +1677,12 @@ None
 == 
 
 Add Clan
+== 
+
+Server filter
+== 
+
+Friends
 == 
 
 Go back the specified duration
@@ -1708,10 +1723,26 @@ Cut length
 Render cut to video
 == 
 
+Please use a different filename
+== 
+
 All combined
 == 
 
+No demo selected
+== 
+
 Folder Link
+== 
+
+Created
+== 
+
+Netversion
+== 
+
+[Demo details]
+map not included
 == 
 
 Are you sure that you want to delete the folder '%s'?
@@ -1723,6 +1754,21 @@ Delete folder
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Loading…
+== 
+
+Ghosts directory
+== 
+
+Activate all
+== 
+
+Deactivate all
+== 
+
+Player info change cooldown
+== 
+
 Create a random skin
 == 
 
@@ -1732,7 +1778,81 @@ Axis
 Graphics card
 == 
 
+Tee
+== 
+
+Info Messages
+== 
+
+Show local time always
+== 
+
+Always show chat
+== 
+
+Show only chat messages from team members
+== 
+
+Chat font size
+== 
+
+Chat width
+== 
+
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
+== 
+
+Authed name color in scoreboard
+== 
+
+Same clan color in scoreboard
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
+== 
+
+Show finish messages
+== 
+
+Enable ghost
+== 
+
+Only save improvements
+== 
+
+Regular background color
+== 
+
+Entities background color
+== 
+
 Unregister protocol and file extensions
+== 
+
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
 == 
 
 FPM
@@ -1745,4 +1865,7 @@ Grabs
 == 
 
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

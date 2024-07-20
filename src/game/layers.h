@@ -7,37 +7,23 @@ class IKernel;
 class IMap;
 
 struct CMapItemGroup;
-struct CMapItemGroupEx;
 struct CMapItemLayer;
 struct CMapItemLayerTilemap;
 
 class CLayers
 {
-	int m_GroupsNum;
-	int m_GroupsStart;
-	int m_GroupsExNum;
-	int m_GroupsExStart;
-	int m_LayersNum;
-	int m_LayersStart;
-	CMapItemGroup *m_pGameGroup;
-	CMapItemGroupEx *m_pGameGroupEx;
-	CMapItemLayerTilemap *m_pGameLayer;
-	IMap *m_pMap;
-
-	void InitTilemapSkip();
-
 public:
 	CLayers();
 	void Init(IKernel *pKernel);
 	void InitBackground(IMap *pMap);
+	void Unload();
+
 	int NumGroups() const { return m_GroupsNum; }
 	int NumLayers() const { return m_LayersNum; }
 	IMap *Map() const { return m_pMap; }
 	CMapItemGroup *GameGroup() const { return m_pGameGroup; }
-	CMapItemGroupEx *GameGroupEx() const { return m_pGameGroupEx; }
 	CMapItemLayerTilemap *GameLayer() const { return m_pGameLayer; }
 	CMapItemGroup *GetGroup(int Index) const;
-	CMapItemGroupEx *GetGroupEx(int Index) const;
 	CMapItemLayer *GetLayer(int Index) const;
 
 	// DDRace
@@ -49,11 +35,22 @@ public:
 	CMapItemLayerTilemap *TuneLayer() const { return m_pTuneLayer; }
 
 private:
+	int m_GroupsNum;
+	int m_GroupsStart;
+	int m_LayersNum;
+	int m_LayersStart;
+
+	CMapItemGroup *m_pGameGroup;
+	CMapItemLayerTilemap *m_pGameLayer;
+	IMap *m_pMap;
+
 	CMapItemLayerTilemap *m_pTeleLayer;
 	CMapItemLayerTilemap *m_pSpeedupLayer;
 	CMapItemLayerTilemap *m_pFrontLayer;
 	CMapItemLayerTilemap *m_pSwitchLayer;
 	CMapItemLayerTilemap *m_pTuneLayer;
+
+	void InitTilemapSkip();
 };
 
 #endif

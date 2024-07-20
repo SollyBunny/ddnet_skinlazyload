@@ -25,9 +25,6 @@
 %s wins!
 == %s је победио!
 
--Page %d-
-== -Страна %d-
-
 Abort
 == Одустани
 
@@ -79,7 +76,7 @@ Client
 Connecting to
 == Повезујем се на
 
-Connection Problems...
+Connection Problems…
 == Проблеми са интернетом
 
 Console
@@ -102,9 +99,6 @@ Delete
 
 Delete demo
 == Обриши снимак
-
-Demo details
-== Детаљи снимка
 
 Demofile: %s
 == Снимак: %s
@@ -259,9 +253,6 @@ No servers match your filter criteria
 Ok
 == У реду
 
-Open
-== Отвори
-
 Parent Folder
 == Претходна датотека
 
@@ -310,9 +301,6 @@ Red team
 Red team wins!
 == Црвени тим је победио!
 
-Refresh
-== Освежи
-
 Remote console
 == Удаљена конзола
 
@@ -321,9 +309,6 @@ Remove
 
 Remove friend
 == Обриши пријатеља
-
-Rename
-== Преименуј
 
 Rename demo
 == Преименуј снимак
@@ -414,9 +399,6 @@ The audio device couldn't be initialised.
 
 The server is running a non-standard tuning on a pure game type.
 == Сервер изводи нестандардно подешавање чистог типа игре.
-
-There's an unsaved map in the editor, you might want to save it before you quit the game.
-== Мапа није сачувана, вероватно желите да је сачувате пре изласка из игре.
 
 Time limit
 == Временско ограничење
@@ -531,20 +513,8 @@ FSAA samples
 Sound volume
 == Јачина звука
 
-Created:
-== Направљено
-
 Max Screenshots
 == Максималан број снимака екрана
-
-Length:
-== Дужина
-
-Netversion:
-== Нет Верзија
-
-Map:
-== Мапа
 
 Hue
 == Нијанса
@@ -555,29 +525,14 @@ Record demo
 Your skin
 == Ваша тема
 
-Size:
-== Величина
-
 Reset to defaults
 == Ресетуј
-
-Quit anyway?
-== Излаз?
-
-Version:
-== Верзија:
-
-Round
-== Рунда
 
 Lht.
 == Светл.
 
 UI Color
 == Боја менија
-
-Crc:
-== Crc:
 
 Alpha
 == Провид.
@@ -587,9 +542,6 @@ LAN
 
 Name plates size
 == Величина плочице са именом
-
-Type:
-== Тип:
 
 Successfully saved the replay!
 == Снимак је успешно сачуван!
@@ -699,14 +651,8 @@ Countries
 Types
 == Типови
 
-Please use a different name
-== Изаберите друго име
-
 Remove chat
 == Уклони дописивање
-
-Markers:
-== Маркери:
 
 %.2f MiB
 == %.2f MiB
@@ -723,15 +669,8 @@ Date
 Fetch Info
 == Дохвати информације
 
-[Demo browser]
-Play
-== Пусти
-
 Demos directory
 == Видео директоријум
-
-Render
-== Рендеруј
 
 Connecting dummy
 == Повезујем копију
@@ -780,9 +719,6 @@ Automatically create statboard csv
 
 Max CSVs
 == Највише csv-ова
-
-Dummy settings
-== Подешавања копије
 
 Download skins
 == Преузимај теме
@@ -892,9 +828,6 @@ Assets
 DDNet Client needs to be restarted to complete update!
 == Потребно је поново покренути DDNet клијент да бисте довршили ажурирање!
 
-Use DDRace Scoreboard
-== Користи DDRace табелу резултата
-
 Show score
 == Прикажи бодове
 
@@ -985,8 +918,8 @@ DDNet %s is available:
 Update now
 == Унапреди сада
 
-Updating...
-== Унапређујем...
+Updating…
+== Унапређујем…
 
 DDNet Client updated!
 == DDNet клијент је унапређен!
@@ -1040,8 +973,8 @@ DDNet %s is out!
 Downloading %s:
 == Преузимање %s:
 
-Update failed! Check log...
-== Ажурирање није успело! Сачекајте log...
+Update failed! Check log…
+== Ажурирање није успело! Сачекајте log…
 
 Restart
 == Поново покрени
@@ -1100,9 +1033,6 @@ Auto
 Replay
 == Помнови
 
-Saving ddnet-settings.cfg failed
-== Чување ddnet-settings.cfg неуспело
-
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == Ширина текстуре %s није дељива са %d, или висина није дељива са %d, што ће проузроковати видљиве грешке.
 
@@ -1145,7 +1075,7 @@ Angle:
 Uploading map data to GPU
 == Слање података мапе Г.Ј.О.~у (GPU)
 
-Trying to determine UDP connectivity...
+Trying to determine UDP connectivity…
 == Покушавам да одредим К.Д.П.(UDP) повезаност
 
 UDP seems to be filtered.
@@ -1225,9 +1155,6 @@ Settings file
 
 Config directory
 == Директоријум конфигурацији
-
-Toggle to edit your dummy settings
-== Укључи да уређујеш подешавања лутке
 
 Download community skins
 == Преузми остале теме
@@ -1330,9 +1257,6 @@ Name Plate
 Hook Collisions
 == Додир куке
 
-Kill Messages
-== Поруке убистава
-
 Show health, shields and ammo
 == Прикажи животе, штитове и меткове
 
@@ -1371,9 +1295,6 @@ Use old chat style
 
 Preview
 == Преглед
-
-Show hook strength indicator
-== Прикажи јачину куке индикатор
 
 Show local player's key presses
 == Прикажи своје акције
@@ -1426,14 +1347,8 @@ Tries to predict other entities to give a feel of low latency
 Background
 == Позадина
 
-Entities Background color
-== Статична боја позадине
-
 Use current map as background
 == Користи ову мапу као позадину
-
-Regular Background Color
-== Уобичајена боја позадине
 
 Run on join
 == Уради када уђеш
@@ -1510,6 +1425,21 @@ Could not initialize the given graphics backend, this is probably because you di
 Could not save downloaded map. Try manually deleting this file: %s
 == 
 
+Error playing demo
+== 
+
+Failed saving the replay!
+== 
+
+Saving settings to '%s' failed
+== 
+
+Error saving settings
+== 
+
+Loading demo file from storage
+== 
+
 Initializing components
 == 
 
@@ -1519,10 +1449,71 @@ Quitting. Please wait…
 Restarting. Please wait…
 == 
 
+Searching
+== 
+
+Enter Username
+== 
+
+Enter Password
+== 
+
+NOT CONNECTED
+== 
+
+Match %d of %d
+== 
+
+No results
+== 
+
+Lines %d - %d (%s)
+== 
+
+Locked
+== 
+
+Following
+== 
+
+Loading commands…
+== 
+
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
+Some map images could not be loaded. Check the local console for details.
+== 
+
+Some map sounds could not be loaded. Check the local console for details.
+== 
+
+Loading menu themes
+== 
+
+Press a key…
+== 
+
+Main menu
+== 
+
 Rename folder
+== 
+
+Render complete
+== 
+
+Are you sure that you want to restart?
+== 
+
+There's an unsaved map in the editor, you might want to save it.
+== 
+
+Continue anyway?
 == 
 
 A demo with this name already exists
@@ -1538,6 +1529,24 @@ File '%s' already exists, do you want to overwrite it?
 == 
 
 (paused)
+== 
+
+Videos directory
+== 
+
+Video was saved to '%s'
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+Example of usage
+== 
+
+No login required
+== 
+
+Communities
 == 
 
 Copy info
@@ -1575,6 +1584,12 @@ Are you sure that you want to remove the clan '%s' from your friends list?
 == 
 
 Add Clan
+== 
+
+Server filter
+== 
+
+Friends
 == 
 
 Play the current demo
@@ -1648,10 +1663,26 @@ Cut length
 Render cut to video
 == 
 
+Please use a different filename
+== 
+
 All combined
 == 
 
+No demo selected
+== 
+
 Folder Link
+== 
+
+Created
+== 
+
+Netversion
+== 
+
+[Demo details]
+map not included
 == 
 
 Open the directory that contains the demo files
@@ -1672,6 +1703,18 @@ Unable to delete the demo '%s'
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Loading…
+== 
+
+Ghosts directory
+== 
+
+Activate all
+== 
+
+Deactivate all
+== 
+
 Menu opened. Press Esc key again to close menu.
 == 
 
@@ -1685,6 +1728,9 @@ Open the directory that contains the configuration and user files
 == 
 
 Open the directory to add custom themes
+== 
+
+Player info change cooldown
 == 
 
 Create a random skin
@@ -1709,6 +1755,54 @@ Cancel
 == 
 
 Graphics card
+== 
+
+Tee
+== 
+
+Info Messages
+== 
+
+Show local time always
+== 
+
+Always show chat
+== 
+
+Show only chat messages from team members
+== 
+
+Chat font size
+== 
+
+Chat width
+== 
+
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
+== 
+
+Authed name color in scoreboard
+== 
+
+Same clan color in scoreboard
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
+== 
+
+Show finish messages
 == 
 
 Weapons
@@ -1741,11 +1835,40 @@ Freeze Laser Inner Color
 Set all to Rifle
 == 
 
+Enable ghost
+== 
+
+Only save improvements
+== 
+
+Regular background color
+== 
+
+Entities background color
+== 
+
 Unregister protocol and file extensions
 == 
 
 Open the directory to add custom assets
 == 
 
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
+== 
+
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 

@@ -1,9 +1,8 @@
 #ifndef ENGINE_SHARED_NETBAN_H
 #define ENGINE_SHARED_NETBAN_H
 
-#include <engine/console.h>
-
 #include <base/system.h>
+#include <engine/console.h>
 
 inline int NetComp(const NETADDR *pAddr1, const NETADDR *pAddr2)
 {
@@ -66,7 +65,7 @@ protected:
 		int m_Hash;
 		int m_HashIndex; // matching parts for ranges, 0 for addr
 
-		CNetHash() {}
+		CNetHash() = default;
 		CNetHash(const NETADDR *pAddr);
 		CNetHash(const CNetRange *pRange);
 
@@ -78,9 +77,9 @@ protected:
 		enum
 		{
 			EXPIRES_NEVER = -1,
-			REASON_LENGTH = 64,
+			REASON_LENGTH = 128,
 		};
-		int m_Expires;
+		int64_t m_Expires;
 		char m_aReason[REASON_LENGTH];
 	};
 
@@ -159,7 +158,7 @@ protected:
 	class IStorage *m_pStorage;
 	CBanAddrPool m_BanAddrPool;
 	CBanRangePool m_BanRangePool;
-	NETADDR m_LocalhostIPV4, m_LocalhostIPV6;
+	NETADDR m_LocalhostIpV4, m_LocalhostIpV6;
 
 public:
 	enum

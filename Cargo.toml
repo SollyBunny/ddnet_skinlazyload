@@ -6,10 +6,11 @@ members = [
   "src/rust-bridge/test",
 ]
 
+resolver = "2"
+
 [profile.dev]
 panic = "abort"
 
 [profile.release]
 lto = "thin"
 panic = "abort"
-

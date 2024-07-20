@@ -111,15 +111,28 @@ public:
 	 * @param pOtherRect The CUIRect to place inside *this* CUIRect
 	 */
 	void HMargin(float Cut, CUIRect *pOtherRect) const;
+
 	/**
 	 * Checks whether a point is inside *this* CUIRect.
 	 *
-	 * @param PointX The point's X position.
-	 * @param PointY The point's Y position.
+	 * @param Point The point's position.
 	 * @return true iff the given point is inside *this* CUIRect.
 	 */
-	bool Inside(float PointX, float PointY) const;
+	bool Inside(vec2 Point) const;
 
+	/**
+	 * Fill background of *this* CUIRect.
+	 *
+	 * @note Example of filling a black half transparent background with 5px rounded edges on all sides
+	 * @note ```MyCuiRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 5.0f);```
+	 *
+	 * @note Example of filling a red background with sharp edges
+	 * @note ```MyCuiRect.Draw(ColorRGBA(1.0f, 0.0f, 0.0f), IGraphics::CORNER_NONE, 0.0f);```
+	 *
+	 * @param Color
+	 * @param Corners
+	 * @param Rounding
+	 */
 	void Draw(ColorRGBA Color, int Corners, float Rounding) const;
 	void Draw4(ColorRGBA ColorTopLeft, ColorRGBA ColorTopRight, ColorRGBA ColorBottomLeft, ColorRGBA ColorBottomRight, int Corners, float Rounding) const;
 

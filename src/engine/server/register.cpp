@@ -1,7 +1,8 @@
 #include "register.h"
 
-#include <base/lock_scope.h>
+#include <base/lock.h>
 #include <base/log.h>
+
 #include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/shared/config.h>
@@ -20,6 +21,7 @@ class CRegister : public IRegister
 		STATUS_OK,
 		STATUS_NEEDCHALLENGE,
 		STATUS_NEEDINFO,
+		STATUS_ERROR,
 
 		PROTOCOL_TW6_IPV6 = 0,
 		PROTOCOL_TW6_IPV4,
@@ -40,12 +42,7 @@ class CRegister : public IRegister
 	class CGlobal
 	{
 	public:
-		~CGlobal()
-		{
-			lock_destroy(m_Lock);
-		}
-
-		LOCK m_Lock = lock_create();
+		CLock m_Lock;
 		int m_InfoSerial GUARDED_BY(m_Lock) = -1;
 		int m_LatestSuccessfulInfoSerial GUARDED_BY(m_Lock) = -1;
 	};
@@ -59,13 +56,9 @@ class CRegister : public IRegister
 				m_pGlobal(std::move(pGlobal))
 			{
 			}
-			~CShared()
-			{
-				lock_destroy(m_Lock);
-			}
 
 			std::shared_ptr<CGlobal> m_pGlobal;
-			LOCK m_Lock = lock_create();
+			CLock m_Lock;
 			int m_NumTotalRequests GUARDED_BY(m_Lock) = 0;
 			int m_LatestResponseStatus GUARDED_BY(m_Lock) = STATUS_NONE;
 			int m_LatestResponseIndex GUARDED_BY(m_Lock) = -1;
@@ -78,17 +71,19 @@ class CRegister : public IRegister
 			int m_Index;
 			int m_InfoSerial;
 			std::shared_ptr<CShared> m_pShared;
-			std::unique_ptr<CHttpRequest> m_pRegister;
+			std::shared_ptr<CHttpRequest> m_pRegister;
+			IHttp *m_pHttp;
 			void Run() override;
 
 		public:
-			CJob(int Protocol, int ServerPort, int Index, int InfoSerial, std::shared_ptr<CShared> pShared, std::unique_ptr<CHttpRequest> &&pRegister) :
+			CJob(int Protocol, int ServerPort, int Index, int InfoSerial, std::shared_ptr<CShared> pShared, std::shared_ptr<CHttpRequest> &&pRegister, IHttp *pHttp) :
 				m_Protocol(Protocol),
 				m_ServerPort(ServerPort),
 				m_Index(Index),
 				m_InfoSerial(InfoSerial),
 				m_pShared(std::move(pShared)),
-				m_pRegister(std::move(pRegister))
+				m_pRegister(std::move(pRegister)),
+				m_pHttp(pHttp)
 			{
 			}
 			~CJob() override = default;
@@ -118,6 +113,8 @@ class CRegister : public IRegister
 	CConfig *m_pConfig;
 	IConsole *m_pConsole;
 	IEngine *m_pEngine;
+	IHttp *m_pHttp;
+
 	// Don't start sending registers before the server has initialized
 	// completely.
 	bool m_GotFirstUpdateCall = false;
@@ -138,7 +135,7 @@ class CRegister : public IRegister
 	char m_aServerInfo[16384];
 
 public:
-	CRegister(CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, int ServerPort, unsigned SixupSecurityToken);
+	CRegister(CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, IHttp *pHttp, int ServerPort, unsigned SixupSecurityToken);
 	void Update() override;
 	void OnConfigChange() override;
 	bool OnPacket(const CNetChunk *pPacket) override;
@@ -159,6 +156,10 @@ bool CRegister::StatusFromString(int *pResult, const char *pString)
 	else if(str_comp(pString, "need_info") == 0)
 	{
 		*pResult = STATUS_NEEDINFO;
+	}
+	else if(str_comp(pString, "error") == 0)
+	{
+		*pResult = STATUS_ERROR;
 	}
 	else
 	{
@@ -306,6 +307,7 @@ void CRegister::CProtocol::SendRegister()
 	}
 	pRegister->LogProgress(HTTPLOG::FAILURE);
 	pRegister->IpResolve(ProtocolToIpresolve(m_Protocol));
+	pRegister->FailOnErrorStatus(false);
 
 	int RequestIndex;
 	{
@@ -317,7 +319,7 @@ void CRegister::CProtocol::SendRegister()
 		RequestIndex = m_pShared->m_NumTotalRequests;
 		m_pShared->m_NumTotalRequests += 1;
 	}
-	m_pParent->m_pEngine->AddJob(std::make_shared<CJob>(m_Protocol, m_pParent->m_ServerPort, RequestIndex, InfoSerial, m_pShared, std::move(pRegister)));
+	m_pParent->m_pEngine->AddJob(std::make_shared<CJob>(m_Protocol, m_pParent->m_ServerPort, RequestIndex, InfoSerial, m_pShared, std::move(pRegister), m_pParent->m_pHttp));
 	m_NewChallengeToken = false;
 
 	m_PrevRegister = Now;
@@ -326,13 +328,12 @@ void CRegister::CProtocol::SendRegister()
 
 void CRegister::CProtocol::SendDeleteIfRegistered(bool Shutdown)
 {
-	lock_wait(m_pShared->m_Lock);
-	bool ShouldSendDelete = m_pShared->m_LatestResponseStatus == STATUS_OK;
-	m_pShared->m_LatestResponseStatus = STATUS_NONE;
-	lock_unlock(m_pShared->m_Lock);
-	if(!ShouldSendDelete)
 	{
-		return;
+		const CLockScope LockScope(m_pShared->m_Lock);
+		const bool ShouldSendDelete = m_pShared->m_LatestResponseStatus == STATUS_OK;
+		m_pShared->m_LatestResponseStatus = STATUS_NONE;
+		if(!ShouldSendDelete)
+			return;
 	}
 
 	char aAddress[64];
@@ -341,7 +342,7 @@ void CRegister::CProtocol::SendDeleteIfRegistered(bool Shutdown)
 	char aSecret[UUID_MAXSTRSIZE];
 	FormatUuid(m_pParent->m_Secret, aSecret, sizeof(aSecret));
 
-	std::unique_ptr<CHttpRequest> pDelete = HttpPost(m_pParent->m_pConfig->m_SvRegisterUrl, (const unsigned char *)"", 0);
+	std::shared_ptr<CHttpRequest> pDelete = HttpPost(m_pParent->m_pConfig->m_SvRegisterUrl, (const unsigned char *)"", 0);
 	pDelete->HeaderString("Action", "delete");
 	pDelete->HeaderString("Address", aAddress);
 	pDelete->HeaderString("Secret", aSecret);
@@ -357,7 +358,7 @@ void CRegister::CProtocol::SendDeleteIfRegistered(bool Shutdown)
 		pDelete->Timeout(CTimeout{1000, 1000, 0, 0});
 	}
 	log_info(ProtocolToSystem(m_Protocol), "deleting...");
-	m_pParent->m_pEngine->AddJob(std::move(pDelete));
+	m_pParent->m_pHttp->Run(pDelete);
 }
 
 CRegister::CProtocol::CProtocol(CRegister *pParent, int Protocol) :
@@ -414,12 +415,12 @@ void CRegister::CProtocol::OnToken(const char *pToken)
 
 void CRegister::CProtocol::CJob::Run()
 {
-	IEngine::RunJobBlocking(m_pRegister.get());
-	if(m_pRegister->State() != HTTP_DONE)
+	m_pHttp->Run(m_pRegister);
+	m_pRegister->Wait();
+	if(m_pRegister->State() != EHttpState::DONE)
 	{
-		// TODO: log the error response content from master
 		// TODO: exponential backoff
-		log_error(ProtocolToSystem(m_Protocol), "error response from master");
+		log_error(ProtocolToSystem(m_Protocol), "error sending request to master");
 		return;
 	}
 	json_value *pJson = m_pRegister->ResultJson();
@@ -440,6 +441,25 @@ void CRegister::CProtocol::CJob::Run()
 	if(StatusFromString(&Status, StatusString))
 	{
 		log_error(ProtocolToSystem(m_Protocol), "invalid status from master: %s", (const char *)StatusString);
+		json_value_free(pJson);
+		return;
+	}
+	if(Status == STATUS_ERROR)
+	{
+		const json_value &Message = Json["message"];
+		if(Message.type != json_string)
+		{
+			json_value_free(pJson);
+			log_error(ProtocolToSystem(m_Protocol), "invalid JSON error response from master");
+			return;
+		}
+		log_error(ProtocolToSystem(m_Protocol), "error response from master: %d: %s", m_pRegister->StatusCode(), (const char *)Message);
+		json_value_free(pJson);
+		return;
+	}
+	if(m_pRegister->StatusCode() >= 400)
+	{
+		log_error(ProtocolToSystem(m_Protocol), "non-success status code %d from master without error code", m_pRegister->StatusCode());
 		json_value_free(pJson);
 		return;
 	}
@@ -480,10 +500,11 @@ void CRegister::CProtocol::CJob::Run()
 	}
 }
 
-CRegister::CRegister(CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, int ServerPort, unsigned SixupSecurityToken) :
+CRegister::CRegister(CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, IHttp *pHttp, int ServerPort, unsigned SixupSecurityToken) :
 	m_pConfig(pConfig),
 	m_pConsole(pConsole),
 	m_pEngine(pEngine),
+	m_pHttp(pHttp),
 	m_ServerPort(ServerPort),
 	m_aProtocols{
 		CProtocol(this, PROTOCOL_TW6_IPV6),
@@ -497,10 +518,8 @@ CRegister::CRegister(CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, int
 	FormatUuid(m_ChallengeSecret, m_aVerifyPacketPrefix + HEADER_LEN, sizeof(m_aVerifyPacketPrefix) - HEADER_LEN);
 	m_aVerifyPacketPrefix[HEADER_LEN + UUID_MAXSTRSIZE - 1] = ':';
 
-	// The DDNet code uses the `unsigned` security token in memory byte order.
-	unsigned char aTokenBytes[sizeof(int32_t)];
-	mem_copy(aTokenBytes, &SixupSecurityToken, sizeof(aTokenBytes));
-	str_format(m_aConnlessTokenHex, sizeof(m_aConnlessTokenHex), "%08x", bytes_be_to_uint(aTokenBytes));
+	// The DDNet code uses the `unsigned` security token in big-endian byte order.
+	str_format(m_aConnlessTokenHex, sizeof(m_aConnlessTokenHex), "%08x", SixupSecurityToken);
 
 	m_pConsole->Chain("sv_register", ConchainOnConfigChange, this);
 	m_pConsole->Chain("sv_register_extra", ConchainOnConfigChange, this);
@@ -758,7 +777,7 @@ void CRegister::OnShutdown()
 	}
 }
 
-IRegister *CreateRegister(CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, int ServerPort, unsigned SixupSecurityToken)
+IRegister *CreateRegister(CConfig *pConfig, IConsole *pConsole, IEngine *pEngine, IHttp *pHttp, int ServerPort, unsigned SixupSecurityToken)
 {
-	return new CRegister(pConfig, pConsole, pEngine, ServerPort, SixupSecurityToken);
+	return new CRegister(pConfig, pConsole, pEngine, pHttp, ServerPort, SixupSecurityToken);
 }

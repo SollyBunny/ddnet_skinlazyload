@@ -25,7 +25,7 @@ void CUIRect::HSplitMid(CUIRect *pTop, CUIRect *pBottom, float Spacing) const
 		pBottom->x = r.x;
 		pBottom->y = r.y + Cut + HalfSpacing;
 		pBottom->w = r.w;
-		pBottom->h = r.h - Cut - HalfSpacing;
+		pBottom->h = Cut - HalfSpacing;
 	}
 }
 
@@ -89,7 +89,7 @@ void CUIRect::VSplitMid(CUIRect *pLeft, CUIRect *pRight, float Spacing) const
 	{
 		pRight->x = r.x + Cut + HalfSpacing;
 		pRight->y = r.y;
-		pRight->w = r.w - Cut - HalfSpacing;
+		pRight->w = Cut - HalfSpacing;
 		pRight->h = r.h;
 	}
 }
@@ -161,9 +161,9 @@ void CUIRect::HMargin(float Cut, CUIRect *pOtherRect) const
 	Margin(vec2(0.0f, Cut), pOtherRect);
 }
 
-bool CUIRect::Inside(float PointX, float PointY) const
+bool CUIRect::Inside(vec2 Point) const
 {
-	return PointX >= x && PointX < x + w && PointY >= y && PointY < y + h;
+	return Point.x >= x && Point.x < x + w && Point.y >= y && Point.y < y + h;
 }
 
 void CUIRect::Draw(ColorRGBA Color, int Corners, float Rounding) const

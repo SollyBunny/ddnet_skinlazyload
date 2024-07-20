@@ -38,15 +38,17 @@ public:
 	void TickDeferred() override;
 	void TickPaused() override;
 	void Snap(int SnappingClient) override;
+	void PostSnap() override;
 	void SwapClients(int Client1, int Client2) override;
 
 	bool CanSnapCharacter(int SnappingClient);
-	bool IsSnappingCharacterInView(int SnappingClientID);
+	bool IsSnappingCharacterInView(int SnappingClientId);
 
 	bool IsGrounded();
 
 	void SetWeapon(int W);
 	void SetJetpack(bool Active);
+	void SetJumps(int Jumps);
 	void SetSolo(bool Solo);
 	void SetSuper(bool Super);
 	void SetLiveFrozen(bool Active);
@@ -60,6 +62,7 @@ public:
 
 	void OnPredictedInput(CNetObj_PlayerInput *pNewInput);
 	void OnDirectInput(CNetObj_PlayerInput *pNewInput);
+	void ReleaseHook();
 	void ResetHook();
 	void ResetInput();
 	void FireWeapon();
@@ -82,11 +85,20 @@ public:
 
 	void Rescue();
 
-	int NeededFaketuning() { return m_NeededFaketuning; }
+	int NeededFaketuning() const { return m_NeededFaketuning; }
 	bool IsAlive() const { return m_Alive; }
 	bool IsPaused() const { return m_Paused; }
 	class CPlayer *GetPlayer() { return m_pPlayer; }
 	CClientMask TeamMask();
+
+	void SetPosition(const vec2 &Position);
+	void Move(vec2 RelPos);
+
+	void ResetVelocity();
+	void SetVelocity(vec2 NewVelocity);
+	void SetRawVelocity(vec2 NewVelocity);
+	void AddVelocity(vec2 Addition);
+	void ApplyMoveRestrictions();
 
 private:
 	// player controlling this character
@@ -94,6 +106,7 @@ private:
 
 	bool m_Alive;
 	bool m_Paused;
+	int m_PausedTick;
 	int m_NeededFaketuning;
 
 	// weapon info
@@ -105,6 +118,8 @@ private:
 
 	int m_ReloadTimer;
 	int m_AttackTick;
+
+	int m_MoveRestrictions;
 
 	int m_DamageTaken;
 
@@ -131,12 +146,11 @@ private:
 	int m_Health;
 	int m_Armor;
 
+	int m_TriggeredEvents7;
+
 	// the player core for the physics
 	CCharacterCore m_Core;
 	CGameTeams *m_pTeams = nullptr;
-
-	std::map<int, std::vector<vec2>> *m_pTeleOuts = nullptr;
-	std::map<int, std::vector<vec2>> *m_pTeleCheckOuts = nullptr;
 
 	// info for dead reckoning
 	int m_ReckoningTick; // tick that we are performing dead reckoning From
@@ -145,7 +159,7 @@ private:
 
 	// DDRace
 
-	void SnapCharacter(int SnappingClient, int ID);
+	void SnapCharacter(int SnappingClient, int Id);
 	static bool IsSwitchActiveCb(int Number, void *pUser);
 	void SetTimeCheckpoint(int TimeCheckpoint);
 	void HandleTiles(int Index);
@@ -153,7 +167,7 @@ private:
 	int m_LastBroadcast;
 	void DDRaceInit();
 	void HandleSkippableTiles(int Index);
-	void SetRescue();
+	void ForceSetRescue(int RescueMode);
 	void DDRaceTick();
 	void DDRacePostCoreTick();
 	void HandleBroadcast();
@@ -161,13 +175,13 @@ private:
 	void SendZoneMsgs();
 	IAntibot *Antibot();
 
-	bool m_SetSavePos;
-	CSaveTee m_RescueTee;
+	bool m_SetSavePos[NUM_RESCUEMODES];
+	CSaveTee m_RescueTee[NUM_RESCUEMODES];
 
 public:
 	CGameTeams *Teams() { return m_pTeams; }
 	void SetTeams(CGameTeams *pTeams);
-	void SetTeleports(std::map<int, std::vector<vec2>> *pTeleOuts, std::map<int, std::vector<vec2>> *pTeleCheckOuts);
+	bool TrySetRescue(int RescueMode);
 
 	void FillAntibot(CAntibotCharacterData *pData);
 	void Pause(bool Pause);
@@ -176,10 +190,12 @@ public:
 	bool UnFreeze();
 	void GiveAllWeapons();
 	void ResetPickups();
+	void ResetJumps();
 	int m_DDRaceState;
 	int Team();
-	bool CanCollide(int ClientID);
-	bool SameTeam(int ClientID);
+	bool CanCollide(int ClientId);
+	bool SameTeam(int ClientId);
+	void StopRecording();
 	bool m_NinjaJetpack;
 	int m_TeamBeforeSuper;
 	int m_FreezeTime;
@@ -201,9 +217,6 @@ public:
 	int m_TileIndex;
 	int m_TileFIndex;
 
-	int m_MoveRestrictions;
-
-	vec2 m_Intersection;
 	int64_t m_LastStartWarning;
 	int64_t m_LastRescue;
 	bool m_LastRefillJumps;
@@ -212,22 +225,22 @@ public:
 	vec2 m_TeleGunPos;
 	bool m_TeleGunTeleport;
 	bool m_IsBlueTeleGunTeleport;
-	int m_StrongWeakID;
+	int m_StrongWeakId;
 
 	int m_SpawnTick;
 	int m_WeaponChangeTick;
 
 	// Setters/Getters because i don't want to modify vanilla vars access modifiers
-	int GetLastWeapon() { return m_LastWeapon; }
+	int GetLastWeapon() const { return m_LastWeapon; }
 	void SetLastWeapon(int LastWeap) { m_LastWeapon = LastWeap; }
-	int GetActiveWeapon() { return m_Core.m_ActiveWeapon; }
+	int GetActiveWeapon() const { return m_Core.m_ActiveWeapon; }
 	void SetActiveWeapon(int ActiveWeap) { m_Core.m_ActiveWeapon = ActiveWeap; }
 	void SetLastAction(int LastAction) { m_LastAction = LastAction; }
-	int GetArmor() { return m_Armor; }
+	int GetArmor() const { return m_Armor; }
 	void SetArmor(int Armor) { m_Armor = Armor; }
 	CCharacterCore GetCore() { return m_Core; }
 	void SetCore(CCharacterCore Core) { m_Core = Core; }
-	CCharacterCore *Core() { return &m_Core; }
+	const CCharacterCore *Core() const { return &m_Core; }
 	bool GetWeaponGot(int Type) { return m_Core.m_aWeapons[Type].m_Got; }
 	void SetWeaponGot(int Type, bool Value) { m_Core.m_aWeapons[Type].m_Got = Value; }
 	int GetWeaponAmmo(int Type) { return m_Core.m_aWeapons[Type].m_Ammo; }
@@ -238,18 +251,18 @@ public:
 
 	int GetLastAction() const { return m_LastAction; }
 
-	bool HasTelegunGun() { return m_Core.m_HasTelegunGun; }
-	bool HasTelegunGrenade() { return m_Core.m_HasTelegunGrenade; }
-	bool HasTelegunLaser() { return m_Core.m_HasTelegunLaser; }
+	bool HasTelegunGun() const { return m_Core.m_HasTelegunGun; }
+	bool HasTelegunGrenade() const { return m_Core.m_HasTelegunGrenade; }
+	bool HasTelegunLaser() const { return m_Core.m_HasTelegunLaser; }
 
-	bool HammerHitDisabled() { return m_Core.m_HammerHitDisabled; }
-	bool ShotgunHitDisabled() { return m_Core.m_ShotgunHitDisabled; }
-	bool LaserHitDisabled() { return m_Core.m_LaserHitDisabled; }
-	bool GrenadeHitDisabled() { return m_Core.m_GrenadeHitDisabled; }
+	bool HammerHitDisabled() const { return m_Core.m_HammerHitDisabled; }
+	bool ShotgunHitDisabled() const { return m_Core.m_ShotgunHitDisabled; }
+	bool LaserHitDisabled() const { return m_Core.m_LaserHitDisabled; }
+	bool GrenadeHitDisabled() const { return m_Core.m_GrenadeHitDisabled; }
 
-	bool IsSuper() { return m_Core.m_Super; }
+	bool IsSuper() const { return m_Core.m_Super; }
 
-	CSaveTee &GetRescueTeeRef() { return m_RescueTee; }
+	CSaveTee &GetLastRescueTeeRef(int Mode = RESCUEMODE_AUTO) { return m_RescueTee[Mode]; }
 };
 
 enum

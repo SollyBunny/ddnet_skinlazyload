@@ -8,54 +8,44 @@
 
 void Process(IStorage *pStorage, const char *pMapName, const char *pConfigName)
 {
-	IOHANDLE File = pStorage->OpenFile(pConfigName, IOFLAG_READ | IOFLAG_SKIP_BOM, IStorage::TYPE_ABSOLUTE);
-	if(!File)
+	CLineReader LineReader;
+	if(!LineReader.OpenFile(pStorage->OpenFile(pConfigName, IOFLAG_READ, IStorage::TYPE_ABSOLUTE)))
 	{
 		dbg_msg("config_store", "config '%s' not found", pConfigName);
 		return;
 	}
 
-	CLineReader LineReader;
-	LineReader.Init(File);
-
-	char *pLine;
+	std::vector<const char *> vpLines;
 	int TotalLength = 0;
-	std::vector<char *> vLines;
-	while((pLine = LineReader.Get()))
+	while(const char *pLine = LineReader.Get())
 	{
-		int Length = str_length(pLine) + 1;
-		char *pCopy = (char *)malloc(Length);
-		mem_copy(pCopy, pLine, Length);
-		vLines.push_back(pCopy);
-		TotalLength += Length;
+		vpLines.push_back(pLine);
+		TotalLength += str_length(pLine) + 1;
 	}
-	io_close(File);
 
 	char *pSettings = (char *)malloc(maximum(1, TotalLength));
 	int Offset = 0;
-	for(auto &Line : vLines)
+	for(const char *pLine : vpLines)
 	{
-		int Length = str_length(Line) + 1;
-		mem_copy(pSettings + Offset, Line, Length);
+		int Length = str_length(pLine) + 1;
+		mem_copy(pSettings + Offset, pLine, Length);
 		Offset += Length;
-		free(Line);
 	}
 
 	CDataFileReader Reader;
 	Reader.Open(pStorage, pMapName, IStorage::TYPE_ABSOLUTE);
 
 	CDataFileWriter Writer;
-	Writer.Init();
 
 	int SettingsIndex = Reader.NumData();
 	bool FoundInfo = false;
 	for(int i = 0; i < Reader.NumItems(); i++)
 	{
-		int Type, ID;
-		int *pItem = (int *)Reader.GetItem(i, &Type, &ID);
+		int Type, Id;
+		int *pItem = (int *)Reader.GetItem(i, &Type, &Id);
 		int Size = Reader.GetItemSize(i);
 		CMapItemInfoSettings MapInfo;
-		if(Type == MAPITEMTYPE_INFO && ID == 0)
+		if(Type == MAPITEMTYPE_INFO && Id == 0)
 		{
 			FoundInfo = true;
 			CMapItemInfoSettings *pInfo = (CMapItemInfoSettings *)pItem;
@@ -93,7 +83,7 @@ void Process(IStorage *pStorage, const char *pMapName, const char *pConfigName)
 				Size = sizeof(MapInfo);
 			}
 		}
-		Writer.AddItem(Type, ID, Size, pItem);
+		Writer.AddItem(Type, Id, Size, pItem);
 	}
 
 	if(!FoundInfo)
@@ -123,7 +113,7 @@ void Process(IStorage *pStorage, const char *pMapName, const char *pConfigName)
 
 	free(pSettings);
 	Reader.Close();
-	if(!Writer.OpenFile(pStorage, pMapName))
+	if(!Writer.Open(pStorage, pMapName))
 	{
 		dbg_msg("config_store", "couldn't open map file '%s' for writing", pMapName);
 		return;

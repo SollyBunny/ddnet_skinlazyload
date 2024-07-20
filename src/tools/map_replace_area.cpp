@@ -2,7 +2,6 @@
 #include <base/system.h>
 #include <engine/shared/datafile.h>
 #include <engine/storage.h>
-#include <game/gamecore.h>
 #include <game/mapitems.h>
 
 // global new layers data (set by ReplaceAreaTiles and ReplaceAreaQuads)
@@ -165,16 +164,21 @@ void SaveOutputMap(CDataFileReader &InputMap, CDataFileWriter &OutputMap)
 {
 	for(int i = 0; i < InputMap.NumItems(); i++)
 	{
-		int ID, Type;
-		void *pItem = InputMap.GetItem(i, &Type, &ID);
+		int Id, Type;
+		CUuid Uuid;
+		void *pItem = InputMap.GetItem(i, &Type, &Id, &Uuid);
 
+		// Filter ITEMTYPE_EX items, they will be automatically added again.
 		if(Type == ITEMTYPE_EX)
+		{
 			continue;
+		}
+
 		if(g_apNewItem[i])
 			pItem = g_apNewItem[i];
 
 		int Size = InputMap.GetItemSize(i);
-		OutputMap.AddItem(Type, ID, Size, pItem);
+		OutputMap.AddItem(Type, Id, Size, pItem, &Uuid);
 	}
 
 	for(int i = 0; i < InputMap.NumData(); i++)
@@ -231,9 +235,9 @@ void CompareGroups(const char aaMapNames[3][64], CDataFileReader aInputMaps[2])
 		for(int j = 0; j < 2; j++)
 			apItem[j] = (CMapItemGroup *)aInputMaps[j].GetItem(aStart[j] + i);
 
-		bool bSameConfig = apItem[0]->m_ParallaxX == apItem[1]->m_ParallaxX && apItem[0]->m_ParallaxY == apItem[1]->m_ParallaxY && apItem[0]->m_OffsetX == apItem[1]->m_OffsetX && apItem[0]->m_OffsetY == apItem[1]->m_OffsetY && apItem[0]->m_UseClipping == apItem[1]->m_UseClipping && apItem[0]->m_ClipX == apItem[1]->m_ClipX && apItem[0]->m_ClipY == apItem[1]->m_ClipY && apItem[0]->m_ClipW == apItem[1]->m_ClipW && apItem[0]->m_ClipH == apItem[1]->m_ClipH;
+		bool SameConfig = apItem[0]->m_ParallaxX == apItem[1]->m_ParallaxX && apItem[0]->m_ParallaxY == apItem[1]->m_ParallaxY && apItem[0]->m_OffsetX == apItem[1]->m_OffsetX && apItem[0]->m_OffsetY == apItem[1]->m_OffsetY && apItem[0]->m_UseClipping == apItem[1]->m_UseClipping && apItem[0]->m_ClipX == apItem[1]->m_ClipX && apItem[0]->m_ClipY == apItem[1]->m_ClipY && apItem[0]->m_ClipW == apItem[1]->m_ClipW && apItem[0]->m_ClipH == apItem[1]->m_ClipH;
 
-		if(!bSameConfig)
+		if(!SameConfig)
 			dbg_msg("map_replace_area", "WARNING: different configuration on layergroup #%d, this might lead to unexpected results", i);
 	}
 }
@@ -374,10 +378,10 @@ void ReplaceAreaQuads(CDataFileReader aInputMaps[2], const float aaaGameAreas[][
 	apQuads[2] = new CQuad[apQuadLayer[0]->m_NumQuads + apQuadLayer[1]->m_NumQuads];
 	int QuadsCounter = 0;
 
-	bool bDataChanged = RemoveDestinationQuads(aaaGameAreas[1], apQuads[1], apQuadLayer[1]->m_NumQuads, apLayerGroups[1], apQuads[2], QuadsCounter);
-	bDataChanged |= InsertDestinationQuads(aaaGameAreas, apQuads[0], apQuadLayer[0]->m_NumQuads, apLayerGroups, apQuads[2], QuadsCounter);
+	bool DataChanged = RemoveDestinationQuads(aaaGameAreas[1], apQuads[1], apQuadLayer[1]->m_NumQuads, apLayerGroups[1], apQuads[2], QuadsCounter);
+	DataChanged |= InsertDestinationQuads(aaaGameAreas, apQuads[0], apQuadLayer[0]->m_NumQuads, apLayerGroups, apQuads[2], QuadsCounter);
 
-	if(bDataChanged)
+	if(DataChanged)
 	{
 		g_apNewData[apQuadLayer[1]->m_Data] = apQuads[2];
 		g_aNewDataSize[apQuadLayer[1]->m_Data] = ((int)sizeof(CQuad)) * QuadsCounter;
@@ -390,7 +394,7 @@ void ReplaceAreaQuads(CDataFileReader aInputMaps[2], const float aaaGameAreas[][
 
 bool RemoveDestinationQuads(const float aaGameArea[2][2], const CQuad *pQuads, const int NumQuads, const CMapItemGroup *pLayerGroup, CQuad *pDestQuads, int &QuadsCounter)
 {
-	bool bDataChanged = false;
+	bool DataChanged = false;
 
 	for(int i = 0; i < NumQuads; i++)
 	{
@@ -398,7 +402,7 @@ bool RemoveDestinationQuads(const float aaGameArea[2][2], const CQuad *pQuads, c
 
 		if(GetVisibleArea(aaGameArea, Ob))
 		{
-			bDataChanged = true;
+			DataChanged = true;
 			continue;
 		}
 
@@ -406,12 +410,12 @@ bool RemoveDestinationQuads(const float aaGameArea[2][2], const CQuad *pQuads, c
 		QuadsCounter++;
 	}
 
-	return bDataChanged;
+	return DataChanged;
 }
 
 bool InsertDestinationQuads(const float aaaGameAreas[2][2][2], const CQuad *pQuads, const int NumQuads, const CMapItemGroup *apLayerGroups[2], CQuad *pDestQuads, int &QuadsCounter)
 {
-	bool bDataChanged = false;
+	bool DataChanged = false;
 
 	for(int i = 0; i < NumQuads; i++)
 	{
@@ -435,11 +439,11 @@ bool InsertDestinationQuads(const float aaaGameAreas[2][2][2], const CQuad *pQua
 			}
 
 			QuadsCounter++;
-			bDataChanged = true;
+			DataChanged = true;
 		}
 	}
 
-	return bDataChanged;
+	return DataChanged;
 }
 
 bool AdaptVisiblePoint(const float aaaGameAreas[2][2][2], const float aaVisibleArea[2][2], const MapObject aObs[2], float aPos[2])
@@ -630,7 +634,7 @@ bool GetLineIntersection(const float aLine1[2], const float aLine2[2], float aIn
 		std::min(aLine1[1], aLine2[1])};
 
 	if(aIntersection)
-		SetInexistent((float *)aIntersection, 2);
+		SetInexistent(aIntersection, 2);
 
 	if(aBorders[0] - aBorders[1] > 0.01f)
 		return false;

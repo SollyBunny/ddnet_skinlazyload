@@ -3,23 +3,22 @@
 #include <atomic>
 #include <cctype>
 #include <charconv>
+#include <chrono>
+#include <cinttypes>
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include <iomanip> // std::get_time
 #include <iterator> // std::size
+#include <sstream> // std::istringstream
 #include <string_view>
 
+#include "lock.h"
+#include "logger.h"
 #include "system.h"
 
-#include "lock_scope.h"
-#include "logger.h"
-
 #include <sys/types.h>
-
-#include <chrono>
-
-#include <cinttypes>
 
 #if defined(CONF_WEBSOCKETS)
 #include <engine/shared/websockets.h>
@@ -63,11 +62,6 @@
 #endif
 
 #elif defined(CONF_FAMILY_WINDOWS)
-#define WIN32_LEAN_AND_MEAN
-#undef _WIN32_WINNT
-// 0x0501 (Windows XP) is required for mingw to get getaddrinfo to work
-// 0x0600 (Windows Vista) is required to use RegGetValueW and RegDeleteTreeW
-#define _WIN32_WINNT 0x0600
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -114,8 +108,8 @@ IOHANDLE io_current_exe()
 	{
 		return 0;
 	}
-	const std::string path = windows_wide_to_utf8(wide_path);
-	return io_open(path.c_str(), IOFLAG_READ);
+	const std::optional<std::string> path = windows_wide_to_utf8(wide_path);
+	return path.has_value() ? io_open(path.value().c_str(), IOFLAG_READ) : 0;
 #elif defined(CONF_PLATFORM_MACOS)
 	char path[IO_MAX_PATH_LENGTH];
 	uint32_t path_size = sizeof(path);
@@ -185,13 +179,13 @@ bool dbg_assert_has_failed()
 	return dbg_assert_failing.load(std::memory_order_acquire);
 }
 
-void dbg_assert_imp(const char *filename, int line, int test, const char *msg)
+void dbg_assert_imp(const char *filename, int line, bool test, const char *msg)
 {
 	if(!test)
 	{
 		const bool already_failing = dbg_assert_has_failed();
 		dbg_assert_failing.store(true, std::memory_order_release);
-		char error[256];
+		char error[512];
 		str_format(error, sizeof(error), "%s(%d): %s", filename, line, msg);
 		dbg_msg("assert", "%s", error);
 		if(!already_failing)
@@ -239,11 +233,6 @@ void mem_move(void *dest, const void *source, size_t size)
 	memmove(dest, source, size);
 }
 
-void mem_zero(void *block, size_t size)
-{
-	memset(block, 0, size);
-}
-
 int mem_comp(const void *a, const void *b, size_t size)
 {
 	return memcmp(a, b, size);
@@ -262,9 +251,9 @@ bool mem_has_null(const void *block, size_t size)
 	return false;
 }
 
-IOHANDLE io_open_impl(const char *filename, int flags)
+IOHANDLE io_open(const char *filename, int flags)
 {
-	dbg_assert(flags == (IOFLAG_READ | IOFLAG_SKIP_BOM) || flags == IOFLAG_READ || flags == IOFLAG_WRITE || flags == IOFLAG_APPEND, "flags must be read, read+skipbom, write or append");
+	dbg_assert(flags == IOFLAG_READ || flags == IOFLAG_WRITE || flags == IOFLAG_APPEND, "flags must be read, write or append");
 #if defined(CONF_FAMILY_WINDOWS)
 	const std::wstring wide_filename = windows_utf8_to_wide(filename);
 	DWORD desired_access;
@@ -279,7 +268,7 @@ IOHANDLE io_open_impl(const char *filename, int flags)
 	else if(flags == IOFLAG_WRITE)
 	{
 		desired_access = FILE_WRITE_DATA;
-		creation_disposition = OPEN_ALWAYS;
+		creation_disposition = CREATE_ALWAYS;
 		open_mode = "wb";
 	}
 	else if(flags == IOFLAG_APPEND)
@@ -322,21 +311,6 @@ IOHANDLE io_open_impl(const char *filename, int flags)
 	}
 	return fopen(filename, open_mode);
 #endif
-}
-
-IOHANDLE io_open(const char *filename, int flags)
-{
-	IOHANDLE result = io_open_impl(filename, flags);
-	unsigned char buf[3];
-	if((flags & IOFLAG_SKIP_BOM) == 0 || !result)
-	{
-		return result;
-	}
-	if(io_read(result, buf, sizeof(buf)) != 3 || buf[0] != 0xef || buf[1] != 0xbb || buf[2] != 0xbf)
-	{
-		io_seek(result, 0, IOSEEK_START);
-	}
-	return result;
 }
 
 unsigned io_read(IOHANDLE io, void *buffer, unsigned size)
@@ -474,10 +448,9 @@ int io_sync(IOHANDLE io)
 #define ASYNC_BUFSIZE (8 * 1024)
 #define ASYNC_LOCAL_BUFSIZE (64 * 1024)
 
-// TODO: Use Thread Safety Analysis when this file is converted to C++
 struct ASYNCIO
 {
-	LOCK lock;
+	CLock lock;
 	IOHANDLE io;
 	SEMAPHORE sphore;
 	void *thread;
@@ -530,13 +503,12 @@ static void aio_handle_free_and_unlock(ASYNCIO *aio) RELEASE(aio->lock)
 	aio->refcount--;
 
 	do_free = aio->refcount == 0;
-	lock_unlock(aio->lock);
+	aio->lock.unlock();
 	if(do_free)
 	{
 		free(aio->buffer);
 		sphore_destroy(&aio->sphore);
-		lock_destroy(aio->lock);
-		free(aio);
+		delete aio;
 	}
 }
 
@@ -544,7 +516,7 @@ static void aio_thread(void *user)
 {
 	ASYNCIO *aio = (ASYNCIO *)user;
 
-	lock_wait(aio->lock);
+	aio->lock.lock();
 	while(true)
 	{
 		struct BUFFERS buffers;
@@ -563,9 +535,9 @@ static void aio_thread(void *user)
 				aio_handle_free_and_unlock(aio);
 				break;
 			}
-			lock_unlock(aio->lock);
+			aio->lock.unlock();
 			sphore_wait(&aio->sphore);
-			lock_wait(aio->lock);
+			aio->lock.lock();
 			continue;
 		}
 
@@ -589,26 +561,25 @@ static void aio_thread(void *user)
 			}
 		}
 		aio->read_pos = (aio->read_pos + buffers.len1 + buffers.len2) % aio->buffer_size;
-		lock_unlock(aio->lock);
+		aio->lock.unlock();
 
 		io_write(aio->io, local_buffer, local_buffer_len);
 		io_flush(aio->io);
 		result_io_error = io_error(aio->io);
 
-		lock_wait(aio->lock);
+		aio->lock.lock();
 		aio->error = result_io_error;
 	}
 }
 
 ASYNCIO *aio_new(IOHANDLE io)
 {
-	ASYNCIO *aio = (ASYNCIO *)malloc(sizeof(*aio));
+	ASYNCIO *aio = new ASYNCIO;
 	if(!aio)
 	{
 		return 0;
 	}
 	aio->io = io;
-	aio->lock = lock_create();
 	sphore_init(&aio->sphore);
 	aio->thread = 0;
 
@@ -616,8 +587,7 @@ ASYNCIO *aio_new(IOHANDLE io)
 	if(!aio->buffer)
 	{
 		sphore_destroy(&aio->sphore);
-		lock_destroy(aio->lock);
-		free(aio);
+		delete aio;
 		return 0;
 	}
 	aio->buffer_size = ASYNC_BUFSIZE;
@@ -632,8 +602,7 @@ ASYNCIO *aio_new(IOHANDLE io)
 	{
 		free(aio->buffer);
 		sphore_destroy(&aio->sphore);
-		lock_destroy(aio->lock);
-		free(aio);
+		delete aio;
 		return 0;
 	}
 	return aio;
@@ -662,12 +631,12 @@ static unsigned int next_buffer_size(unsigned int cur_size, unsigned int need_si
 
 void aio_lock(ASYNCIO *aio) ACQUIRE(aio->lock)
 {
-	lock_wait(aio->lock);
+	aio->lock.lock();
 }
 
 void aio_unlock(ASYNCIO *aio) RELEASE(aio->lock)
 {
-	lock_unlock(aio->lock);
+	aio->lock.unlock();
 	sphore_signal(&aio->sphore);
 }
 
@@ -752,7 +721,7 @@ int aio_error(ASYNCIO *aio)
 
 void aio_free(ASYNCIO *aio)
 {
-	lock_wait(aio->lock);
+	aio->lock.lock();
 	if(aio->thread)
 	{
 		thread_detach(aio->thread);
@@ -818,12 +787,12 @@ void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
 	data->u = u;
 #if defined(CONF_FAMILY_UNIX)
 	{
-		pthread_t id;
 		pthread_attr_t attr;
-		pthread_attr_init(&attr);
+		dbg_assert(pthread_attr_init(&attr) == 0, "pthread_attr_init failure");
 #if defined(CONF_PLATFORM_MACOS) && defined(__MAC_10_10) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_10
-		pthread_attr_set_qos_class_np(&attr, QOS_CLASS_USER_INTERACTIVE, 0);
+		dbg_assert(pthread_attr_set_qos_class_np(&attr, QOS_CLASS_USER_INTERACTIVE, 0) == 0, "pthread_attr_set_qos_class_np failure");
 #endif
+		pthread_t id;
 		dbg_assert(pthread_create(&id, &attr, thread_run, data) == 0, "pthread_create failure");
 		return (void *)id;
 	}
@@ -840,12 +809,10 @@ void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
 void thread_wait(void *thread)
 {
 #if defined(CONF_FAMILY_UNIX)
-	int result = pthread_join((pthread_t)thread, NULL);
-	if(result != 0)
-		dbg_msg("thread", "!! %d", result);
+	dbg_assert(pthread_join((pthread_t)thread, nullptr) == 0, "pthread_join failure");
 #elif defined(CONF_FAMILY_WINDOWS)
-	WaitForSingleObject((HANDLE)thread, INFINITE);
-	CloseHandle(thread);
+	dbg_assert(WaitForSingleObject((HANDLE)thread, INFINITE) == WAIT_OBJECT_0, "WaitForSingleObject failure");
+	dbg_assert(CloseHandle(thread), "CloseHandle failure");
 #else
 #error not implemented
 #endif
@@ -854,9 +821,7 @@ void thread_wait(void *thread)
 void thread_yield()
 {
 #if defined(CONF_FAMILY_UNIX)
-	int result = sched_yield();
-	if(result != 0)
-		dbg_msg("thread", "yield failed: %d", errno);
+	dbg_assert(sched_yield() == 0, "sched_yield failure");
 #elif defined(CONF_FAMILY_WINDOWS)
 	Sleep(0);
 #else
@@ -867,168 +832,87 @@ void thread_yield()
 void thread_detach(void *thread)
 {
 #if defined(CONF_FAMILY_UNIX)
-	int result = pthread_detach((pthread_t)(thread));
-	if(result != 0)
-		dbg_msg("thread", "detach failed: %d", result);
+	dbg_assert(pthread_detach((pthread_t)thread) == 0, "pthread_detach failure");
 #elif defined(CONF_FAMILY_WINDOWS)
-	CloseHandle(thread);
+	dbg_assert(CloseHandle(thread), "CloseHandle failure");
 #else
 #error not implemented
 #endif
 }
 
-bool thread_init_and_detach(void (*threadfunc)(void *), void *u, const char *name)
+void thread_init_and_detach(void (*threadfunc)(void *), void *u, const char *name)
 {
 	void *thread = thread_init(threadfunc, u, name);
-	if(thread)
-		thread_detach(thread);
-	return thread != nullptr;
+	thread_detach(thread);
 }
-
-#if defined(CONF_FAMILY_UNIX)
-typedef pthread_mutex_t LOCKINTERNAL;
-#elif defined(CONF_FAMILY_WINDOWS)
-typedef CRITICAL_SECTION LOCKINTERNAL;
-#else
-#error not implemented on this platform
-#endif
-
-LOCK lock_create()
-{
-	LOCKINTERNAL *lock = (LOCKINTERNAL *)malloc(sizeof(*lock));
-#if defined(CONF_FAMILY_UNIX)
-	int result;
-#endif
-
-	if(!lock)
-		return 0;
-
-#if defined(CONF_FAMILY_UNIX)
-	result = pthread_mutex_init(lock, 0x0);
-	if(result != 0)
-	{
-		dbg_msg("lock", "init failed: %d", result);
-		free(lock);
-		return 0;
-	}
-#elif defined(CONF_FAMILY_WINDOWS)
-	InitializeCriticalSection((LPCRITICAL_SECTION)lock);
-#else
-#error not implemented on this platform
-#endif
-	return (LOCK)lock;
-}
-
-void lock_destroy(LOCK lock)
-{
-#if defined(CONF_FAMILY_UNIX)
-	int result = pthread_mutex_destroy((LOCKINTERNAL *)lock);
-	if(result != 0)
-		dbg_msg("lock", "destroy failed: %d", result);
-#elif defined(CONF_FAMILY_WINDOWS)
-	DeleteCriticalSection((LPCRITICAL_SECTION)lock);
-#else
-#error not implemented on this platform
-#endif
-	free(lock);
-}
-
-int lock_trylock(LOCK lock)
-{
-#if defined(CONF_FAMILY_UNIX)
-	return pthread_mutex_trylock((LOCKINTERNAL *)lock);
-#elif defined(CONF_FAMILY_WINDOWS)
-	return !TryEnterCriticalSection((LPCRITICAL_SECTION)lock);
-#else
-#error not implemented on this platform
-#endif
-}
-
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wthread-safety-analysis"
-#endif
-void lock_wait(LOCK lock)
-{
-#if defined(CONF_FAMILY_UNIX)
-	int result = pthread_mutex_lock((LOCKINTERNAL *)lock);
-	if(result != 0)
-		dbg_msg("lock", "lock failed: %d", result);
-#elif defined(CONF_FAMILY_WINDOWS)
-	EnterCriticalSection((LPCRITICAL_SECTION)lock);
-#else
-#error not implemented on this platform
-#endif
-}
-
-void lock_unlock(LOCK lock)
-{
-#if defined(CONF_FAMILY_UNIX)
-	int result = pthread_mutex_unlock((LOCKINTERNAL *)lock);
-	if(result != 0)
-		dbg_msg("lock", "unlock failed: %d", result);
-#elif defined(CONF_FAMILY_WINDOWS)
-	LeaveCriticalSection((LPCRITICAL_SECTION)lock);
-#else
-#error not implemented on this platform
-#endif
-}
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 #if defined(CONF_FAMILY_WINDOWS)
 void sphore_init(SEMAPHORE *sem)
 {
-	*sem = CreateSemaphore(0, 0, 10000, 0);
+	*sem = CreateSemaphoreW(nullptr, 0, std::numeric_limits<LONG>::max(), nullptr);
+	dbg_assert(*sem != nullptr, "CreateSemaphoreW failure");
 }
-void sphore_wait(SEMAPHORE *sem) { WaitForSingleObject((HANDLE)*sem, INFINITE); }
-void sphore_signal(SEMAPHORE *sem) { ReleaseSemaphore((HANDLE)*sem, 1, NULL); }
-void sphore_destroy(SEMAPHORE *sem) { CloseHandle((HANDLE)*sem); }
+void sphore_wait(SEMAPHORE *sem)
+{
+	dbg_assert(WaitForSingleObject((HANDLE)*sem, INFINITE) == WAIT_OBJECT_0, "WaitForSingleObject failure");
+}
+void sphore_signal(SEMAPHORE *sem)
+{
+	dbg_assert(ReleaseSemaphore((HANDLE)*sem, 1, nullptr), "ReleaseSemaphore failure");
+}
+void sphore_destroy(SEMAPHORE *sem)
+{
+	dbg_assert(CloseHandle((HANDLE)*sem), "CloseHandle failure");
+}
 #elif defined(CONF_PLATFORM_MACOS)
 void sphore_init(SEMAPHORE *sem)
 {
-	char aBuf[64];
+	char aBuf[32];
 	str_format(aBuf, sizeof(aBuf), "%p", (void *)sem);
 	*sem = sem_open(aBuf, O_CREAT | O_EXCL, S_IRWXU | S_IRWXG, 0);
-	if(*sem == SEM_FAILED)
-		dbg_msg("sphore", "init failed: %d", errno);
+	dbg_assert(*sem != SEM_FAILED, "sem_open failure");
 }
-void sphore_wait(SEMAPHORE *sem) { sem_wait(*sem); }
-void sphore_signal(SEMAPHORE *sem) { sem_post(*sem); }
+void sphore_wait(SEMAPHORE *sem)
+{
+	while(true)
+	{
+		if(sem_wait(*sem) == 0)
+			break;
+		dbg_assert(errno == EINTR, "sem_wait failure");
+	}
+}
+void sphore_signal(SEMAPHORE *sem)
+{
+	dbg_assert(sem_post(*sem) == 0, "sem_post failure");
+}
 void sphore_destroy(SEMAPHORE *sem)
 {
-	char aBuf[64];
-	sem_close(*sem);
+	dbg_assert(sem_close(*sem) == 0, "sem_close failure");
+	char aBuf[32];
 	str_format(aBuf, sizeof(aBuf), "%p", (void *)sem);
-	sem_unlink(aBuf);
+	dbg_assert(sem_unlink(aBuf) == 0, "sem_unlink failure");
 }
 #elif defined(CONF_FAMILY_UNIX)
 void sphore_init(SEMAPHORE *sem)
 {
-	if(sem_init(sem, 0, 0) != 0)
-		dbg_msg("sphore", "init failed: %d", errno);
+	dbg_assert(sem_init(sem, 0, 0) == 0, "sem_init failure");
 }
-
 void sphore_wait(SEMAPHORE *sem)
 {
-	do
+	while(true)
 	{
-		errno = 0;
-		if(sem_wait(sem) != 0)
-			dbg_msg("sphore", "wait failed: %d", errno);
-	} while(errno == EINTR);
+		if(sem_wait(sem) == 0)
+			break;
+		dbg_assert(errno == EINTR, "sem_wait failure");
+	}
 }
-
 void sphore_signal(SEMAPHORE *sem)
 {
-	if(sem_post(sem) != 0)
-		dbg_msg("sphore", "post failed: %d", errno);
+	dbg_assert(sem_post(sem) == 0, "sem_post failure");
 }
 void sphore_destroy(SEMAPHORE *sem)
 {
-	if(sem_destroy(sem) != 0)
-		dbg_msg("sphore", "destroy failed: %d", errno);
+	dbg_assert(sem_destroy(sem) == 0, "sem_destroy failure");
 }
 #endif
 
@@ -1068,6 +952,9 @@ int64_t time_freq()
 }
 
 /* -----  network ----- */
+
+const NETADDR NETADDR_ZEROED = {NETTYPE_INVALID, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0};
+
 static void netaddr_to_sockaddr_in(const NETADDR *src, struct sockaddr_in *dest)
 {
 	mem_zero(dest, sizeof(struct sockaddr_in));
@@ -1335,7 +1222,7 @@ static int parse_int(int *out, const char **str)
 {
 	int i = 0;
 	*out = 0;
-	if(**str < '0' || **str > '9')
+	if(!str_isnum(**str))
 		return -1;
 
 	i = **str - '0';
@@ -1343,7 +1230,7 @@ static int parse_int(int *out, const char **str)
 
 	while(true)
 	{
-		if(**str < '0' || **str > '9')
+		if(!str_isnum(**str))
 		{
 			*out = i;
 			return 0;
@@ -1388,19 +1275,15 @@ static int parse_uint16(unsigned short *out, const char **str)
 
 int net_addr_from_url(NETADDR *addr, const char *string, char *host_buf, size_t host_buf_size)
 {
-	char host[128];
-	int length;
-	int start = 0;
-	int end;
-	int failure;
 	const char *str = str_startswith(string, "tw-0.6+udp://");
 	if(!str)
 		return 1;
 
 	mem_zero(addr, sizeof(*addr));
 
-	length = str_length(str);
-	end = length;
+	int length = str_length(str);
+	int start = 0;
+	int end = length;
 	for(int i = 0; i < length; i++)
 	{
 		if(str[i] == '@')
@@ -1418,14 +1301,13 @@ int net_addr_from_url(NETADDR *addr, const char *string, char *host_buf, size_t 
 			break;
 		}
 	}
+
+	char host[128];
 	str_truncate(host, sizeof(host), str + start, end - start);
 	if(host_buf)
 		str_copy(host_buf, host, host_buf_size);
 
-	if((failure = net_addr_from_str(addr, host)))
-		return failure;
-
-	return failure;
+	return net_addr_from_str(addr, host);
 }
 
 int net_addr_from_str(NETADDR *addr, const char *string)
@@ -1561,9 +1443,9 @@ std::string windows_format_system_message(unsigned long error)
 	if(FormatMessageW(flags, NULL, error, 0, (LPWSTR)&wide_message, 0, NULL) == 0)
 		return "unknown error";
 
-	std::string message = windows_wide_to_utf8(wide_message);
+	std::optional<std::string> message = windows_wide_to_utf8(wide_message);
 	LocalFree(wide_message);
-	return message;
+	return message.value_or("(invalid UTF-16 in error message)");
 }
 #endif
 
@@ -1653,14 +1535,17 @@ NETSOCKET net_udp_create(NETADDR bindaddr)
 
 			/* set broadcast */
 			if(setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (const char *)&broadcast, sizeof(broadcast)) != 0)
-				dbg_msg("socket", "Setting BROADCAST on ipv4 failed: %d", errno);
+			{
+				dbg_msg("socket", "Setting BROADCAST on ipv4 failed: %d", net_errno());
+			}
 
 			{
 				/* set DSCP/TOS */
 				int iptos = 0x10 /* IPTOS_LOWDELAY */;
-				//int iptos = 46; /* High Priority */
 				if(setsockopt(socket, IPPROTO_IP, IP_TOS, (char *)&iptos, sizeof(iptos)) != 0)
-					dbg_msg("socket", "Setting TOS on ipv4 failed: %d", errno);
+				{
+					dbg_msg("socket", "Setting TOS on ipv4 failed: %d", net_errno());
+				}
 			}
 		}
 	}
@@ -1698,15 +1583,21 @@ NETSOCKET net_udp_create(NETADDR bindaddr)
 
 			/* set broadcast */
 			if(setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (const char *)&broadcast, sizeof(broadcast)) != 0)
-				dbg_msg("socket", "Setting BROADCAST on ipv6 failed: %d", errno);
+			{
+				dbg_msg("socket", "Setting BROADCAST on ipv6 failed: %d", net_errno());
+			}
 
+			// TODO: setting IP_TOS on ipv6 with setsockopt is not supported on Windows, see https://github.com/ddnet/ddnet/issues/7605
+#if !defined(CONF_FAMILY_WINDOWS)
 			{
 				/* set DSCP/TOS */
 				int iptos = 0x10 /* IPTOS_LOWDELAY */;
-				//int iptos = 46; /* High Priority */
 				if(setsockopt(socket, IPPROTO_IP, IP_TOS, (char *)&iptos, sizeof(iptos)) != 0)
-					dbg_msg("socket", "Setting TOS on ipv6 failed: %d", errno);
+				{
+					dbg_msg("socket", "Setting TOS on ipv6 failed: %d", net_errno());
+				}
 			}
+#endif
 		}
 	}
 
@@ -1940,7 +1831,7 @@ NETSOCKET net_tcp_create(NETADDR bindaddr)
 	NETSOCKET sock = (NETSOCKET_INTERNAL *)malloc(sizeof(*sock));
 	*sock = invalid_socket;
 	NETADDR tmpbindaddr = bindaddr;
-	int socket = -1;
+	int socket4 = -1;
 
 	if(bindaddr.type & NETTYPE_IPV4)
 	{
@@ -1949,14 +1840,15 @@ NETSOCKET net_tcp_create(NETADDR bindaddr)
 		/* bind, we should check for error */
 		tmpbindaddr.type = NETTYPE_IPV4;
 		netaddr_to_sockaddr_in(&tmpbindaddr, &addr);
-		socket = priv_net_create_socket(AF_INET, SOCK_STREAM, (struct sockaddr *)&addr, sizeof(addr));
-		if(socket >= 0)
+		socket4 = priv_net_create_socket(AF_INET, SOCK_STREAM, (struct sockaddr *)&addr, sizeof(addr));
+		if(socket4 >= 0)
 		{
 			sock->type |= NETTYPE_IPV4;
-			sock->ipv4sock = socket;
+			sock->ipv4sock = socket4;
 		}
 	}
 
+	int socket6 = -1;
 	if(bindaddr.type & NETTYPE_IPV6)
 	{
 		struct sockaddr_in6 addr;
@@ -1964,15 +1856,15 @@ NETSOCKET net_tcp_create(NETADDR bindaddr)
 		/* bind, we should check for error */
 		tmpbindaddr.type = NETTYPE_IPV6;
 		netaddr_to_sockaddr_in6(&tmpbindaddr, &addr);
-		socket = priv_net_create_socket(AF_INET6, SOCK_STREAM, (struct sockaddr *)&addr, sizeof(addr));
-		if(socket >= 0)
+		socket6 = priv_net_create_socket(AF_INET6, SOCK_STREAM, (struct sockaddr *)&addr, sizeof(addr));
+		if(socket6 >= 0)
 		{
 			sock->type |= NETTYPE_IPV6;
-			sock->ipv6sock = socket;
+			sock->ipv6sock = socket6;
 		}
 	}
 
-	if(socket < 0)
+	if(socket4 < 0 && socket6 < 0)
 	{
 		free(sock);
 		sock = nullptr;
@@ -2080,6 +1972,8 @@ int net_tcp_connect(NETSOCKET sock, const NETADDR *a)
 	{
 		struct sockaddr_in addr;
 		netaddr_to_sockaddr_in(a, &addr);
+		if(sock->ipv4sock < 0)
+			return -2;
 		return connect(sock->ipv4sock, (struct sockaddr *)&addr, sizeof(addr));
 	}
 
@@ -2087,6 +1981,8 @@ int net_tcp_connect(NETSOCKET sock, const NETADDR *a)
 	{
 		struct sockaddr_in6 addr;
 		netaddr_to_sockaddr_in6(a, &addr);
+		if(sock->ipv6sock < 0)
+			return -2;
 		return connect(sock->ipv6sock, (struct sockaddr *)&addr, sizeof(addr));
 	}
 
@@ -2211,36 +2107,43 @@ void fs_listdir(const char *dir, FS_LISTDIR_CALLBACK cb, int type, void *user)
 	if(handle == INVALID_HANDLE_VALUE)
 		return;
 
-	/* add all the entries */
 	do
 	{
-		const std::string current_entry = windows_wide_to_utf8(finddata.cFileName);
-		if(cb(current_entry.c_str(), (finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0, type, user))
+		const std::optional<std::string> current_entry = windows_wide_to_utf8(finddata.cFileName);
+		if(!current_entry.has_value())
+		{
+			log_error("filesystem", "ERROR: file/folder name containing invalid UTF-16 found in folder '%s'", dir);
+			continue;
+		}
+		if(cb(current_entry.value().c_str(), (finddata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0, type, user))
 			break;
 	} while(FindNextFileW(handle, &finddata));
 
 	FindClose(handle);
 #else
-	struct dirent *entry;
-	char buffer[IO_MAX_PATH_LENGTH];
-	int length;
-	DIR *d = opendir(dir);
-
-	if(!d)
+	DIR *dir_handle = opendir(dir);
+	if(dir_handle == nullptr)
 		return;
 
+	char buffer[IO_MAX_PATH_LENGTH];
 	str_format(buffer, sizeof(buffer), "%s/", dir);
-	length = str_length(buffer);
-
-	while((entry = readdir(d)) != NULL)
+	size_t length = str_length(buffer);
+	while(true)
 	{
-		str_copy(buffer + length, entry->d_name, (int)sizeof(buffer) - length);
+		struct dirent *entry = readdir(dir_handle);
+		if(entry == nullptr)
+			break;
+		if(!str_utf8_check(entry->d_name))
+		{
+			log_error("filesystem", "ERROR: file/folder name containing invalid UTF-8 found in folder '%s'", dir);
+			continue;
+		}
+		str_copy(buffer + length, entry->d_name, sizeof(buffer) - length);
 		if(cb(entry->d_name, fs_is_dir(buffer), type, user))
 			break;
 	}
 
-	/* close the directory and return */
-	closedir(d);
+	closedir(dir_handle);
 #endif
 }
 
@@ -2256,13 +2159,17 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 	if(handle == INVALID_HANDLE_VALUE)
 		return;
 
-	/* add all the entries */
 	do
 	{
-		const std::string current_entry = windows_wide_to_utf8(finddata.cFileName);
+		const std::optional<std::string> current_entry = windows_wide_to_utf8(finddata.cFileName);
+		if(!current_entry.has_value())
+		{
+			log_error("filesystem", "ERROR: file/folder name containing invalid UTF-16 found in folder '%s'", dir);
+			continue;
+		}
 
 		CFsFileInfo info;
-		info.m_pName = current_entry.c_str();
+		info.m_pName = current_entry.value().c_str();
 		info.m_TimeCreated = filetime_to_unixtime(&finddata.ftCreationTime);
 		info.m_TimeModified = filetime_to_unixtime(&finddata.ftLastWriteTime);
 
@@ -2272,25 +2179,29 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 
 	FindClose(handle);
 #else
-	struct dirent *entry;
-	time_t created = -1, modified = -1;
-	char buffer[IO_MAX_PATH_LENGTH];
-	int length;
-	DIR *d = opendir(dir);
-
-	if(!d)
+	DIR *dir_handle = opendir(dir);
+	if(dir_handle == nullptr)
 		return;
 
+	char buffer[IO_MAX_PATH_LENGTH];
 	str_format(buffer, sizeof(buffer), "%s/", dir);
-	length = str_length(buffer);
+	size_t length = str_length(buffer);
 
-	while((entry = readdir(d)) != NULL)
+	while(true)
 	{
-		CFsFileInfo info;
-
-		str_copy(buffer + length, entry->d_name, (int)sizeof(buffer) - length);
+		struct dirent *entry = readdir(dir_handle);
+		if(entry == nullptr)
+			break;
+		if(!str_utf8_check(entry->d_name))
+		{
+			log_error("filesystem", "ERROR: file/folder name containing invalid UTF-8 found in folder '%s'", dir);
+			continue;
+		}
+		str_copy(buffer + length, entry->d_name, sizeof(buffer) - length);
+		time_t created = -1, modified = -1;
 		fs_file_time(buffer, &created, &modified);
 
+		CFsFileInfo info;
 		info.m_pName = entry->d_name;
 		info.m_TimeCreated = created;
 		info.m_TimeModified = modified;
@@ -2299,8 +2210,7 @@ void fs_listdir_fileinfo(const char *dir, FS_LISTDIR_CALLBACK_FILEINFO cb, int t
 			break;
 	}
 
-	/* close the directory and return */
-	closedir(d);
+	closedir(dir_handle);
 #endif
 }
 
@@ -2309,17 +2219,33 @@ int fs_storage_path(const char *appname, char *path, int max)
 #if defined(CONF_FAMILY_WINDOWS)
 	WCHAR *wide_home = _wgetenv(L"APPDATA");
 	if(!wide_home)
+	{
+		path[0] = '\0';
 		return -1;
-	const std::string home = windows_wide_to_utf8(wide_home);
-	str_format(path, max, "%s/%s", home.c_str(), appname);
+	}
+	const std::optional<std::string> home = windows_wide_to_utf8(wide_home);
+	if(!home.has_value())
+	{
+		log_error("filesystem", "ERROR: the APPDATA environment variable contains invalid UTF-16");
+		path[0] = '\0';
+		return -1;
+	}
+	str_format(path, max, "%s/%s", home.value().c_str(), appname);
 	return 0;
-#elif defined(CONF_PLATFORM_ANDROID)
-	// just use the data directory
-	return -1;
 #else
 	char *home = getenv("HOME");
 	if(!home)
+	{
+		path[0] = '\0';
 		return -1;
+	}
+
+	if(!str_utf8_check(home))
+	{
+		log_error("filesystem", "ERROR: the HOME environment variable contains invalid UTF-8");
+		path[0] = '\0';
+		return -1;
+	}
 
 #if defined(CONF_PLATFORM_HAIKU)
 	str_format(path, max, "%s/config/settings/%s", home, appname);
@@ -2335,7 +2261,15 @@ int fs_storage_path(const char *appname, char *path, int max)
 	{
 		char *data_home = getenv("XDG_DATA_HOME");
 		if(data_home)
+		{
+			if(!str_utf8_check(data_home))
+			{
+				log_error("filesystem", "ERROR: the XDG_DATA_HOME environment variable contains invalid UTF-8");
+				path[0] = '\0';
+				return -1;
+			}
 			str_format(path, max, "%s/%s", data_home, appname);
+		}
 		else
 			str_format(path, max, "%s/.local/share/%s", home, appname);
 	}
@@ -2349,17 +2283,20 @@ int fs_storage_path(const char *appname, char *path, int max)
 
 int fs_makedir_rec_for(const char *path)
 {
-	char buffer[1024 * 2];
-	char *p;
+	char buffer[IO_MAX_PATH_LENGTH];
 	str_copy(buffer, path);
-	for(p = buffer + 1; *p != '\0'; p++)
+	for(int index = 1; buffer[index] != '\0'; ++index)
 	{
-		if(*p == '/' && *(p + 1) != '\0')
+		// Do not try to create folder for drive letters on Windows,
+		// as this is not necessary and may fail for system drives.
+		if((buffer[index] == '/' || buffer[index] == '\\') && buffer[index + 1] != '\0' && buffer[index - 1] != ':')
 		{
-			*p = '\0';
+			buffer[index] = '\0';
 			if(fs_makedir(buffer) < 0)
+			{
 				return -1;
-			*p = '/';
+			}
+			buffer[index] = '/';
 		}
 	}
 	return 0;
@@ -2442,17 +2379,12 @@ int fs_is_relative_path(const char *path)
 
 int fs_chdir(const char *path)
 {
-	if(fs_is_dir(path))
-	{
 #if defined(CONF_FAMILY_WINDOWS)
-		const std::wstring wide_path = windows_utf8_to_wide(path);
-		return SetCurrentDirectoryW(wide_path.c_str()) != 0 ? 0 : 1;
+	const std::wstring wide_path = windows_utf8_to_wide(path);
+	return SetCurrentDirectoryW(wide_path.c_str()) != 0 ? 0 : 1;
 #else
-		return chdir(path) ? 1 : 0;
+	return chdir(path) ? 1 : 0;
 #endif
-	}
-	else
-		return 1;
 }
 
 char *fs_getcwd(char *buffer, int buffer_size)
@@ -2460,19 +2392,23 @@ char *fs_getcwd(char *buffer, int buffer_size)
 #if defined(CONF_FAMILY_WINDOWS)
 	const DWORD size_needed = GetCurrentDirectoryW(0, nullptr);
 	std::wstring wide_current_dir(size_needed, L'0');
-	DWORD result = GetCurrentDirectoryW(size_needed, wide_current_dir.data());
-	if(result == 0)
+	dbg_assert(GetCurrentDirectoryW(size_needed, wide_current_dir.data()) == size_needed - 1, "GetCurrentDirectoryW failure");
+	const std::optional<std::string> current_dir = windows_wide_to_utf8(wide_current_dir.c_str());
+	if(!current_dir.has_value())
 	{
-		const DWORD LastError = GetLastError();
-		const std::string ErrorMsg = windows_format_system_message(LastError);
-		dbg_msg("filesystem", "GetCurrentDirectoryW failed: %ld %s", LastError, ErrorMsg.c_str());
+		buffer[0] = '\0';
 		return nullptr;
 	}
-	const std::string current_dir = windows_wide_to_utf8(wide_current_dir.c_str());
-	str_copy(buffer, current_dir.c_str(), buffer_size);
+	str_copy(buffer, current_dir.value().c_str(), buffer_size);
 	return buffer;
 #else
-	return getcwd(buffer, buffer_size);
+	char *result = getcwd(buffer, buffer_size);
+	if(result == nullptr || !str_utf8_check(result))
+	{
+		buffer[0] = '\0';
+		return nullptr;
+	}
+	return result;
 #endif
 }
 
@@ -2654,32 +2590,83 @@ int net_socket_read_wait(NETSOCKET sock, int time)
 	return 0;
 }
 
-int time_timestamp()
+int64_t time_timestamp()
 {
 	return time(0);
+}
+
+static struct tm *time_localtime_threadlocal(time_t *time_data)
+{
+#if defined(CONF_FAMILY_WINDOWS)
+	// The result of localtime is thread-local on Windows
+	// https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/localtime-localtime32-localtime64
+	return localtime(time_data);
+#else
+	// Thread-local buffer for the result of localtime_r
+	thread_local struct tm time_info_buf;
+	return localtime_r(time_data, &time_info_buf);
+#endif
 }
 
 int time_houroftheday()
 {
 	time_t time_data;
-	struct tm *time_info;
-
 	time(&time_data);
-	time_info = localtime(&time_data);
+	struct tm *time_info = time_localtime_threadlocal(&time_data);
 	return time_info->tm_hour;
 }
 
-int time_season()
+static bool time_iseasterday(time_t time_data, struct tm *time_info)
+{
+	// compute Easter day (Sunday) using https://en.wikipedia.org/w/index.php?title=Computus&oldid=890710285#Anonymous_Gregorian_algorithm
+	int Y = time_info->tm_year + 1900;
+	int a = Y % 19;
+	int b = Y / 100;
+	int c = Y % 100;
+	int d = b / 4;
+	int e = b % 4;
+	int f = (b + 8) / 25;
+	int g = (b - f + 1) / 3;
+	int h = (19 * a + b - d - g + 15) % 30;
+	int i = c / 4;
+	int k = c % 4;
+	int L = (32 + 2 * e + 2 * i - h - k) % 7;
+	int m = (a + 11 * h + 22 * L) / 451;
+	int month = (h + L - 7 * m + 114) / 31;
+	int day = ((h + L - 7 * m + 114) % 31) + 1;
+
+	// (now-1d ≤ easter ≤ now+2d) <=> (easter-2d ≤ now ≤ easter+1d) <=> (Good Friday ≤ now ≤ Easter Monday)
+	for(int day_offset = -1; day_offset <= 2; day_offset++)
+	{
+		time_data = time_data + day_offset * 60 * 60 * 24;
+		time_info = time_localtime_threadlocal(&time_data);
+		if(time_info->tm_mon == month - 1 && time_info->tm_mday == day)
+			return true;
+	}
+	return false;
+}
+
+ETimeSeason time_season()
 {
 	time_t time_data;
-	struct tm *time_info;
-
 	time(&time_data);
-	time_info = localtime(&time_data);
+	struct tm *time_info = time_localtime_threadlocal(&time_data);
 
 	if((time_info->tm_mon == 11 && time_info->tm_mday == 31) || (time_info->tm_mon == 0 && time_info->tm_mday == 1))
 	{
 		return SEASON_NEWYEAR;
+	}
+	else if(time_info->tm_mon == 11 && time_info->tm_mday >= 24 && time_info->tm_mday <= 26)
+	{
+		return SEASON_XMAS;
+	}
+	else if((time_info->tm_mon == 9 && time_info->tm_mday == 31) || (time_info->tm_mon == 10 && time_info->tm_mday == 1))
+	{
+		return SEASON_HALLOWEEN;
+	}
+	else if(time_iseasterday(time_data, time_info))
+	{
+		return SEASON_EASTER;
 	}
 
 	switch(time_info->tm_mon)
@@ -2700,8 +2687,10 @@ int time_season()
 	case 9:
 	case 10:
 		return SEASON_AUTUMN;
+	default:
+		dbg_assert(false, "Invalid month");
+		dbg_break();
 	}
-	return SEASON_SPRING; // should never happen
 }
 
 void str_append(char *dst, const char *src, int dst_size)
@@ -2772,6 +2761,15 @@ int str_format_v(char *buffer, int buffer_size, const char *format, va_list args
 	return str_utf8_fix_truncation(buffer);
 }
 
+int str_format_int(char *buffer, size_t buffer_size, int value)
+{
+	buffer[0] = '\0'; // Fix false positive clang-analyzer-core.UndefinedBinaryOperatorResult when using result
+	auto result = std::to_chars(buffer, buffer + buffer_size - 1, value);
+	result.ptr[0] = '\0';
+	return result.ptr - buffer;
+}
+
+#undef str_format
 int str_format(char *buffer, int buffer_size, const char *format, ...)
 {
 	va_list args;
@@ -2780,6 +2778,9 @@ int str_format(char *buffer, int buffer_size, const char *format, ...)
 	va_end(args);
 	return length;
 }
+#if !defined(CONF_DEBUG)
+#define str_format str_format_opt
+#endif
 
 const char *str_trim_words(const char *str, int words)
 {
@@ -2938,7 +2939,7 @@ int str_comp_filenames(const char *a, const char *b)
 
 	for(; *a && *b; ++a, ++b)
 	{
-		if(*a >= '0' && *a <= '9' && *b >= '0' && *b <= '9')
+		if(str_isnum(*a) && str_isnum(*b))
 		{
 			result = 0;
 			do
@@ -2947,11 +2948,11 @@ int str_comp_filenames(const char *a, const char *b)
 					result = *a - *b;
 				++a;
 				++b;
-			} while(*a >= '0' && *a <= '9' && *b >= '0' && *b <= '9');
+			} while(str_isnum(*a) && str_isnum(*b));
 
-			if(*a >= '0' && *a <= '9')
+			if(str_isnum(*a))
 				return 1;
-			else if(*b >= '0' && *b <= '9')
+			else if(str_isnum(*b))
 				return -1;
 			else if(result || *a == '\0' || *b == '\0')
 				return result;
@@ -3152,6 +3153,38 @@ const char *str_find(const char *haystack, const char *needle)
 	}
 
 	return 0;
+}
+
+bool str_delimiters_around_offset(const char *haystack, const char *delim, int offset, int *start, int *end)
+{
+	bool found = true;
+	const char *search = haystack;
+	const int delim_len = str_length(delim);
+	*start = 0;
+	while(str_find(search, delim))
+	{
+		const char *test = str_find(search, delim) + delim_len;
+		int distance = test - haystack;
+		if(distance > offset)
+			break;
+
+		*start = distance;
+		search = test;
+	}
+	if(search == haystack)
+		found = false;
+
+	if(str_find(search, delim))
+	{
+		*end = str_find(search, delim) - haystack;
+	}
+	else
+	{
+		*end = str_length(haystack);
+		found = false;
+	}
+
+	return found;
 }
 
 const char *str_rchr(const char *haystack, char needle)
@@ -3430,8 +3463,7 @@ int str_base64_decode(void *dst_raw, int dst_size, const char *data)
 #endif
 void str_timestamp_ex(time_t time_data, char *buffer, int buffer_size, const char *format)
 {
-	struct tm *time_info;
-	time_info = localtime(&time_data);
+	struct tm *time_info = time_localtime_threadlocal(&time_data);
 	strftime(buffer, buffer_size, format, time_info);
 	buffer[buffer_size - 1] = 0; /* assure null termination */
 }
@@ -3446,6 +3478,22 @@ void str_timestamp_format(char *buffer, int buffer_size, const char *format)
 void str_timestamp(char *buffer, int buffer_size)
 {
 	str_timestamp_format(buffer, buffer_size, FORMAT_NOSPACE);
+}
+
+bool timestamp_from_str(const char *string, const char *format, time_t *timestamp)
+{
+	std::tm tm{};
+	std::istringstream ss(string);
+	ss >> std::get_time(&tm, format);
+	if(ss.fail() || !ss.eof())
+		return false;
+
+	time_t result = mktime(&tm);
+	if(result < 0)
+		return false;
+
+	*timestamp = result;
+	return true;
 }
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
@@ -3487,8 +3535,12 @@ int str_time(int64_t centisecs, int format, char *buffer, int buffer_size)
 				(centisecs % hour) / min, (centisecs % min) / sec, centisecs % sec);
 		[[fallthrough]];
 	case TIME_MINS_CENTISECS:
-		return str_format(buffer, buffer_size, "%02" PRId64 ":%02" PRId64 ".%02" PRId64, centisecs / min,
-			(centisecs % min) / sec, centisecs % sec);
+		if(centisecs >= min)
+			return str_format(buffer, buffer_size, "%02" PRId64 ":%02" PRId64 ".%02" PRId64, centisecs / min,
+				(centisecs % min) / sec, centisecs % sec);
+		[[fallthrough]];
+	case TIME_SECS_CENTISECS:
+		return str_format(buffer, buffer_size, "%02" PRId64 ".%02" PRId64, (centisecs % min) / sec, centisecs % sec);
 	}
 
 	return -1;
@@ -3532,11 +3584,16 @@ char str_uppercase(char c)
 	return c;
 }
 
+bool str_isnum(char c)
+{
+	return c >= '0' && c <= '9';
+}
+
 int str_isallnum(const char *str)
 {
 	while(*str)
 	{
-		if(!(*str >= '0' && *str <= '9'))
+		if(!str_isnum(*str))
 			return 0;
 		str++;
 	}
@@ -3547,7 +3604,7 @@ int str_isallnum_hex(const char *str)
 {
 	while(*str)
 	{
-		if(!(*str >= '0' && *str <= '9') && !(*str >= 'a' && *str <= 'f') && !(*str >= 'A' && *str <= 'F'))
+		if(!str_isnum(*str) && !(*str >= 'a' && *str <= 'f') && !(*str >= 'A' && *str <= 'F'))
 			return 0;
 		str++;
 	}
@@ -3557,6 +3614,18 @@ int str_isallnum_hex(const char *str)
 int str_toint(const char *str)
 {
 	return str_toint_base(str, 10);
+}
+
+bool str_toint(const char *str, int *out)
+{
+	// returns true if conversion was successful
+	char *end;
+	int value = strtol(str, &end, 10);
+	if(*end != '\0')
+		return false;
+	if(out != nullptr)
+		*out = value;
+	return true;
 }
 
 int str_toint_base(const char *str, int base)
@@ -3579,11 +3648,16 @@ float str_tofloat(const char *str)
 	return strtod(str, nullptr);
 }
 
-void str_from_int(int value, char *buffer, size_t buffer_size)
+bool str_tofloat(const char *str, float *out)
 {
-	buffer[0] = '\0'; // Fix false positive clang-analyzer-core.UndefinedBinaryOperatorResult when using result
-	auto result = std::to_chars(buffer, buffer + buffer_size - 1, value);
-	result.ptr[0] = '\0';
+	// returns true if conversion was successful
+	char *end;
+	float value = strtod(str, &end);
+	if(*end != '\0')
+		return false;
+	if(out != nullptr)
+		*out = value;
+	return true;
 }
 
 int str_utf8_comp_nocase(const char *a, const char *b)
@@ -4051,7 +4125,8 @@ void cmdline_free(int argc, const char **argv)
 #endif
 }
 
-PROCESS shell_execute(const char *file)
+#if !defined(CONF_PLATFORM_ANDROID)
+PROCESS shell_execute(const char *file, EShellExecuteWindowState window_state)
 {
 #if defined(CONF_FAMILY_WINDOWS)
 	const std::wstring wide_file = windows_utf8_to_wide(file);
@@ -4061,7 +4136,18 @@ PROCESS shell_execute(const char *file)
 	info.cbSize = sizeof(SHELLEXECUTEINFOW);
 	info.lpVerb = L"open";
 	info.lpFile = wide_file.c_str();
-	info.nShow = SW_SHOWMINNOACTIVE;
+	switch(window_state)
+	{
+	case EShellExecuteWindowState::FOREGROUND:
+		info.nShow = SW_SHOW;
+		break;
+	case EShellExecuteWindowState::BACKGROUND:
+		info.nShow = SW_SHOWMINNOACTIVE;
+		break;
+	default:
+		dbg_assert(false, "window_state invalid");
+		dbg_break();
+	}
 	info.fMask = SEE_MASK_NOCLOSEPROCESS;
 	// Save and restore the FPU control word because ShellExecute might change it
 	fenv_t floating_point_environment;
@@ -4183,6 +4269,7 @@ int open_file(const char *path)
 	return open_link(buf);
 #endif
 }
+#endif // !defined(CONF_PLATFORM_ANDROID)
 
 struct SECURE_RANDOM_DATA
 {
@@ -4435,8 +4522,9 @@ void os_locale_str(char *locale, size_t length)
 	wchar_t wide_buffer[LOCALE_NAME_MAX_LENGTH];
 	dbg_assert(GetUserDefaultLocaleName(wide_buffer, std::size(wide_buffer)) > 0, "GetUserDefaultLocaleName failure");
 
-	const std::string buffer = windows_wide_to_utf8(wide_buffer);
-	str_copy(locale, buffer.c_str(), length);
+	const std::optional<std::string> buffer = windows_wide_to_utf8(wide_buffer);
+	dbg_assert(buffer.has_value(), "GetUserDefaultLocaleName returned invalid UTF-16");
+	str_copy(locale, buffer.value().c_str(), length);
 #elif defined(CONF_PLATFORM_MACOS)
 	CFLocaleRef locale_ref = CFLocaleCopyCurrent();
 	CFStringRef locale_identifier_ref = static_cast<CFStringRef>(CFLocaleGetValue(locale_ref, kCFLocaleIdentifier));
@@ -4479,7 +4567,7 @@ void os_locale_str(char *locale, size_t length)
 		{
 			locale[i] = '-';
 		}
-		else if(locale[i] != '-' && !(locale[i] >= 'a' && locale[i] <= 'z') && !(locale[i] >= 'A' && locale[i] <= 'Z') && !(locale[i] >= '0' && locale[i] <= '9'))
+		else if(locale[i] != '-' && !(locale[i] >= 'a' && locale[i] <= 'z') && !(locale[i] >= 'A' && locale[i] <= 'Z') && !(str_isnum(locale[i])))
 		{
 			locale[i] = '\0';
 			break;
@@ -4561,20 +4649,23 @@ std::wstring windows_utf8_to_wide(const char *str)
 	const int orig_length = str_length(str);
 	if(orig_length == 0)
 		return L"";
-	const int size_needed = MultiByteToWideChar(CP_UTF8, 0, str, orig_length, nullptr, 0);
+	const int size_needed = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str, orig_length, nullptr, 0);
+	dbg_assert(size_needed > 0, "Invalid UTF-8 passed to windows_utf8_to_wide");
 	std::wstring wide_string(size_needed, L'\0');
-	dbg_assert(MultiByteToWideChar(CP_UTF8, 0, str, orig_length, wide_string.data(), size_needed) == size_needed, "MultiByteToWideChar failure");
+	dbg_assert(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, str, orig_length, wide_string.data(), size_needed) == size_needed, "MultiByteToWideChar failure");
 	return wide_string;
 }
 
-std::string windows_wide_to_utf8(const wchar_t *wide_str)
+std::optional<std::string> windows_wide_to_utf8(const wchar_t *wide_str)
 {
 	const int orig_length = wcslen(wide_str);
 	if(orig_length == 0)
 		return "";
-	const int size_needed = WideCharToMultiByte(CP_UTF8, 0, wide_str, orig_length, nullptr, 0, nullptr, nullptr);
+	const int size_needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide_str, orig_length, nullptr, 0, nullptr, nullptr);
+	if(size_needed == 0)
+		return {};
 	std::string string(size_needed, '\0');
-	dbg_assert(WideCharToMultiByte(CP_UTF8, 0, wide_str, orig_length, string.data(), size_needed, nullptr, nullptr) == size_needed, "WideCharToMultiByte failure");
+	dbg_assert(WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide_str, orig_length, string.data(), size_needed, nullptr, nullptr) == size_needed, "WideCharToMultiByte failure");
 	return string;
 }
 

@@ -19,13 +19,13 @@ char *CSaveTeam::GetString()
 	return nullptr;
 }
 
-int CSaveTeam::FromString(char const *)
+int CSaveTeam::FromString(const char *)
 {
 	// Dummy implementation for testing
 	return 1;
 }
 
-bool CSaveTeam::MatchPlayers(const char (*paNames)[MAX_NAME_LENGTH], const int *pClientID, int NumPlayer, char *pMessage, int MessageLen)
+bool CSaveTeam::MatchPlayers(const char (*paNames)[MAX_NAME_LENGTH], const int *pClientId, int NumPlayer, char *pMessage, int MessageLen) const
 {
 	// Dummy implementation for testing
 	return false;
@@ -98,7 +98,7 @@ struct Score : public testing::TestWithParam<IDbConnection *>
 		str_copy(ScoreData.m_aMap, "Kobra 3", sizeof(ScoreData.m_aMap));
 		str_copy(ScoreData.m_aGameUuid, "8d300ecf-5873-4297-bee5-95668fdff320", sizeof(ScoreData.m_aGameUuid));
 		str_copy(ScoreData.m_aName, "nameless tee", sizeof(ScoreData.m_aName));
-		ScoreData.m_ClientID = 0;
+		ScoreData.m_ClientId = 0;
 		ScoreData.m_Time = Time;
 		str_copy(ScoreData.m_aTimestamp, "2021-11-24 19:24:08", sizeof(ScoreData.m_aTimestamp));
 		for(int i = 0; i < NUM_CHECKPOINTS; i++)
@@ -143,8 +143,9 @@ struct SingleScore : public Score
 	}
 };
 
-TEST_P(SingleScore, Top)
+TEST_P(SingleScore, TopRegional)
 {
+	g_Config.m_SvRegionalRankings = true;
 	ASSERT_FALSE(CScoreWorker::ShowTop(m_pConn, &m_PlayerRequest, m_aError, sizeof(m_aError))) << m_aError;
 	ExpectLines(m_pPlayerResult,
 		{"------------ Global Top ------------",
@@ -152,14 +153,33 @@ TEST_P(SingleScore, Top)
 			"------------ GER Top ------------"});
 }
 
-TEST_P(SingleScore, Rank)
+TEST_P(SingleScore, Top)
 {
+	g_Config.m_SvRegionalRankings = false;
+	ASSERT_FALSE(CScoreWorker::ShowTop(m_pConn, &m_PlayerRequest, m_aError, sizeof(m_aError))) << m_aError;
+	ExpectLines(m_pPlayerResult,
+		{"------------ Global Top ------------",
+			"1. nameless tee Time: 01:40.00",
+			"----------------------------------------"});
+}
+
+TEST_P(SingleScore, RankRegional)
+{
+	g_Config.m_SvRegionalRankings = true;
 	ASSERT_FALSE(CScoreWorker::ShowRank(m_pConn, &m_PlayerRequest, m_aError, sizeof(m_aError))) << m_aError;
 	ExpectLines(m_pPlayerResult, {"nameless tee - 01:40.00 - better than 100% - requested by brainless tee", "Global rank 1 - GER unranked"}, true);
 }
 
-TEST_P(SingleScore, TopServer)
+TEST_P(SingleScore, Rank)
 {
+	g_Config.m_SvRegionalRankings = false;
+	ASSERT_FALSE(CScoreWorker::ShowRank(m_pConn, &m_PlayerRequest, m_aError, sizeof(m_aError))) << m_aError;
+	ExpectLines(m_pPlayerResult, {"nameless tee - 01:40.00 - better than 100% - requested by brainless tee", "Global rank 1"}, true);
+}
+
+TEST_P(SingleScore, TopServerRegional)
+{
+	g_Config.m_SvRegionalRankings = true;
 	str_copy(m_PlayerRequest.m_aServer, "USA", sizeof(m_PlayerRequest.m_aServer));
 	ASSERT_FALSE(CScoreWorker::ShowTop(m_pConn, &m_PlayerRequest, m_aError, sizeof(m_aError))) << m_aError;
 	ExpectLines(m_pPlayerResult,
@@ -169,11 +189,31 @@ TEST_P(SingleScore, TopServer)
 			"1. nameless tee Time: 01:40.00"});
 }
 
-TEST_P(SingleScore, RankServer)
+TEST_P(SingleScore, TopServer)
 {
+	g_Config.m_SvRegionalRankings = false;
+	str_copy(m_PlayerRequest.m_aServer, "USA", sizeof(m_PlayerRequest.m_aServer));
+	ASSERT_FALSE(CScoreWorker::ShowTop(m_pConn, &m_PlayerRequest, m_aError, sizeof(m_aError))) << m_aError;
+	ExpectLines(m_pPlayerResult,
+		{"------------ Global Top ------------",
+			"1. nameless tee Time: 01:40.00",
+			"----------------------------------------"});
+}
+
+TEST_P(SingleScore, RankServerRegional)
+{
+	g_Config.m_SvRegionalRankings = true;
 	str_copy(m_PlayerRequest.m_aServer, "USA", sizeof(m_PlayerRequest.m_aServer));
 	ASSERT_FALSE(CScoreWorker::ShowRank(m_pConn, &m_PlayerRequest, m_aError, sizeof(m_aError))) << m_aError;
 	ExpectLines(m_pPlayerResult, {"nameless tee - 01:40.00 - better than 100% - requested by brainless tee", "Global rank 1 - USA rank 1"}, true);
+}
+
+TEST_P(SingleScore, RankServer)
+{
+	g_Config.m_SvRegionalRankings = false;
+	str_copy(m_PlayerRequest.m_aServer, "USA", sizeof(m_PlayerRequest.m_aServer));
+	ASSERT_FALSE(CScoreWorker::ShowRank(m_pConn, &m_PlayerRequest, m_aError, sizeof(m_aError))) << m_aError;
+	ExpectLines(m_pPlayerResult, {"nameless tee - 01:40.00 - better than 100% - requested by brainless tee", "Global rank 1"}, true);
 }
 
 TEST_P(SingleScore, LoadPlayerData)
@@ -502,7 +542,7 @@ TEST_P(RandomMap, NoStars)
 {
 	m_RandomMapRequest.m_Stars = -1;
 	ASSERT_FALSE(CScoreWorker::RandomMap(m_pConn, &m_RandomMapRequest, m_aError, sizeof(m_aError))) << m_aError;
-	EXPECT_EQ(m_pRandomMapResult->m_ClientID, 0);
+	EXPECT_EQ(m_pRandomMapResult->m_ClientId, 0);
 	EXPECT_STREQ(m_pRandomMapResult->m_aMap, "Kobra 3");
 	EXPECT_STREQ(m_pRandomMapResult->m_aMessage, "");
 }
@@ -511,7 +551,7 @@ TEST_P(RandomMap, StarsExists)
 {
 	m_RandomMapRequest.m_Stars = 5;
 	ASSERT_FALSE(CScoreWorker::RandomMap(m_pConn, &m_RandomMapRequest, m_aError, sizeof(m_aError))) << m_aError;
-	EXPECT_EQ(m_pRandomMapResult->m_ClientID, 0);
+	EXPECT_EQ(m_pRandomMapResult->m_ClientId, 0);
 	EXPECT_STREQ(m_pRandomMapResult->m_aMap, "Kobra 3");
 	EXPECT_STREQ(m_pRandomMapResult->m_aMessage, "");
 }
@@ -520,7 +560,7 @@ TEST_P(RandomMap, StarsDoesntExist)
 {
 	m_RandomMapRequest.m_Stars = 3;
 	ASSERT_FALSE(CScoreWorker::RandomMap(m_pConn, &m_RandomMapRequest, m_aError, sizeof(m_aError))) << m_aError;
-	EXPECT_EQ(m_pRandomMapResult->m_ClientID, 0);
+	EXPECT_EQ(m_pRandomMapResult->m_ClientId, 0);
 	EXPECT_STREQ(m_pRandomMapResult->m_aMap, "");
 	EXPECT_STREQ(m_pRandomMapResult->m_aMessage, "No maps found on this server!");
 }
@@ -529,7 +569,7 @@ TEST_P(RandomMap, UnfinishedExists)
 {
 	m_RandomMapRequest.m_Stars = -1;
 	ASSERT_FALSE(CScoreWorker::RandomUnfinishedMap(m_pConn, &m_RandomMapRequest, m_aError, sizeof(m_aError))) << m_aError;
-	EXPECT_EQ(m_pRandomMapResult->m_ClientID, 0);
+	EXPECT_EQ(m_pRandomMapResult->m_ClientId, 0);
 	EXPECT_STREQ(m_pRandomMapResult->m_aMap, "Kobra 3");
 	EXPECT_STREQ(m_pRandomMapResult->m_aMessage, "");
 }
@@ -538,7 +578,7 @@ TEST_P(RandomMap, UnfinishedDoesntExist)
 {
 	InsertRank();
 	ASSERT_FALSE(CScoreWorker::RandomUnfinishedMap(m_pConn, &m_RandomMapRequest, m_aError, sizeof(m_aError))) << m_aError;
-	EXPECT_EQ(m_pRandomMapResult->m_ClientID, 0);
+	EXPECT_EQ(m_pRandomMapResult->m_ClientId, 0);
 	EXPECT_STREQ(m_pRandomMapResult->m_aMap, "");
 	EXPECT_STREQ(m_pRandomMapResult->m_aMessage, "You have no more unfinished maps on this server!");
 }

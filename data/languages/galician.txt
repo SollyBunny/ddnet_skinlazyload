@@ -25,9 +25,6 @@
 %s wins!
 == ¡%s gana!
 
--Page %d-
-== -Páxina %d-
-
 Abort
 == Cancelar
 
@@ -79,8 +76,8 @@ Client
 Connecting to
 == Conectando con
 
-Connection Problems...
-== Problemas de conexión...
+Connection Problems…
+== Problemas de conexión…
 
 Console
 == Consola
@@ -102,9 +99,6 @@ Delete
 
 Delete demo
 == Borrar demo
-
-Demo details
-== Detalles de la demo
 
 Demofile: %s
 == Arquivo: %s
@@ -262,9 +256,6 @@ No servers match your filter criteria
 Ok
 == Aceptar
 
-Open
-== Abrir
-
 Parent Folder
 == Directorio pai
 
@@ -279,10 +270,6 @@ Ping
 
 Pistol
 == Pistola
-
-[Demo browser]
-Play
-== Reproducir
 
 Play background music
 == Reproducir música de fondo
@@ -317,9 +304,6 @@ Red team
 Red team wins!
 == O equipo vermello gana!
 
-Refresh
-== Actualizar
-
 Remote console
 == Consola remota
 
@@ -328,9 +312,6 @@ Remove
 
 Remove friend
 == Eliminar amigo
-
-Rename
-== Renombrar
 
 Rename demo
 == Renombrar demo
@@ -422,9 +403,6 @@ The audio device couldn't be initialised.
 The server is running a non-standard tuning on a pure game type.
 == O servidor está a executar unha configuración non estándar nun tipo de xogo puro.
 
-There's an unsaved map in the editor, you might want to save it before you quit the game.
-== Tes un mapa sen gardar no editor, quizá queiras gardalo antes de saír.
-
 Time limit
 == Tempo límite
 
@@ -506,23 +484,11 @@ FSAA samples
 Sound volume
 == Volume do son
 
-Created:
-== Creado:
-
 Max Screenshots
 == Número máximo de capturas
 
-Length:
-== Lonxitude:
-
 Laser
 == Láser
-
-Netversion:
-== Versión Net:
-
-Map:
-== Mapa:
 
 Hue
 == Matiz
@@ -533,29 +499,14 @@ Record demo
 Your skin
 == O teu skin
 
-Size:
-== Tamaño:
-
 Reset to defaults
 == Restablecer por defecto
-
-Quit anyway?
-== Saír de todos os xeitos?
-
-Version:
-== Versión:
-
-Round
-== Rolda
 
 Lht.
 == Lum.
 
 UI Color
 == Cor de menú
-
-Crc:
-== Crc:
 
 Alpha
 == Transp.
@@ -565,9 +516,6 @@ LAN
 
 Name plates size
 == Tamaño da fonte dos alcumes
-
-Type:
-== Tipo:
 
 Successfully saved the replay!
 == Repetición gardada con éxito!
@@ -662,8 +610,8 @@ DDNet %s is out!
 Downloading %s:
 == Descargando %s:
 
-Update failed! Check log...
-== Actualización errada! Comproba o rexistro...
+Update failed! Check log…
+== Actualización errada! Comproba o rexistro…
 
 DDNet Client updated!
 == Cliente DDNet actualizado!
@@ -674,14 +622,8 @@ Update now
 Restart
 == Reiniciar
 
-Please use a different name
-== Por favor usa un nome diferente
-
 Remove chat
 == Eliminar chat
-
-Markers:
-== Marcadores:
 
 %.2f MiB
 == %.2f MiB
@@ -703,9 +645,6 @@ Date
 
 Fetch Info
 == Obter info.
-
-Render
-== Renderizar
 
 Connecting dummy
 == Conectando dummy
@@ -745,9 +684,6 @@ Automatically create statboard csv
 
 Max CSVs
 == CSV máx
-
-Dummy settings
-== Config. del Dummy
 
 Vanilla skins only
 == Só skins Vanilla
@@ -854,9 +790,6 @@ DDNet
 DDNet Client needs to be restarted to complete update!
 == Utilizar o marcador DDRace
 
-Use DDRace Scoreboard
-== Utilizar o marcador DDRace
-
 Show score
 == Mostrar puntaje
 
@@ -944,8 +877,8 @@ Show tiles layers from BG map
 DDNet %s is available:
 == DDNet %s está dispoñible:
 
-Updating...
-== Actualizando...
+Updating…
+== Actualizando…
 
 No updates available
 == Non hai actualizacións dispoñibles
@@ -997,9 +930,6 @@ Grabs
 
 9+ new mentions
 == 9+ novas mencións
-
-Saving ddnet-settings.cfg failed
-== Erro ao gardar ddnet-settings.cfg
 
 Warning
 == Advertencia
@@ -1179,12 +1109,6 @@ Preview
 Background
 == Fondo
 
-Entities Background color
-== Cor de fondo de entidades
-
-Regular Background Color
-== Cor de fondo regular
-
 Discord
 == Discord
 
@@ -1193,9 +1117,6 @@ https://ddnet.org/discord
 
 Are you sure that you want to disconnect and switch to a different server?
 == Seguro que queres desconectarche e cambiar de servidor?
-
-Kill Messages
-== Mensaxes de morte
 
 Show local player's key presses
 == Mostrar as teclas presionadas polo xogador local
@@ -1242,9 +1163,6 @@ Tutorial
 Can't find a Tutorial server
 == Non se puido atopar un servidor Titorial
 
-Toggle to edit your dummy settings
-== Actívao para editar a configuración do téu monicreque
-
 Choose default eyes when joining a server
 == Escolle os ollos predeterminados ao unirche a un servidor
 
@@ -1278,8 +1196,8 @@ Speed:
 Angle:
 == Ángulo:
 
-Trying to determine UDP connectivity...
-== Tratando de determinar a conexión UDP...
+Trying to determine UDP connectivity…
+== Tratando de determinar a conexión UDP…
 
 UDP seems to be filtered.
 == UDP parece estar filtrado.
@@ -1448,9 +1366,6 @@ Show DDRace HUD
 
 Show jumps indicator
 == Mostrar indicador de saltos
-
-Show hook strength indicator
-== Mostrar indicador de forza do gancho
 
 Hook collision line
 == Liña de colisión do gancho
@@ -1656,16 +1571,92 @@ Relative
 Absolute
 == Absoluto
 
+Error playing demo
+== 
+
+Failed saving the replay!
+== 
+
+Saving settings to '%s' failed
+== 
+
+Error saving settings
+== 
+
+Loading demo file from storage
+== 
+
 Quitting. Please wait…
 == 
 
 Restarting. Please wait…
 == 
 
+Searching
+== 
+
+Enter Username
+== 
+
+Enter Password
+== 
+
+NOT CONNECTED
+== 
+
+Match %d of %d
+== 
+
+No results
+== 
+
+Lines %d - %d (%s)
+== 
+
+Locked
+== 
+
+Following
+== 
+
+Loading commands…
+== 
+
 Multi-View
 == 
 
+[Spectating]
+Following %s
+== 
+
+Some map images could not be loaded. Check the local console for details.
+== 
+
+Some map sounds could not be loaded. Check the local console for details.
+== 
+
+Loading menu themes
+== 
+
+Press a key…
+== 
+
+Main menu
+== 
+
 Rename folder
+== 
+
+Render complete
+== 
+
+Are you sure that you want to restart?
+== 
+
+There's an unsaved map in the editor, you might want to save it.
+== 
+
+Continue anyway?
 == 
 
 A demo with this name already exists
@@ -1680,7 +1671,31 @@ Unable to rename the folder
 (paused)
 == 
 
+Videos directory
+== 
+
+Video was saved to '%s'
+== 
+
+%d/%d KiB (%.1f KiB/s)
+== 
+
+Example of usage
+== 
+
+No login required
+== 
+
+Communities
+== 
+
 No server selected
+== 
+
+Server filter
+== 
+
+Friends
 == 
 
 Go back the specified duration
@@ -1721,10 +1736,26 @@ Cut length
 Render cut to video
 == 
 
+Please use a different filename
+== 
+
 All combined
 == 
 
+No demo selected
+== 
+
 Folder Link
+== 
+
+Created
+== 
+
+Netversion
+== 
+
+[Demo details]
+map not included
 == 
 
 Are you sure that you want to delete the folder '%s'?
@@ -1736,14 +1767,106 @@ Delete folder
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Loading…
+== 
+
+Ghosts directory
+== 
+
+Activate all
+== 
+
+Deactivate all
+== 
+
+Player info change cooldown
+== 
+
 Axis
 == 
 
 Graphics card
 == 
 
+Tee
+== 
+
+Info Messages
+== 
+
+Show local time always
+== 
+
+Always show chat
+== 
+
+Show only chat messages from team members
+== 
+
+Chat font size
+== 
+
+Chat width
+== 
+
+Show friend mark (♥) in name plates
+== 
+
+Show hook strength icon indicator
+== 
+
+Show hook strength number indicator
+== 
+
+Authed name color in scoreboard
+== 
+
+Same clan color in scoreboard
+== 
+
+Show own player's hook collision line
+== 
+
+Always show own player's hook collision line
+== 
+
+Always show other players' hook collision lines
+== 
+
+Show finish messages
+== 
+
 Default length
 == 
 
+Enable ghost
+== 
+
+Only save improvements
+== 
+
+Regular background color
+== 
+
+Entities background color
+== 
+
+Round %d/%d
+== 
+
+[Spectators]
+%d others…
+== 
+
+[Team and size]
+%d\n(%d/%d)
+== 
+
+Team %d (%d/%d)
+== 
+
 Moved ingame
+== 
+
+https://wiki.ddnet.org/wiki/Mapping
 == 
