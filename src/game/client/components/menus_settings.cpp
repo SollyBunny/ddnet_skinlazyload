@@ -3194,10 +3194,17 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 	{
 		Client()->GenerateTimeoutSeed();
 	}
+	Miscellaneous.HSplitTop(2.0f, nullptr, &Miscellaneous);
+
+	Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
+	if(DoButton_CheckBox(&g_Config.m_CLHammerSpinny, Localize("Spinny Hammer"), g_Config.m_CLHammerSpinny, &Button))
+		g_Config.m_CLHammerSpinny ^= 1;
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_CLHammerSpinny, &Button, Localize("Allow the hammer to spin around like the other weapons"));
 
 	Miscellaneous.HSplitTop(5.0f, nullptr, &Miscellaneous);
 	Miscellaneous.HSplitTop(20.0f, &Label, &Miscellaneous);
 	Miscellaneous.HSplitTop(2.0f, nullptr, &Miscellaneous);
+	
 	UI()->DoLabel(&Label, Localize("Run on join"), 14.0f, TEXTALIGN_ML);
 	Miscellaneous.HSplitTop(20.0f, &Button, &Miscellaneous);
 	static CLineInput s_RunOnJoinInput(g_Config.m_ClRunOnJoin, sizeof(g_Config.m_ClRunOnJoin));
