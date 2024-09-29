@@ -46,14 +46,14 @@ class CServerBan : public CNetBan
 	class CServer *m_pServer;
 
 	template<class T>
-	int BanExt(T *pBanPool, const typename T::CDataType *pData, int Seconds, const char *pReason);
+	int BanExt(T *pBanPool, const typename T::CDataType *pData, int Seconds, const char *pReason, bool VerbatimReason);
 
 public:
 	class CServer *Server() const { return m_pServer; }
 
 	void InitServerBan(class IConsole *pConsole, class IStorage *pStorage, class CServer *pServer);
 
-	int BanAddr(const NETADDR *pAddr, int Seconds, const char *pReason) override;
+	int BanAddr(const NETADDR *pAddr, int Seconds, const char *pReason, bool VerbatimReason) override;
 	int BanRange(const CNetRange *pRange, int Seconds, const char *pReason) override;
 
 	static void ConBanExt(class IConsole::IResult *pResult, void *pUser);
@@ -219,6 +219,7 @@ public:
 	int m_RunServer;
 
 	bool m_MapReload;
+	bool m_SameMapReload;
 	bool m_ReloadedWhenEmpty;
 	int m_RconClientId;
 	int m_RconAuthLevel;
@@ -258,7 +259,6 @@ public:
 
 	size_t m_AnnouncementLastLine;
 	std::vector<std::string> m_vAnnouncements;
-	char m_aAnnouncementFile[IO_MAX_PATH_LENGTH];
 
 	std::shared_ptr<ILogger> m_pFileLogger = nullptr;
 	std::shared_ptr<ILogger> m_pStdoutLogger = nullptr;
@@ -279,7 +279,7 @@ public:
 	void SetClientFlags(int ClientId, int Flags) override;
 
 	void Kick(int ClientId, const char *pReason) override;
-	void Ban(int ClientId, int Seconds, const char *pReason) override;
+	void Ban(int ClientId, int Seconds, const char *pReason, bool VerbatimReason) override;
 	void RedirectClient(int ClientId, int Port, bool Verbose = false) override;
 
 	void DemoRecorder_HandleAutoStart() override;
@@ -324,6 +324,7 @@ public:
 	void SendCapabilities(int ClientId);
 	void SendMap(int ClientId);
 	void SendMapData(int ClientId, int Chunk);
+	void SendMapReload(int ClientId);
 	void SendConnectionReady(int ClientId);
 	void SendRconLine(int ClientId, const char *pLine);
 	// Accepts -1 as ClientId to mean "all clients with at least auth level admin"
@@ -379,6 +380,7 @@ public:
 
 	void ChangeMap(const char *pMap) override;
 	const char *GetMapName() const override;
+	void ReloadMap() override;
 	int LoadMap(const char *pMapName);
 
 	void SaveDemo(int ClientId, float Time) override;
@@ -424,6 +426,7 @@ public:
 	static void ConchainSixupUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainLoglevel(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainStdoutOutputLevel(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainAnnouncementFileName(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 
 #if defined(CONF_FAMILY_UNIX)
 	static void ConchainConnLoggingServerChange(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
@@ -440,7 +443,8 @@ public:
 
 	void GetClientAddr(int ClientId, NETADDR *pAddr) const override;
 	int m_aPrevStates[MAX_CLIENTS];
-	const char *GetAnnouncementLine(const char *pFileName) override;
+	const char *GetAnnouncementLine() override;
+	void ReadAnnouncementsFile(const char *pFileName) override;
 
 	int *GetIdMap(int ClientId) override;
 

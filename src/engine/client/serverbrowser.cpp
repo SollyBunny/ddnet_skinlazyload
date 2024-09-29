@@ -27,9 +27,6 @@
 #include <engine/http.h>
 #include <engine/storage.h>
 
-static constexpr const char *COMMUNITY_COUNTRY_NONE = "none";
-static constexpr const char *COMMUNITY_TYPE_NONE = "None";
-
 class CSortWrap
 {
 	typedef bool (CServerBrowser::*SortFunc)(int, int) const;
@@ -704,7 +701,22 @@ void ServerBrowserFormatAddresses(char *pBuffer, int BufferSize, NETADDR *pAddrs
 		{
 			return;
 		}
-		net_addr_str(&pAddrs[i], pBuffer, BufferSize, true);
+		char aIpAddr[512];
+		if(!net_addr_str(&pAddrs[i], aIpAddr, sizeof(aIpAddr), true))
+		{
+			str_copy(pBuffer, aIpAddr, BufferSize);
+			return;
+		}
+		if(pAddrs[i].type & NETTYPE_TW7)
+		{
+			str_format(
+				pBuffer,
+				BufferSize,
+				"tw-0.7+udp://%s",
+				aIpAddr);
+			return;
+		}
+		str_copy(pBuffer, aIpAddr, BufferSize);
 		int Length = str_length(pBuffer);
 		pBuffer += Length;
 		BufferSize -= Length;
@@ -973,9 +985,9 @@ void CServerBrowser::Refresh(int Type, bool Force)
 
 		m_BroadcastTime = time_get();
 
-		for(int i = 8303; i <= 8310; i++)
+		for(int Port = LAN_PORT_BEGIN; Port <= LAN_PORT_END; Port++)
 		{
-			Packet.m_Address.port = i;
+			Packet.m_Address.port = Port;
 			m_pNetClient->Send(&Packet);
 		}
 
@@ -1080,7 +1092,6 @@ void CServerBrowser::UpdateFromHttp()
 	}
 
 	int NumServers = m_pHttp->NumServers();
-	int NumLegacyServers = m_pHttp->NumLegacyServers();
 	std::function<bool(const NETADDR *, int)> Want = [](const NETADDR *pAddrs, int NumAddrs) { return true; };
 	if(m_ServerlistType == IServerBrowser::TYPE_FAVORITES)
 	{
@@ -1139,16 +1150,6 @@ void CServerBrowser::UpdateFromHttp()
 		pEntry->m_RequestIgnoreInfo = true;
 	}
 
-	for(int i = 0; i < NumLegacyServers; i++)
-	{
-		NETADDR Addr = m_pHttp->LegacyServer(i);
-		if(!Want(&Addr, 1))
-		{
-			continue;
-		}
-		QueueRequest(Add(&Addr, 1));
-	}
-
 	if(m_ServerlistType == IServerBrowser::TYPE_FAVORITES)
 	{
 		const IFavorites::CEntry *pFavorites;
@@ -1171,7 +1172,7 @@ void CServerBrowser::UpdateFromHttp()
 			}
 			// (Also add favorites we're not allowed to ping.)
 			CServerEntry *pEntry = Add(pFavorites[i].m_aAddrs, pFavorites[i].m_NumAddrs);
-			if(pFavorites->m_AllowPing)
+			if(pFavorites[i].m_AllowPing)
 			{
 				QueueRequest(pEntry);
 			}
@@ -1464,15 +1465,21 @@ void CServerBrowser::LoadDDNetServers()
 		const json_value &IconUrl = Icon["url"];
 		const json_value &Name = Community["name"];
 		const json_value HasFinishes = Community["has_finishes"];
-		const json_value *pFinishes = &Icon["finishes"];
+		const json_value *pFinishes = &Community["finishes"];
 		const json_value *pServers = &Community["servers"];
-		// We accidentally set servers to be part of icon, so support that as a
-		// fallback for now. Can be removed in a few versions when the
-		// communities.json has been updated.
+		// We accidentally set finishes/servers to be part of icon in
+		// the past, so support that, too. Can be removed once we make
+		// a breaking change to the whole thing, necessitating a new
+		// endpoint.
+		if(pFinishes->type == json_none)
+		{
+			pServers = &Icon["finishes"];
+		}
 		if(pServers->type == json_none)
 		{
 			pServers = &Icon["servers"];
 		}
+		// Backward compatibility.
 		if(pFinishes->type == json_none)
 		{
 			if(str_comp(Id, COMMUNITY_DDNET) == 0)
@@ -1480,7 +1487,6 @@ void CServerBrowser::LoadDDNetServers()
 				pFinishes = &(*m_pDDNetInfo)["maps"];
 			}
 		}
-		// Backward compatibility.
 		if(pServers->type == json_none)
 		{
 			if(str_comp(Id, COMMUNITY_DDNET) == 0)
@@ -2289,16 +2295,6 @@ bool CServerBrowser::IsRegistered(const NETADDR &Addr)
 			}
 		}
 	}
-
-	const int NumLegacyServers = m_pHttp->NumLegacyServers();
-	for(int i = 0; i < NumLegacyServers; i++)
-	{
-		if(net_addr_comp(&m_pHttp->LegacyServer(i), &Addr) == 0)
-		{
-			return true;
-		}
-	}
-
 	return false;
 }
 

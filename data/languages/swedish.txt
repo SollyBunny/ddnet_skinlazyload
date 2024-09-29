@@ -7,7 +7,7 @@
 #	3edcxzaq1		2020-06-25 00:00:00
 #	cur.ie			2020-09-28 00:00:00
 #	simpygirl		2022-02-20 00:00:00
-#	furo			2024-07-17 00:00:00
+#	furo			2024-09-29 00:00:00
 ##### /authors #####
 
 ##### translated strings #####
@@ -281,9 +281,6 @@ Player
 
 Player country:
 == Land
-
-Player options
-== Spelaralternativ
 
 Players
 == Spelare
@@ -900,9 +897,6 @@ Show HUD
 Pause
 == Pausa
 
-Reload
-== Ladda om
-
 Spree
 == Spree
 
@@ -1516,9 +1510,6 @@ Show health, shields and ammo
 DDRace HUD
 == DDRace HUD
 
-Show client IDs in scoreboard
-== Visa klient ID i poänglista
-
 Show DDRace HUD
 == Visa DDRace HUD
 
@@ -1875,3 +1866,79 @@ Team %d (%d/%d)
 
 https://wiki.ddnet.org/wiki/Mapping
 == https://wiki.ddnet.org/wiki/Mapping
+
+Could not resolve connect address '%s'. See local console for details.
+== Kunde inte förstå anslutnings adress '%s'. Se den lokala konsolen för detaljer.
+
+Connect address error
+== Anslutnings problem
+
+Could not connect dummy
+== Kunde inte ansluta dummy
+
+Dummy is not allowed on this server
+== Dummy är inte tillåten på denna server
+
+Please wait…
+== Vänligen vänta…
+
+Show client IDs (scoreboard, chat, spectator)
+== Visa klient IDen (poänglistan, chatt, åskadarmeny)
+
+Are you sure that you want to delete '%s'?
+== Är du säker att du vill ta bort '%s'?
+
+Delete skin
+== Ta bort skin
+
+Basic
+== Enkel
+
+Custom
+== Anpassa
+
+Unable to delete skin
+== Kunde inte ta bort skin
+
+Save skin
+== Spara skin
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== Är du säker på att du vill spara ditt skin? Om detta skin finns redan, så kommer den att ersättas.
+
+Unable to save the skin
+== Misslyckades att spara skin
+
+Unable to save the skin with a reserved name
+== Misslyckades med att spara skin med reserverat namn
+
+No local servers found (ports %d-%d)
+== Inga lokala servrar hittades (portar %d-%d)
+
+[Hertz]
+Hz
+== Hz
+
+[skins]
+Body
+== Kropp
+
+[skins]
+Marking
+== Märkning
+
+[skins]
+Decoration
+== Dekoration
+
+[skins]
+Hands
+== Händer
+
+[skins]
+Feet
+== Fötter
+
+[skins]
+Eyes
+== Ögon

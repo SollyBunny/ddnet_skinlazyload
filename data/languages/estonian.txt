@@ -281,9 +281,6 @@ Player
 Player country:
 == Mängija maa:
 
-Player options
-== Mängija sätted
-
 Players
 == Mängijad
 
@@ -709,9 +706,6 @@ Kill
 
 Pause
 == Paus
-
-Reload
-== Lae uuesti
 
 Deactivate
 == Deaktiveeri
@@ -1605,9 +1599,6 @@ Show local time always
 DDRace HUD
 == DDRace HUD
 
-Show client IDs in scoreboard
-== Näita kliendi ID-eid tulemustabelis
-
 Show DDRace HUD
 == Näita DDRace HUD-i
 
@@ -1871,6 +1862,82 @@ Round %d/%d
 
 Team %d (%d/%d)
 == Tiim %d (%d/%d)
+
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
+Could not connect dummy
+== 
+
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== 
+
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
+No local servers found (ports %d-%d)
+== 
+
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
+[Hertz]
+Hz
+== 
+
+Show client IDs (scoreboard, chat, spectator)
+== 
+
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
+== 
 
 https://wiki.ddnet.org/wiki/Mapping
 == 

@@ -172,6 +172,7 @@ public:
 	};
 
 	bool m_DND;
+	bool m_Whispers;
 	int64_t m_FirstVoteTick;
 	char m_aTimeoutCode[64];
 
@@ -179,6 +180,7 @@ public:
 	int Pause(int State, bool Force);
 	int ForcePause(int Time);
 	int IsPaused() const;
+	bool CanSpec() const;
 
 	bool IsPlaying() const;
 	int64_t m_Last_KickVote;

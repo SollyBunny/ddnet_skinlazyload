@@ -17,6 +17,8 @@
 
 #include "menus.h"
 
+using namespace FontIcons;
+
 void CMenus::RenderStartMenu(CUIRect MainView)
 {
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_START);
@@ -154,21 +156,19 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	}
 #endif
 
-	static bool EditorHotkeyWasPressed = true;
-	static float EditorHotKeyChecktime = 0.0f;
 	Menu.HSplitBottom(5.0f, &Menu, 0); // little space
 	Menu.HSplitBottom(40.0f, &Menu, &Button);
 	static CButtonContainer s_MapEditorButton;
-	if(DoButton_Menu(&s_MapEditorButton, Localize("Editor"), 0, &Button, g_Config.m_ClShowStartMenuImages ? "editor" : 0, IGraphics::CORNER_ALL, Rounding, 0.5f, m_pClient->Editor()->HasUnsavedData() ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || (!EditorHotkeyWasPressed && Client()->LocalTime() - EditorHotKeyChecktime < 0.1f && CheckHotKey(KEY_E)))
+	if(DoButton_Menu(&s_MapEditorButton, Localize("Editor"), 0, &Button, g_Config.m_ClShowStartMenuImages ? "editor" : 0, IGraphics::CORNER_ALL, Rounding, 0.5f, m_pClient->Editor()->HasUnsavedData() ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || (!m_EditorHotkeyWasPressed && Client()->LocalTime() - m_EditorHotKeyChecktime < 0.1f && CheckHotKey(KEY_E)))
 	{
 		g_Config.m_ClEditor = 1;
 		Input()->MouseModeRelative();
-		EditorHotkeyWasPressed = true;
+		m_EditorHotkeyWasPressed = true;
 	}
 	if(!Input()->KeyIsPressed(KEY_E))
 	{
-		EditorHotkeyWasPressed = false;
-		EditorHotKeyChecktime = Client()->LocalTime();
+		m_EditorHotkeyWasPressed = false;
+		m_EditorHotKeyChecktime = Client()->LocalTime();
 	}
 
 	Menu.HSplitBottom(5.0f, &Menu, 0); // little space
@@ -188,13 +188,27 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	}
 
 	// render version
-	CUIRect VersionUpdate, CurVersion;
-	MainView.HSplitBottom(20.0f, nullptr, &VersionUpdate);
-	VersionUpdate.VSplitRight(50.0f, &CurVersion, nullptr);
-	VersionUpdate.VMargin(VMargin, &VersionUpdate);
-
+	CUIRect CurVersion, ConsoleButton;
+	MainView.HSplitBottom(45.0f, nullptr, &CurVersion);
+	CurVersion.VSplitRight(40.0f, &CurVersion, nullptr);
+	CurVersion.HSplitTop(20.0f, &ConsoleButton, &CurVersion);
+	CurVersion.HSplitTop(5.0f, nullptr, &CurVersion);
+	ConsoleButton.VSplitRight(40.0f, nullptr, &ConsoleButton);
 	Ui()->DoLabel(&CurVersion, GAME_RELEASE_VERSION, 14.0f, TEXTALIGN_MR);
 
+	static CButtonContainer s_ConsoleButton;
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+	if(DoButton_Menu(&s_ConsoleButton, FONT_ICON_TERMINAL, 0, &ConsoleButton, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.1f)))
+	{
+		GameClient()->m_GameConsole.Toggle(CGameConsole::CONSOLETYPE_LOCAL);
+	}
+	TextRender()->SetRenderFlags(0);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
+	CUIRect VersionUpdate;
+	MainView.HSplitBottom(20.0f, nullptr, &VersionUpdate);
+	VersionUpdate.VMargin(VMargin, &VersionUpdate);
 #if defined(CONF_AUTOUPDATE)
 	CUIRect UpdateButton;
 	VersionUpdate.VSplitRight(100.0f, &VersionUpdate, &UpdateButton);
@@ -242,12 +256,12 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	}
 	else if(State == IUpdater::FAIL)
 	{
-		str_format(aBuf, sizeof(aBuf), Localize("Update failed! Check log…"));
+		str_copy(aBuf, Localize("Update failed! Check log…"));
 		TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
 	}
 	else if(State == IUpdater::NEED_RESTART)
 	{
-		str_format(aBuf, sizeof(aBuf), Localize("DDNet Client updated!"));
+		str_copy(aBuf, Localize("DDNet Client updated!"));
 		TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
 	}
 	Ui()->DoLabel(&VersionUpdate, aBuf, 14.0f, TEXTALIGN_ML);

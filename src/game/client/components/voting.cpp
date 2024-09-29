@@ -31,6 +31,16 @@ void CVoting::ConVote(IConsole::IResult *pResult, void *pUserData)
 
 void CVoting::Callvote(const char *pType, const char *pValue, const char *pReason)
 {
+	if(Client()->IsSixup())
+	{
+		protocol7::CNetMsg_Cl_CallVote Msg;
+		Msg.m_pType = pType;
+		Msg.m_pValue = pValue;
+		Msg.m_pReason = pReason;
+		Msg.m_Force = false;
+		Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL, true);
+		return;
+	}
 	CNetMsg_Cl_CallVote Msg = {0};
 	Msg.m_pType = pType;
 	Msg.m_pValue = pValue;
@@ -259,7 +269,7 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 				char aBuf[512];
 				str_format(aBuf, sizeof(aBuf), "%s (%s)", m_aDescription, m_aReason);
 				Client()->Notify("DDNet Vote", aBuf);
-				m_pClient->m_Sounds.Play(CSounds::CHN_GUI, SOUND_CHAT_HIGHLIGHT, 0);
+				m_pClient->m_Sounds.Play(CSounds::CHN_GUI, SOUND_CHAT_HIGHLIGHT, 1.0f);
 			}
 		}
 	}

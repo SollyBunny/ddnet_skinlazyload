@@ -69,16 +69,21 @@ void CMenus::RenderGame(CUIRect MainView)
 		}
 	}
 
-	ButtonBar.VSplitRight(5.0f, &ButtonBar, 0);
+	ButtonBar.VSplitRight(5.0f, &ButtonBar, nullptr);
 	ButtonBar.VSplitRight(170.0f, &ButtonBar, &Button);
 
-	bool DummyConnecting = Client()->DummyConnecting();
 	static CButtonContainer s_DummyButton;
 	if(!Client()->DummyAllowed())
 	{
 		DoButton_Menu(&s_DummyButton, Localize("Connect Dummy"), 1, &Button);
+		GameClient()->m_Tooltips.DoToolTip(&s_DummyButton, &Button, Localize("Dummy is not allowed on this server"));
 	}
-	else if(DummyConnecting)
+	else if(Client()->DummyConnectingDelayed())
+	{
+		DoButton_Menu(&s_DummyButton, Localize("Connect Dummy"), 1, &Button);
+		GameClient()->m_Tooltips.DoToolTip(&s_DummyButton, &Button, Localize("Please wait…"));
+	}
+	else if(Client()->DummyConnecting())
 	{
 		DoButton_Menu(&s_DummyButton, Localize("Connecting dummy"), 1, &Button);
 	}
@@ -102,9 +107,8 @@ void CMenus::RenderGame(CUIRect MainView)
 		}
 	}
 
-	ButtonBar.VSplitRight(5.0f, &ButtonBar, 0);
+	ButtonBar.VSplitRight(5.0f, &ButtonBar, nullptr);
 	ButtonBar.VSplitRight(140.0f, &ButtonBar, &Button);
-
 	static CButtonContainer s_DemoButton;
 	const bool Recording = DemoRecorder(RECORDER_MANUAL)->IsRecording();
 	if(DoButton_Menu(&s_DemoButton, Recording ? Localize("Stop record") : Localize("Record demo"), 0, &Button))
@@ -125,13 +129,12 @@ void CMenus::RenderGame(CUIRect MainView)
 
 	if(m_pClient->m_Snap.m_pLocalInfo && m_pClient->m_Snap.m_pGameInfoObj && !Paused && !Spec)
 	{
-		static CButtonContainer s_SpectateButton;
-
 		if(m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_SPECTATORS)
 		{
-			ButtonBar.VSplitLeft(5.0f, 0, &ButtonBar);
 			ButtonBar.VSplitLeft(120.0f, &Button, &ButtonBar);
-			if(!DummyConnecting && DoButton_Menu(&s_SpectateButton, Localize("Spectate"), 0, &Button))
+			ButtonBar.VSplitLeft(5.0f, nullptr, &ButtonBar);
+			static CButtonContainer s_SpectateButton;
+			if(!Client()->DummyConnecting() && DoButton_Menu(&s_SpectateButton, Localize("Spectate"), 0, &Button))
 			{
 				if(g_Config.m_ClDummy == 0 || Client()->DummyConnected())
 				{
@@ -145,10 +148,10 @@ void CMenus::RenderGame(CUIRect MainView)
 		{
 			if(m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_RED)
 			{
-				ButtonBar.VSplitLeft(5.0f, 0, &ButtonBar);
 				ButtonBar.VSplitLeft(120.0f, &Button, &ButtonBar);
+				ButtonBar.VSplitLeft(5.0f, nullptr, &ButtonBar);
 				static CButtonContainer s_JoinRedButton;
-				if(!DummyConnecting && DoButton_Menu(&s_JoinRedButton, Localize("Join red"), 0, &Button))
+				if(!Client()->DummyConnecting() && DoButton_Menu(&s_JoinRedButton, Localize("Join red"), 0, &Button))
 				{
 					m_pClient->SendSwitchTeam(TEAM_RED);
 					SetActive(false);
@@ -157,10 +160,10 @@ void CMenus::RenderGame(CUIRect MainView)
 
 			if(m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_BLUE)
 			{
-				ButtonBar.VSplitLeft(5.0f, 0, &ButtonBar);
 				ButtonBar.VSplitLeft(120.0f, &Button, &ButtonBar);
+				ButtonBar.VSplitLeft(5.0f, nullptr, &ButtonBar);
 				static CButtonContainer s_JoinBlueButton;
-				if(!DummyConnecting && DoButton_Menu(&s_JoinBlueButton, Localize("Join blue"), 0, &Button))
+				if(!Client()->DummyConnecting() && DoButton_Menu(&s_JoinBlueButton, Localize("Join blue"), 0, &Button))
 				{
 					m_pClient->SendSwitchTeam(TEAM_BLUE);
 					SetActive(false);
@@ -169,22 +172,23 @@ void CMenus::RenderGame(CUIRect MainView)
 		}
 		else
 		{
-			if(m_pClient->m_Snap.m_pLocalInfo->m_Team != 0)
+			if(m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_RED)
 			{
-				ButtonBar.VSplitLeft(5.0f, 0, &ButtonBar);
 				ButtonBar.VSplitLeft(120.0f, &Button, &ButtonBar);
-				if(!DummyConnecting && DoButton_Menu(&s_SpectateButton, Localize("Join game"), 0, &Button))
+				ButtonBar.VSplitLeft(5.0f, nullptr, &ButtonBar);
+				static CButtonContainer s_JoinGameButton;
+				if(!Client()->DummyConnecting() && DoButton_Menu(&s_JoinGameButton, Localize("Join game"), 0, &Button))
 				{
-					m_pClient->SendSwitchTeam(0);
+					m_pClient->SendSwitchTeam(TEAM_RED);
 					SetActive(false);
 				}
 			}
 		}
 
-		if(m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_SPECTATORS && ShowDDRaceButtons)
+		if(m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_SPECTATORS && (ShowDDRaceButtons || !(m_pClient->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_TEAMS)))
 		{
-			ButtonBar.VSplitLeft(5.0f, 0, &ButtonBar);
 			ButtonBar.VSplitLeft(65.0f, &Button, &ButtonBar);
+			ButtonBar.VSplitLeft(5.0f, nullptr, &ButtonBar);
 
 			static CButtonContainer s_KillButton;
 			if(DoButton_Menu(&s_KillButton, Localize("Kill"), 0, &Button))
@@ -195,17 +199,17 @@ void CMenus::RenderGame(CUIRect MainView)
 		}
 	}
 
-	if(m_pClient->m_ReceivedDDNetPlayer && m_pClient->m_Snap.m_pLocalInfo && m_pClient->m_Snap.m_pGameInfoObj && ShowDDRaceButtons)
+	if(m_pClient->m_ReceivedDDNetPlayer && m_pClient->m_Snap.m_pLocalInfo && m_pClient->m_Snap.m_pGameInfoObj && (ShowDDRaceButtons || !(m_pClient->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_TEAMS)))
 	{
 		if(m_pClient->m_Snap.m_pLocalInfo->m_Team != TEAM_SPECTATORS || Paused || Spec)
 		{
-			ButtonBar.VSplitLeft(5.0f, 0, &ButtonBar);
 			ButtonBar.VSplitLeft((!Paused && !Spec) ? 65.0f : 120.0f, &Button, &ButtonBar);
+			ButtonBar.VSplitLeft(5.0f, nullptr, &ButtonBar);
 
 			static CButtonContainer s_PauseButton;
 			if(DoButton_Menu(&s_PauseButton, (!Paused && !Spec) ? Localize("Pause") : Localize("Join game"), 0, &Button))
 			{
-				m_pClient->Console()->ExecuteLine("say /pause");
+				Console()->ExecuteLine("say /pause");
 				SetActive(false);
 			}
 		}
@@ -225,18 +229,16 @@ void CMenus::PopupConfirmDisconnectDummy()
 
 void CMenus::RenderPlayers(CUIRect MainView)
 {
-	CUIRect Button, Button2, ButtonBar, Options, Player;
+	CUIRect Button, Button2, ButtonBar, PlayerList, Player;
 	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 
-	// player options
-	MainView.Margin(10.0f, &Options);
-	Options.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
-	Options.Margin(10.0f, &Options);
-	Options.HSplitTop(50.0f, &Button, &Options);
-	Ui()->DoLabel(&Button, Localize("Player options"), 34.0f, TEXTALIGN_ML);
+	// list background color
+	MainView.Margin(10.0f, &PlayerList);
+	PlayerList.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 10.0f);
+	PlayerList.Margin(10.0f, &PlayerList);
 
 	// headline
-	Options.HSplitTop(34.0f, &ButtonBar, &Options);
+	PlayerList.HSplitTop(34.0f, &ButtonBar, &PlayerList);
 	ButtonBar.VSplitRight(231.0f, &Player, &ButtonBar);
 	Ui()->DoLabel(&Player, Localize("Player"), 24.0f, TEXTALIGN_ML);
 
@@ -268,7 +270,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	}
 
 	static CListBox s_ListBox;
-	s_ListBox.DoStart(24.0f, TotalPlayers, 1, 3, -1, &Options);
+	s_ListBox.DoStart(24.0f, TotalPlayers, 1, 3, -1, &PlayerList);
 
 	// options
 	static char s_aPlayerIds[MAX_CLIENTS][4] = {{0}};
@@ -681,26 +683,15 @@ void CMenus::RenderServerControl(CUIRect MainView)
 
 	// render quick search
 	CUIRect QuickSearch;
-	Bottom.VSplitLeft(5.0f, 0, &Bottom);
+	Bottom.VSplitLeft(5.0f, nullptr, &Bottom);
 	Bottom.VSplitLeft(250.0f, &QuickSearch, &Bottom);
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-
-	Ui()->DoLabel(&QuickSearch, FONT_ICON_MAGNIFYING_GLASS, 14.0f, TEXTALIGN_ML);
-	float SearchWidth = TextRender()->TextWidth(14.0f, FONT_ICON_MAGNIFYING_GLASS, -1, -1.0f);
-	TextRender()->SetRenderFlags(0);
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-	QuickSearch.VSplitLeft(SearchWidth, 0, &QuickSearch);
-	QuickSearch.VSplitLeft(5.0f, 0, &QuickSearch);
-
-	if(m_ControlPageOpening || (Input()->KeyPress(KEY_F) && Input()->ModifierIsPressed()))
+	if(m_ControlPageOpening)
 	{
-		Ui()->SetActiveItem(&m_FilterInput);
 		m_ControlPageOpening = false;
+		Ui()->SetActiveItem(&m_FilterInput);
 		m_FilterInput.SelectAll();
 	}
-	m_FilterInput.SetEmptyText(Localize("Search"));
-	Ui()->DoClearableEditBox(&m_FilterInput, &QuickSearch, 14.0f);
+	Ui()->DoEditBox_Search(&m_FilterInput, &QuickSearch, 14.0f, !Ui()->IsPopupOpen() && m_pClient->m_GameConsole.IsClosed());
 
 	// call vote
 	Bottom.VSplitRight(10.0f, &Bottom, 0);
@@ -942,7 +933,7 @@ void CMenus::GhostlistPopulate()
 	m_vGhosts.clear();
 	m_GhostPopulateStartTime = time_get_nanoseconds();
 	Storage()->ListDirectoryInfo(IStorage::TYPE_ALL, m_pClient->m_Ghost.GetGhostDir(), GhostlistFetchCallback, this);
-	std::sort(m_vGhosts.begin(), m_vGhosts.end());
+	SortGhostlist();
 
 	CGhostItem *pOwnGhost = 0;
 	for(auto &Ghost : m_vGhosts)
@@ -998,6 +989,7 @@ void CMenus::UpdateOwnGhost(CGhostItem Item)
 	Item.m_Date = std::time(0);
 	Item.m_Failed = false;
 	m_vGhosts.insert(std::lower_bound(m_vGhosts.begin(), m_vGhosts.end(), Item), Item);
+	SortGhostlist();
 }
 
 void CMenus::DeleteGhostItem(int Index)
@@ -1005,6 +997,22 @@ void CMenus::DeleteGhostItem(int Index)
 	if(m_vGhosts[Index].HasFile())
 		Storage()->RemoveFile(m_vGhosts[Index].m_aFilename, IStorage::TYPE_SAVE);
 	m_vGhosts.erase(m_vGhosts.begin() + Index);
+}
+
+void CMenus::SortGhostlist()
+{
+	if(g_Config.m_GhSort == GHOST_SORT_NAME)
+		std::stable_sort(m_vGhosts.begin(), m_vGhosts.end(), [](const CGhostItem &Left, const CGhostItem &Right) {
+			return g_Config.m_GhSortOrder ? (str_comp(Left.m_aPlayer, Right.m_aPlayer) > 0) : (str_comp(Left.m_aPlayer, Right.m_aPlayer) < 0);
+		});
+	else if(g_Config.m_GhSort == GHOST_SORT_TIME)
+		std::stable_sort(m_vGhosts.begin(), m_vGhosts.end(), [](const CGhostItem &Left, const CGhostItem &Right) {
+			return g_Config.m_GhSortOrder ? (Left.m_Time > Right.m_Time) : (Left.m_Time < Right.m_Time);
+		});
+	else if(g_Config.m_GhSort == GHOST_SORT_DATE)
+		std::stable_sort(m_vGhosts.begin(), m_vGhosts.end(), [](const CGhostItem &Left, const CGhostItem &Right) {
+			return g_Config.m_GhSortOrder ? (Left.m_Date > Right.m_Date) : (Left.m_Date < Right.m_Date);
+		});
 }
 
 void CMenus::RenderGhost(CUIRect MainView)
@@ -1027,10 +1035,12 @@ void CMenus::RenderGhost(CUIRect MainView)
 	Headers.Draw(ColorRGBA(1, 1, 1, 0.25f), IGraphics::CORNER_T, 5.0f);
 	Headers.VSplitRight(20.0f, &Headers, 0);
 
-	struct CColumn
+	class CColumn
 	{
+	public:
 		const char *m_pCaption;
 		int m_Id;
+		int m_Sort;
 		float m_Width;
 		CUIRect m_Rect;
 	};
@@ -1044,11 +1054,11 @@ void CMenus::RenderGhost(CUIRect MainView)
 	};
 
 	static CColumn s_aCols[] = {
-		{"", -1, 2.0f, {0}},
-		{"", COL_ACTIVE, 30.0f, {0}},
-		{Localizable("Name"), COL_NAME, 200.0f, {0}},
-		{Localizable("Time"), COL_TIME, 90.0f, {0}},
-		{Localizable("Date"), COL_DATE, 150.0f, {0}},
+		{"", -1, GHOST_SORT_NONE, 2.0f, {0}},
+		{"", COL_ACTIVE, GHOST_SORT_NONE, 30.0f, {0}},
+		{Localizable("Name"), COL_NAME, GHOST_SORT_NAME, 200.0f, {0}},
+		{Localizable("Time"), COL_TIME, GHOST_SORT_TIME, 90.0f, {0}},
+		{Localizable("Date"), COL_DATE, GHOST_SORT_DATE, 150.0f, {0}},
 	};
 
 	int NumCols = std::size(s_aCols);
@@ -1063,8 +1073,22 @@ void CMenus::RenderGhost(CUIRect MainView)
 	}
 
 	// do headers
-	for(int i = 0; i < NumCols; i++)
-		DoButton_GridHeader(&s_aCols[i].m_Id, Localize(s_aCols[i].m_pCaption), 0, &s_aCols[i].m_Rect);
+	for(const auto &Col : s_aCols)
+	{
+		if(DoButton_GridHeader(&Col.m_Id, Localize(Col.m_pCaption), g_Config.m_GhSort == Col.m_Sort, &Col.m_Rect))
+		{
+			if(Col.m_Sort != GHOST_SORT_NONE)
+			{
+				if(g_Config.m_GhSort == Col.m_Sort)
+					g_Config.m_GhSortOrder ^= 1;
+				else
+					g_Config.m_GhSortOrder = 0;
+				g_Config.m_GhSort = Col.m_Sort;
+
+				SortGhostlist();
+			}
+		}
+	}
 
 	View.Draw(ColorRGBA(0, 0, 0, 0.15f), 0, 0);
 

@@ -870,7 +870,7 @@ void CGameContext::ConDrySave(IConsole::IResult *pResult, void *pUserData)
 
 	CSaveTeam SavedTeam;
 	int Team = pSelf->GetDDRaceTeam(pResult->m_ClientId);
-	int Result = SavedTeam.Save(pSelf, Team, true);
+	ESaveResult Result = SavedTeam.Save(pSelf, Team, true);
 	if(CSaveTeam::HandleSaveError(Result, pResult->m_ClientId, pSelf))
 		return;
 
@@ -885,6 +885,18 @@ void CGameContext::ConDrySave(IConsole::IResult *pResult, void *pUserData)
 	int Len = str_length(SavedTeam.GetString());
 	io_write(File, SavedTeam.GetString(), Len);
 	io_close(File);
+}
+
+void CGameContext::ConReloadCensorlist(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	pSelf->ReadCensorList();
+}
+
+void CGameContext::ConReloadAnnouncement(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	pSelf->Server()->ReadAnnouncementsFile(g_Config.m_SvAnnouncementFileName);
 }
 
 void CGameContext::ConDumpAntibot(IConsole::IResult *pResult, void *pUserData)

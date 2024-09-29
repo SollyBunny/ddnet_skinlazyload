@@ -519,9 +519,6 @@ Kill
 Pause
 == ﺚﮑﻣ ﺖﻟﺎﺣ
 
-Player options
-== ﻦﮑﯾﺯﺎﺑ ﺕﺎﻤﯿﻈﻨﺗ
-
 Player
 == ﻦﮑﯾﺯﺎﺑ
 
@@ -542,9 +539,6 @@ Vote command:
 
 Time
 == ﻥﺎﻣﺯ
-
-Reload
-== ﻩﺭﺎﺑﻭﺩ ﯼﺮﯿﮔﺭﺎﺑ
 
 Deactivate
 == ﻥﺩﺮﮐ ﻝﺎﻌﻓﺮﯿﻏ
@@ -1225,9 +1219,6 @@ Show votes window after voting
 DDRace HUD
 == DDRace HUD
 
-Show client IDs in scoreboard
-== ﺯﺎﯿﺘﻣﺍ ﯼﻮﻠﺑﺎﺗ ﺭﺩ ﺖﻨﯾﻼﮐ ID ﺶﯾﺎﻤﻧ
-
 Show DDRace HUD
 == DDRace HUD ﺶﯾﺎﻤﻧ
 
@@ -1518,7 +1509,16 @@ Could not initialize the given graphics backend, reverting to the default backen
 Could not initialize the given graphics backend, this is probably because you didn't install the driver of the integrated graphics card.
 == 
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
 Could not save downloaded map. Try manually deleting this file: %s
+== 
+
+Could not connect dummy
 == 
 
 Error playing demo
@@ -1612,6 +1612,12 @@ Render complete
 Are you sure that you want to restart?
 == 
 
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== 
+
 There's an unsaved map in the editor, you might want to save it.
 == 
 
@@ -1636,7 +1642,16 @@ Videos directory
 Video was saved to '%s'
 == 
 
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
 %d/%d KiB (%.1f KiB/s)
+== 
+
+No local servers found (ports %d-%d)
 == 
 
 Example of usage
@@ -1754,6 +1769,12 @@ Delete folder
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
 Loading…
 == 
 
@@ -1764,6 +1785,10 @@ Activate all
 == 
 
 Deactivate all
+== 
+
+[Hertz]
+Hz
 == 
 
 Player info change cooldown
@@ -1785,6 +1810,9 @@ Info Messages
 == 
 
 Show local time always
+== 
+
+Show client IDs (scoreboard, chat, spectator)
 == 
 
 Always show chat
@@ -1841,6 +1869,21 @@ Entities background color
 Unregister protocol and file extensions
 == 
 
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
+== 
+
 Round %d/%d
 == 
 
@@ -1853,6 +1896,30 @@ Round %d/%d
 == 
 
 Team %d (%d/%d)
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
 == 
 
 FPM

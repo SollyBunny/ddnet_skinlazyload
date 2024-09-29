@@ -135,7 +135,7 @@ void CSpectator::ConSpectateClosest(IConsole::IResult *pResult, void *pUserData)
 	int ClosestDistance = std::numeric_limits<int>::max();
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
-		if(i == SpectatorId || !Snap.m_apPlayerInfos[i] || Snap.m_apPlayerInfos[i]->m_Team == TEAM_SPECTATORS || (SpectatorId == SPEC_FREEVIEW && i == Snap.m_LocalClientId))
+		if(i == SpectatorId || !Snap.m_aCharacters[i].m_Active || !Snap.m_apPlayerInfos[i] || Snap.m_apPlayerInfos[i]->m_Team == TEAM_SPECTATORS || (SpectatorId == SPEC_FREEVIEW && i == Snap.m_LocalClientId))
 			continue;
 		const CNetObj_Character &MaybeClosestCharacter = Snap.m_aCharacters[i].m_Cur;
 		int Distance = distance(CurPosition, vec2(MaybeClosestCharacter.m_X, MaybeClosestCharacter.m_Y));
@@ -184,6 +184,33 @@ bool CSpectator::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 	Ui()->ConvertMouseMove(&x, &y, CursorType);
 	m_SelectorMouse += vec2(x, y);
 	return true;
+}
+
+bool CSpectator::OnInput(const IInput::CEvent &Event)
+{
+	if(IsActive() && Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_ESCAPE)
+	{
+		OnRelease();
+		return true;
+	}
+
+	if(g_Config.m_ClSpectatorMouseclicks)
+	{
+		if(m_pClient->m_Snap.m_SpecInfo.m_Active && !IsActive() && !GameClient()->m_MultiViewActivated &&
+			!Ui()->IsPopupOpen() && m_pClient->m_GameConsole.IsClosed() && !m_pClient->m_Menus.IsActive())
+		{
+			if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_MOUSE_1)
+			{
+				if(m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW)
+					Spectate(SPEC_FREEVIEW);
+				else
+					SpectateClosest();
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 void CSpectator::OnRelease()
@@ -258,8 +285,6 @@ void CSpectator::OnRender()
 	float BoxMove = -10.0f;
 	float BoxOffset = 0.0f;
 
-	const bool MousePressed = Input()->KeyPress(KEY_MOUSE_1);
-
 	for(const auto &pInfo : m_pClient->m_Snap.m_apInfoByDDTeamName)
 	{
 		if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
@@ -293,13 +318,41 @@ void CSpectator::OnRender()
 		ObjWidth = 600.0f;
 	}
 
+	const vec2 ScreenSize = vec2(Width, Height);
+	const vec2 ScreenCenter = ScreenSize / 2.0f;
+	CUIRect SpectatorRect = {Width / 2.0f - ObjWidth, Height / 2.0f - 300.0f, ObjWidth * 2.0f, 600.0f};
+	CUIRect SpectatorMouseRect;
+	SpectatorRect.Margin(20.0f, &SpectatorMouseRect);
+
+	const bool WasTouchPressed = m_TouchState.m_AnyPressed;
+	Ui()->UpdateTouchState(m_TouchState);
+	if(m_TouchState.m_AnyPressed)
+	{
+		const vec2 TouchPos = (m_TouchState.m_PrimaryPosition - vec2(0.5f, 0.5f)) * ScreenSize;
+		if(SpectatorMouseRect.Inside(ScreenCenter + TouchPos))
+		{
+			m_SelectorMouse = TouchPos;
+		}
+	}
+	else if(WasTouchPressed)
+	{
+		const vec2 TouchPos = (m_TouchState.m_PrimaryPosition - vec2(0.5f, 0.5f)) * ScreenSize;
+		if(!SpectatorRect.Inside(ScreenCenter + TouchPos))
+		{
+			OnRelease();
+			return;
+		}
+	}
+
 	Graphics()->MapScreen(0, 0, Width, Height);
 
-	Graphics()->DrawRect(Width / 2.0f - ObjWidth, Height / 2.0f - 300.0f, ObjWidth * 2, 600.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 20.0f);
+	SpectatorRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), IGraphics::CORNER_ALL, 20.0f);
 
 	// clamp mouse position to selector area
 	m_SelectorMouse.x = clamp(m_SelectorMouse.x, -(ObjWidth - 20.0f), ObjWidth - 20.0f);
 	m_SelectorMouse.y = clamp(m_SelectorMouse.y, -280.0f, 280.0f);
+
+	const bool MousePressed = Input()->KeyPress(KEY_MOUSE_1) || m_TouchState.m_PrimaryPressed;
 
 	// draw selections
 	if((Client()->State() == IClient::STATE_DEMOPLAYBACK && m_pClient->m_DemoSpecId == SPEC_FREEVIEW) ||
@@ -477,7 +530,16 @@ void CSpectator::OnRender()
 			TextRender()->TextColor(1.0f, 1.0f, 1.0f, PlayerSelected ? 1.0f : 0.5f);
 			TeeAlpha = 1.0f;
 		}
-		TextRender()->Text(Width / 2.0f + x + 50.0f, Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize, m_pClient->m_aClients[m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId].m_aName, 220.0f);
+		CTextCursor NameCursor;
+		TextRender()->SetCursor(&NameCursor, Width / 2.0f + x + 50.0f, Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize, TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END);
+		NameCursor.m_LineWidth = 180.0f;
+		if(g_Config.m_ClShowIds)
+		{
+			char aClientId[16];
+			GameClient()->FormatClientId(m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
+			TextRender()->TextEx(&NameCursor, aClientId);
+		}
+		TextRender()->TextEx(&NameCursor, m_pClient->m_aClients[m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId].m_aName);
 
 		if(GameClient()->m_MultiViewActivated)
 		{
@@ -534,7 +596,7 @@ void CSpectator::OnRender()
 	}
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-	RenderTools()->RenderCursor(m_SelectorMouse + vec2(Width, Height) / 2, 48.0f);
+	RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 48.0f);
 }
 
 void CSpectator::OnReset()
@@ -558,6 +620,22 @@ void CSpectator::Spectate(int SpectatorId)
 	if(m_pClient->m_Snap.m_SpecInfo.m_SpectatorId == SpectatorId)
 		return;
 
+	if(Client()->IsSixup())
+	{
+		protocol7::CNetMsg_Cl_SetSpectatorMode Msg;
+		if(SpectatorId == SPEC_FREEVIEW)
+		{
+			Msg.m_SpecMode = protocol7::SPEC_FREEVIEW;
+			Msg.m_SpectatorId = -1;
+		}
+		else
+		{
+			Msg.m_SpecMode = protocol7::SPEC_PLAYER;
+			Msg.m_SpectatorId = SpectatorId;
+		}
+		Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL, true);
+		return;
+	}
 	CNetMsg_Cl_SetSpectatorMode Msg;
 	Msg.m_SpectatorId = SpectatorId;
 	Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);

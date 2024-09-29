@@ -216,7 +216,7 @@ void CGhost::CheckStartLocal(bool Predicted)
 
 		vec2 PrevPos = m_pClient->m_PredictedPrevChar.m_Pos;
 		vec2 Pos = m_pClient->m_PredictedChar.m_Pos;
-		if(((!m_Rendering && RenderTick == -1) || m_AllowRestart) && CRaceHelper::IsStart(m_pClient, PrevPos, Pos))
+		if(((!m_Rendering && RenderTick == -1) || m_AllowRestart) && GameClient()->RaceHelper()->IsStart(PrevPos, Pos))
 		{
 			if(m_Rendering && !m_RenderingStartedByServer) // race restarted: stop rendering
 				StopRender();
@@ -240,7 +240,7 @@ void CGhost::CheckStartLocal(bool Predicted)
 			int TickDiff = CurTick - PrevTick;
 			for(int i = 0; i < TickDiff; i++)
 			{
-				if(CRaceHelper::IsStart(m_pClient, mix(PrevPos, Pos, (float)i / TickDiff), mix(PrevPos, Pos, (float)(i + 1) / TickDiff)))
+				if(GameClient()->RaceHelper()->IsStart(mix(PrevPos, Pos, (float)i / TickDiff), mix(PrevPos, Pos, (float)(i + 1) / TickDiff)))
 				{
 					RecordTick = PrevTick + i + 1;
 					if(!m_AllowRestart)
@@ -366,10 +366,7 @@ void CGhost::OnRender()
 					IsTeamplay = (m_pClient->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_TEAMS) != 0;
 
 				GhostNinjaRenderInfo = Ghost.m_RenderInfo;
-				GhostNinjaRenderInfo.m_OriginalRenderSkin = pSkin->m_OriginalSkin;
-				GhostNinjaRenderInfo.m_ColorableRenderSkin = pSkin->m_ColorableSkin;
-				GhostNinjaRenderInfo.m_BloodColor = pSkin->m_BloodColor;
-				GhostNinjaRenderInfo.m_SkinMetrics = pSkin->m_Metrics;
+				GhostNinjaRenderInfo.Apply(pSkin);
 				GhostNinjaRenderInfo.m_CustomColoredSkin = IsTeamplay;
 				if(!IsTeamplay)
 				{
@@ -392,16 +389,12 @@ void CGhost::InitRenderInfos(CGhostItem *pGhost)
 	IntsToStr(&pGhost->m_Skin.m_Skin0, 6, aSkinName, std::size(aSkinName));
 	CTeeRenderInfo *pRenderInfo = &pGhost->m_RenderInfo;
 
-	const CSkin *pSkin = m_pClient->m_Skins.Find(aSkinName);
-	pRenderInfo->m_OriginalRenderSkin = pSkin->m_OriginalSkin;
-	pRenderInfo->m_ColorableRenderSkin = pSkin->m_ColorableSkin;
-	pRenderInfo->m_BloodColor = pSkin->m_BloodColor;
-	pRenderInfo->m_SkinMetrics = pSkin->m_Metrics;
+	pRenderInfo->Apply(m_pClient->m_Skins.Find(aSkinName));
 	pRenderInfo->m_CustomColoredSkin = pGhost->m_Skin.m_UseCustomColor;
 	if(pGhost->m_Skin.m_UseCustomColor)
 	{
-		pRenderInfo->m_ColorBody = color_cast<ColorRGBA>(ColorHSLA(pGhost->m_Skin.m_ColorBody).UnclampLighting());
-		pRenderInfo->m_ColorFeet = color_cast<ColorRGBA>(ColorHSLA(pGhost->m_Skin.m_ColorFeet).UnclampLighting());
+		pRenderInfo->m_ColorBody = color_cast<ColorRGBA>(ColorHSLA(pGhost->m_Skin.m_ColorBody).UnclampLighting(ColorHSLA::DARKEST_LGT));
+		pRenderInfo->m_ColorFeet = color_cast<ColorRGBA>(ColorHSLA(pGhost->m_Skin.m_ColorFeet).UnclampLighting(ColorHSLA::DARKEST_LGT));
 	}
 	else
 	{
@@ -697,11 +690,7 @@ void CGhost::OnRefreshSkins()
 		CTeeRenderInfo *pRenderInfo = &Ghost.m_RenderInfo;
 		if(aSkinName[0] != '\0')
 		{
-			const CSkin *pSkin = m_pClient->m_Skins.Find(aSkinName);
-			pRenderInfo->m_OriginalRenderSkin = pSkin->m_OriginalSkin;
-			pRenderInfo->m_ColorableRenderSkin = pSkin->m_ColorableSkin;
-			pRenderInfo->m_BloodColor = pSkin->m_BloodColor;
-			pRenderInfo->m_SkinMetrics = pSkin->m_Metrics;
+			pRenderInfo->Apply(m_pClient->m_Skins.Find(aSkinName));
 		}
 		else
 		{

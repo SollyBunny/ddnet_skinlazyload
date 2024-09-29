@@ -5,6 +5,7 @@
 #include <engine/engine.h>
 #include <engine/favorites.h>
 #include <engine/friends.h>
+#include <engine/gfx/image_manipulation.h>
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
@@ -33,7 +34,7 @@ static void FormatServerbrowserPing(char (&aBuffer)[N], const CServerInfo *pInfo
 		str_format(aBuffer, sizeof(aBuffer), "%d", pInfo->m_Latency);
 		return;
 	}
-	static const char *LOCATION_NAMES[CServerInfo::NUM_LOCS] = {
+	static const char *const LOCATION_NAMES[CServerInfo::NUM_LOCS] = {
 		"", // LOC_UNKNOWN
 		Localizable("AFR"), // LOC_AFRICA
 		Localizable("ASI"), // LOC_ASIA
@@ -55,11 +56,18 @@ static ColorRGBA GetPingTextColor(int Latency)
 static ColorRGBA GetGametypeTextColor(const char *pGametype)
 {
 	ColorHSLA HslaColor;
-	if(str_comp(pGametype, "DM") == 0 || str_comp(pGametype, "TDM") == 0 || str_comp(pGametype, "CTF") == 0)
+	if(str_comp(pGametype, "DM") == 0 || str_comp(pGametype, "TDM") == 0 || str_comp(pGametype, "CTF") == 0 || str_comp(pGametype, "LMS") == 0 || str_comp(pGametype, "LTS") == 0)
 		HslaColor = ColorHSLA(0.33f, 1.0f, 0.75f);
 	else if(str_find_nocase(pGametype, "catch"))
 		HslaColor = ColorHSLA(0.17f, 1.0f, 0.75f);
-	else if(str_find_nocase(pGametype, "idm") || str_find_nocase(pGametype, "itdm") || str_find_nocase(pGametype, "ictf") || str_find_nocase(pGametype, "f-ddrace"))
+	else if(str_find_nocase(pGametype, "dm") || str_find_nocase(pGametype, "tdm") || str_find_nocase(pGametype, "ctf") || str_find_nocase(pGametype, "lms") || str_find_nocase(pGametype, "lts"))
+	{
+		if(pGametype[0] == 'i' || pGametype[0] == 'g')
+			HslaColor = ColorHSLA(0.0f, 1.0f, 0.75f);
+		else
+			HslaColor = ColorHSLA(0.40f, 1.0f, 0.75f);
+	}
+	else if(str_find_nocase(pGametype, "f-ddrace") || str_find_nocase(pGametype, "freeze"))
 		HslaColor = ColorHSLA(0.0f, 1.0f, 0.75f);
 	else if(str_find_nocase(pGametype, "fng"))
 		HslaColor = ColorHSLA(0.83f, 1.0f, 0.75f);
@@ -215,7 +223,16 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		}
 		else if(!ServerBrowser()->NumServers())
 		{
-			Ui()->DoLabel(&View, Localize("No servers found"), 16.0f, TEXTALIGN_MC);
+			if(ServerBrowser()->GetCurrentType() == IServerBrowser::TYPE_LAN)
+			{
+				char aBuf[128];
+				str_format(aBuf, sizeof(aBuf), Localize("No local servers found (ports %d-%d)"), IServerBrowser::LAN_PORT_BEGIN, IServerBrowser::LAN_PORT_END);
+				Ui()->DoLabel(&View, aBuf, 16.0f, TEXTALIGN_MC);
+			}
+			else
+			{
+				Ui()->DoLabel(&View, Localize("No servers found"), 16.0f, TEXTALIGN_MC);
+			}
 		}
 		else if(ServerBrowser()->NumServers() && !NumServers)
 		{
@@ -869,11 +886,14 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 			{
 				if(Click == 1)
 				{
-					// Left click: when all are active, only activate one
+					// Left click: when all are active, only activate one and none
 					for(int j = 0; j < MaxItems; ++j)
 					{
-						if(j != ItemIndex)
-							Filter.Add(GetItemName(j));
+						if(const char *pItemName = GetItemName(j);
+							j != ItemIndex &&
+							!((&Filter == &ServerBrowser()->CountriesFilter() && str_comp(pItemName, IServerBrowser::COMMUNITY_COUNTRY_NONE) == 0) ||
+								(&Filter == &ServerBrowser()->TypesFilter() && str_comp(pItemName, IServerBrowser::COMMUNITY_TYPE_NONE) == 0)))
+							Filter.Add(pItemName);
 					}
 				}
 				else if(Click == 2)
@@ -890,7 +910,10 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 				bool AllFilteredExceptUs = true;
 				for(int j = 0; j < MaxItems; ++j)
 				{
-					if(j != ItemIndex && !Filter.Filtered(GetItemName(j)))
+					if(const char *pItemName = GetItemName(j);
+						j != ItemIndex && !Filter.Filtered(pItemName) &&
+						!((&Filter == &ServerBrowser()->CountriesFilter() && str_comp(pItemName, IServerBrowser::COMMUNITY_COUNTRY_NONE) == 0) ||
+							(&Filter == &ServerBrowser()->TypesFilter() && str_comp(pItemName, IServerBrowser::COMMUNITY_TYPE_NONE) == 0)))
 					{
 						AllFilteredExceptUs = false;
 						break;
@@ -898,7 +921,7 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 				}
 				// When last one is removed, re-enable all currently selectable items.
 				// Don't use Clear, to avoid enabling also currently unselectable items.
-				if(AllFilteredExceptUs)
+				if(AllFilteredExceptUs && Active)
 				{
 					for(int j = 0; j < MaxItems; ++j)
 					{
@@ -1302,6 +1325,8 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 			CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
 			const vec2 TeeRenderPos = vec2(Skin.x + TeeInfo.m_Size / 2.0f, Skin.y + Skin.h / 2.0f + OffsetToMid.y);
 			RenderTools()->RenderTee(pIdleState, &TeeInfo, CurrentClient.m_Afk ? EMOTE_BLINK : EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
+			Ui()->DoButtonLogic(&CurrentClient.m_aSkin, 0, &Skin);
+			GameClient()->m_Tooltips.DoToolTip(&CurrentClient.m_aSkin, &Skin, CurrentClient.m_aSkin);
 		}
 
 		// name
@@ -1470,8 +1495,9 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				if(s_ScrollRegion.RectClipped(Rect))
 					continue;
 
-				const bool Inside = Ui()->HotItem() == Friend.ListItemId() || Ui()->HotItem() == Friend.RemoveButtonId() || Ui()->HotItem() == Friend.CommunityTooltipId();
-				bool ButtonResult = Ui()->DoButtonLogic(Friend.ListItemId(), 0, &Rect);
+				const bool Inside = Ui()->HotItem() == Friend.ListItemId() || Ui()->HotItem() == Friend.RemoveButtonId() || Ui()->HotItem() == Friend.CommunityTooltipId() || Ui()->HotItem() == Friend.SkinTooltipId();
+				int ButtonResult = Ui()->DoButtonLogic(Friend.ListItemId(), 0, &Rect);
+
 				if(Friend.ServerInfo())
 				{
 					GameClient()->m_Tooltips.DoToolTip(Friend.ListItemId(), &Rect, Localize("Click to select server. Double click to join your friend."));
@@ -1502,6 +1528,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
 					const vec2 TeeRenderPos = vec2(Skin.x + Skin.w / 2.0f, Skin.y + Skin.h * 0.55f + OffsetToMid.y);
 					RenderTools()->RenderTee(pIdleState, &TeeInfo, Friend.IsAfk() ? EMOTE_BLINK : EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
+					Ui()->DoButtonLogic(Friend.SkinTooltipId(), 0, &Skin);
+					GameClient()->m_Tooltips.DoToolTip(Friend.SkinTooltipId(), &Skin, Friend.Skin());
 				}
 				Rect.HSplitTop(11.0f, &NameLabel, &ClanLabel);
 
@@ -1553,7 +1581,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					if(Ui()->DoButtonLogic(Friend.RemoveButtonId(), 0, &RemoveButton))
 					{
 						m_pRemoveFriend = &Friend;
-						ButtonResult = false;
+						ButtonResult = 0;
 					}
 					GameClient()->m_Tooltips.DoToolTip(Friend.RemoveButtonId(), &RemoveButton, Friend.FriendState() == IFriends::FRIEND_PLAYER ? Localize("Click to remove this player from your friends list.") : Localize("Click to remove this clan from your friends list."));
 				}
@@ -1563,7 +1591,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				{
 					str_copy(g_Config.m_UiServerAddress, Friend.ServerInfo()->m_aAddress);
 					m_ServerBrowserShouldRevealSelection = true;
-					if(Ui()->DoDoubleClickLogic(Friend.ListItemId()))
+					if(ButtonResult == 1 && Ui()->DoDoubleClickLogic(Friend.ListItemId()))
 					{
 						Connect(g_Config.m_UiServerAddress);
 					}
@@ -1784,21 +1812,24 @@ bool CMenus::PrintHighlighted(const char *pName, F &&PrintFn)
 {
 	const char *pStr = g_Config.m_BrFilterString;
 	char aFilterStr[sizeof(g_Config.m_BrFilterString)];
+	char aFilterStrTrimmed[sizeof(g_Config.m_BrFilterString)];
 	while((pStr = str_next_token(pStr, IServerBrowser::SEARCH_EXCLUDE_TOKEN, aFilterStr, sizeof(aFilterStr))))
 	{
+		str_copy(aFilterStrTrimmed, str_utf8_skip_whitespaces(aFilterStr));
+		str_utf8_trim_right(aFilterStrTrimmed);
 		// highlight the parts that matches
 		const char *pFilteredStr;
-		int FilterLen = str_length(aFilterStr);
-		if(aFilterStr[0] == '"' && aFilterStr[FilterLen - 1] == '"')
+		int FilterLen = str_length(aFilterStrTrimmed);
+		if(aFilterStrTrimmed[0] == '"' && aFilterStrTrimmed[FilterLen - 1] == '"')
 		{
-			aFilterStr[FilterLen - 1] = '\0';
-			pFilteredStr = str_comp(pName, &aFilterStr[1]) == 0 ? pName : nullptr;
+			aFilterStrTrimmed[FilterLen - 1] = '\0';
+			pFilteredStr = str_comp(pName, &aFilterStrTrimmed[1]) == 0 ? pName : nullptr;
 			FilterLen -= 2;
 		}
 		else
 		{
 			const char *pFilteredStrEnd;
-			pFilteredStr = str_utf8_find_nocase(pName, aFilterStr, &pFilteredStrEnd);
+			pFilteredStr = str_utf8_find_nocase(pName, aFilterStrTrimmed, &pFilteredStrEnd);
 			if(pFilteredStr != nullptr && pFilteredStrEnd != nullptr)
 				FilterLen = pFilteredStrEnd - pFilteredStr;
 		}
@@ -1813,17 +1844,13 @@ bool CMenus::PrintHighlighted(const char *pName, F &&PrintFn)
 
 CTeeRenderInfo CMenus::GetTeeRenderInfo(vec2 Size, const char *pSkinName, bool CustomSkinColors, int CustomSkinColorBody, int CustomSkinColorFeet) const
 {
-	const CSkin *pSkin = m_pClient->m_Skins.Find(pSkinName);
-
 	CTeeRenderInfo TeeInfo;
-	TeeInfo.m_OriginalRenderSkin = pSkin->m_OriginalSkin;
-	TeeInfo.m_ColorableRenderSkin = pSkin->m_ColorableSkin;
-	TeeInfo.m_SkinMetrics = pSkin->m_Metrics;
+	TeeInfo.Apply(m_pClient->m_Skins.Find(pSkinName));
 	TeeInfo.m_CustomColoredSkin = CustomSkinColors;
 	if(CustomSkinColors)
 	{
-		TeeInfo.m_ColorBody = color_cast<ColorRGBA>(ColorHSLA(CustomSkinColorBody).UnclampLighting());
-		TeeInfo.m_ColorFeet = color_cast<ColorRGBA>(ColorHSLA(CustomSkinColorFeet).UnclampLighting());
+		TeeInfo.m_ColorBody = color_cast<ColorRGBA>(ColorHSLA(CustomSkinColorBody).UnclampLighting(ColorHSLA::DARKEST_LGT));
+		TeeInfo.m_ColorFeet = color_cast<ColorRGBA>(ColorHSLA(CustomSkinColorFeet).UnclampLighting(ColorHSLA::DARKEST_LGT));
 	}
 	else
 	{
@@ -1987,18 +2014,8 @@ void CMenus::LoadCommunityIconFinish(const char *pCommunityId, CImageInfo &Info,
 	CommunityIcon.m_Sha256 = Sha256;
 	CommunityIcon.m_OrgTexture = Graphics()->LoadTextureRaw(Info, 0, pCommunityId);
 
-	// create gray scale version
-	unsigned char *pData = static_cast<unsigned char *>(Info.m_pData);
-	const size_t Step = Info.PixelSize();
-	for(size_t i = 0; i < Info.m_Width * Info.m_Height; i++)
-	{
-		int v = (pData[i * Step] + pData[i * Step + 1] + pData[i * Step + 2]) / 3;
-		pData[i * Step] = v;
-		pData[i * Step + 1] = v;
-		pData[i * Step + 2] = v;
-	}
+	ConvertToGrayscale(Info);
 	CommunityIcon.m_GreyTexture = Graphics()->LoadTextureRawMove(Info, 0, pCommunityId);
-	Info.m_pData = nullptr;
 
 	auto ExistingIcon = std::find_if(m_vCommunityIcons.begin(), m_vCommunityIcons.end(), [pCommunityId](const SCommunityIcon &Element) {
 		return str_comp(Element.m_aCommunityId, pCommunityId) == 0;

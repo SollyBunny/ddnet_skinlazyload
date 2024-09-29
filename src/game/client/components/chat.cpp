@@ -9,6 +9,7 @@
 #include <engine/textrender.h>
 
 #include <game/generated/protocol.h>
+#include <game/generated/protocol7.h>
 
 #include <game/client/animstate.h>
 #include <game/client/components/scoreboard.h>
@@ -454,8 +455,6 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				// add separator
 				const char *pSeparator = pCompletionCommand->m_aParams[0] == '\0' ? "" : " ";
 				str_append(aBuf, pSeparator);
-				if(*pSeparator)
-					str_append(aBuf, pSeparator);
 
 				// add part after the name
 				str_append(aBuf, m_Input.GetString() + m_PlaceholderOffset + m_PlaceholderLength);
@@ -651,14 +650,16 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 
 bool CChat::LineShouldHighlight(const char *pLine, const char *pName)
 {
-	const char *pHL = str_utf8_find_nocase(pLine, pName);
+	const char *pHit = str_utf8_find_nocase(pLine, pName);
 
-	if(pHL)
+	while(pHit)
 	{
 		int Length = str_length(pName);
 
-		if(Length > 0 && (pLine == pHL || pHL[-1] == ' ') && (pHL[Length] == 0 || pHL[Length] == ' ' || pHL[Length] == '.' || pHL[Length] == '!' || pHL[Length] == ',' || pHL[Length] == '?' || pHL[Length] == ':'))
+		if(Length > 0 && (pLine == pHit || pHit[-1] == ' ') && (pHit[Length] == 0 || pHit[Length] == ' ' || pHit[Length] == '.' || pHit[Length] == '!' || pHit[Length] == ',' || pHit[Length] == '?' || pHit[Length] == ':'))
 			return true;
+
+		pHit = str_utf8_find_nocase(pHit + 1, pName);
 	}
 
 	return false;
@@ -704,6 +705,7 @@ void CChat::StoreSave(const char *pText)
 	}
 	*/
 
+	const bool SavesFileExists = Storage()->FileExists(SAVES_FILE, IStorage::TYPE_SAVE);
 	IOHANDLE File = Storage()->OpenFile(SAVES_FILE, IOFLAG_APPEND, IStorage::TYPE_SAVE);
 	if(!File)
 		return;
@@ -715,7 +717,7 @@ void CChat::StoreSave(const char *pText)
 		aSaveCode,
 	};
 
-	if(io_tell(File) == 0)
+	if(!SavesFileExists)
 	{
 		CsvWrite(File, 4, SAVES_HEADER);
 	}
@@ -903,17 +905,8 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 		{
 			if(!g_Config.m_ClChatOld)
 			{
-				pCurrentLine->m_CustomColoredSkin = LineAuthor.m_RenderInfo.m_CustomColoredSkin;
-				if(pCurrentLine->m_CustomColoredSkin)
-					pCurrentLine->m_RenderSkin = LineAuthor.m_RenderInfo.m_ColorableRenderSkin;
-				else
-					pCurrentLine->m_RenderSkin = LineAuthor.m_RenderInfo.m_OriginalRenderSkin;
-
 				str_copy(pCurrentLine->m_aSkinName, LineAuthor.m_aSkinName);
-				pCurrentLine->m_ColorBody = LineAuthor.m_RenderInfo.m_ColorBody;
-				pCurrentLine->m_ColorFeet = LineAuthor.m_RenderInfo.m_ColorFeet;
-
-				pCurrentLine->m_RenderSkinMetrics = LineAuthor.m_RenderInfo.m_SkinMetrics;
+				pCurrentLine->m_TeeRenderInfo = LineAuthor.m_RenderInfo;
 				pCurrentLine->m_HasRenderTee = true;
 			}
 		}
@@ -929,7 +922,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 		{
 			if(g_Config.m_SndServerMessage)
 			{
-				m_pClient->m_Sounds.Play(CSounds::CHN_GUI, SOUND_CHAT_SERVER, 0);
+				m_pClient->m_Sounds.Play(CSounds::CHN_GUI, SOUND_CHAT_SERVER, 1.0f);
 				m_aLastSoundPlayed[CHAT_SERVER] = Now;
 			}
 		}
@@ -947,7 +940,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 			Client()->Notify("DDNet Chat", aBuf);
 			if(g_Config.m_SndHighlight)
 			{
-				m_pClient->m_Sounds.Play(CSounds::CHN_GUI, SOUND_CHAT_HIGHLIGHT, 0);
+				m_pClient->m_Sounds.Play(CSounds::CHN_GUI, SOUND_CHAT_HIGHLIGHT, 1.0f);
 				m_aLastSoundPlayed[CHAT_HIGHLIGHT] = Now;
 			}
 
@@ -970,7 +963,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 #endif
 			if(PlaySound)
 			{
-				m_pClient->m_Sounds.Play(CSounds::CHN_GUI, SOUND_CHAT_CLIENT, 0);
+				m_pClient->m_Sounds.Play(CSounds::CHN_GUI, SOUND_CHAT_CLIENT, 1.0f);
 				m_aLastSoundPlayed[CHAT_CLIENT] = Now;
 			}
 		}
@@ -983,17 +976,11 @@ void CChat::OnRefreshSkins()
 	{
 		if(Line.m_HasRenderTee)
 		{
-			const CSkin *pSkin = m_pClient->m_Skins.Find(Line.m_aSkinName);
-			if(Line.m_CustomColoredSkin)
-				Line.m_RenderSkin = pSkin->m_ColorableSkin;
-			else
-				Line.m_RenderSkin = pSkin->m_OriginalSkin;
-
-			Line.m_RenderSkinMetrics = pSkin->m_Metrics;
+			Line.m_TeeRenderInfo.Apply(m_pClient->m_Skins.Find(Line.m_aSkinName));
 		}
 		else
 		{
-			Line.m_RenderSkin.Reset();
+			Line.m_TeeRenderInfo.Reset();
 		}
 	}
 }
@@ -1043,17 +1030,11 @@ void CChat::OnPrepareLines(float y)
 		TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
 		Graphics()->DeleteQuadContainer(Line.m_QuadContainerIndex);
 
-		char aName[64 + 12] = "";
-
+		char aClientId[16] = "";
 		if(g_Config.m_ClShowIds && Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
 		{
-			if(Line.m_ClientId < 10)
-				str_format(aName, sizeof(aName), " %d: ", Line.m_ClientId);
-			else
-				str_format(aName, sizeof(aName), "%d: ", Line.m_ClientId);
+			GameClient()->FormatClientId(Line.m_ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
 		}
-
-		str_append(aName, Line.m_aName);
 
 		char aCount[12];
 		if(Line.m_ClientId < 0)
@@ -1064,7 +1045,11 @@ void CChat::OnPrepareLines(float y)
 		const char *pText = Line.m_aText;
 		if(Config()->m_ClStreamerMode && Line.m_ClientId == SERVER_MSG)
 		{
-			if(str_startswith(Line.m_aText, "Team save in progress. You'll be able to load with '/load") && str_endswith(Line.m_aText, "if it fails"))
+			if(str_startswith(Line.m_aText, "Team save in progress. You'll be able to load with '/load ") && str_endswith(Line.m_aText, "'"))
+			{
+				pText = "Team save in progress. You'll be able to load with '/load ***'";
+			}
+			else if(str_startswith(Line.m_aText, "Team save in progress. You'll be able to load with '/load") && str_endswith(Line.m_aText, "if it fails"))
 			{
 				pText = "Team save in progress. You'll be able to load with '/load ***' if save is successful or with '/load *** *** ***' if it fails";
 			}
@@ -1095,7 +1080,8 @@ void CChat::OnPrepareLines(float y)
 				}
 			}
 
-			TextRender()->TextEx(&Cursor, aName);
+			TextRender()->TextEx(&Cursor, aClientId);
+			TextRender()->TextEx(&Cursor, Line.m_aName);
 			if(Line.m_TimesRepeated > 0)
 				TextRender()->TextEx(&Cursor, aCount);
 
@@ -1165,7 +1151,8 @@ void CChat::OnPrepareLines(float y)
 			NameColor = ColorRGBA(0.8f, 0.8f, 0.8f, 1.f);
 
 		TextRender()->TextColor(NameColor);
-		TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &Cursor, aName);
+		TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &Cursor, aClientId);
+		TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &Cursor, Line.m_aName);
 
 		if(Line.m_TimesRepeated > 0)
 		{
@@ -1299,6 +1286,23 @@ void CChat::OnRender()
 
 		m_Input.SetScrollOffset(ScrollOffset);
 		m_Input.SetScrollOffsetChange(ScrollOffsetChange);
+
+		// Autocompletion hint
+		if(m_Input.GetString()[0] == '/' && m_Input.GetString()[1] != '\0' && !m_vCommands.empty())
+		{
+			for(const auto &Command : m_vCommands)
+			{
+				if(str_startswith_nocase(Command.m_aName, m_Input.GetString() + 1))
+				{
+					Cursor.m_X = m_Input.GetCaretPosition().x;
+					Cursor.m_Y = m_Input.GetCaretPosition().y;
+					TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.5f);
+					TextRender()->TextEx(&Cursor, Command.m_aName + str_length(m_Input.GetString() + 1));
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					break;
+				}
+			}
+		}
 	}
 
 #if defined(CONF_VIDEORECORDER)
@@ -1357,17 +1361,7 @@ void CChat::OnRender()
 			if(!g_Config.m_ClChatOld && Line.m_HasRenderTee)
 			{
 				const int TeeSize = MessageTeeSize();
-				CTeeRenderInfo RenderInfo;
-				RenderInfo.m_CustomColoredSkin = Line.m_CustomColoredSkin;
-				if(Line.m_CustomColoredSkin)
-					RenderInfo.m_ColorableRenderSkin = Line.m_RenderSkin;
-				else
-					RenderInfo.m_OriginalRenderSkin = Line.m_RenderSkin;
-				RenderInfo.m_SkinMetrics = Line.m_RenderSkinMetrics;
-
-				RenderInfo.m_ColorBody = Line.m_ColorBody;
-				RenderInfo.m_ColorFeet = Line.m_ColorFeet;
-				RenderInfo.m_Size = TeeSize;
+				Line.m_TeeRenderInfo.m_Size = TeeSize;
 
 				float RowHeight = FontSize() + RealMsgPaddingY;
 				float OffsetTeeY = TeeSize / 2.0f;
@@ -1375,9 +1369,9 @@ void CChat::OnRender()
 
 				const CAnimState *pIdleState = CAnimState::GetIdle();
 				vec2 OffsetToMid;
-				CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &RenderInfo, OffsetToMid);
+				CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &Line.m_TeeRenderInfo, OffsetToMid);
 				vec2 TeeRenderPos(x + (RealMsgPaddingX + TeeSize) / 2.0f, y + OffsetTeeY + FullHeightMinusTee / 2.0f + OffsetToMid.y);
-				RenderTools()->RenderTee(pIdleState, &RenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), TeeRenderPos, Blend);
+				RenderTools()->RenderTee(pIdleState, &Line.m_TeeRenderInfo, EMOTE_NORMAL, vec2(1, 0.1f), TeeRenderPos, Blend);
 			}
 
 			const ColorRGBA TextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(Blend);
@@ -1416,6 +1410,16 @@ void CChat::SendChat(int Team, const char *pLine)
 		return;
 
 	m_LastChatSend = time();
+
+	if(m_pClient->Client()->IsSixup())
+	{
+		protocol7::CNetMsg_Cl_Say Msg7;
+		Msg7.m_Mode = Team == 1 ? protocol7::CHAT_TEAM : protocol7::CHAT_ALL;
+		Msg7.m_Target = -1;
+		Msg7.m_pMessage = pLine;
+		Client()->SendPackMsgActive(&Msg7, MSGFLAG_VITAL, true);
+		return;
+	}
 
 	// send chat message
 	CNetMsg_Cl_Say Msg;

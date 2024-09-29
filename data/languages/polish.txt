@@ -282,9 +282,6 @@ Player
 Player country:
 == Narodowość:
 
-Player options
-== Opcje gracza
-
 Players
 == Gracze
 
@@ -682,9 +679,6 @@ Enable replays
 
 Automatically create statboard csv
 == Automatycznie stwórz plik csv z tabelą wyników
-
-Reload
-== Przeładuj
 
 Replay feature is disabled!
 == Funkcja odtwarzania jest wyłączona!
@@ -1639,9 +1633,6 @@ Show health, shields and ammo
 Show local time always
 == Pokazuj czas lokalny
 
-Show client IDs in scoreboard
-== Pokazuj ID klienta w tabeli wyników
-
 Show DDRace HUD
 == Pokazuj HUD DDRace
 
@@ -1808,6 +1799,15 @@ Submitting the render commands failed. Try to update your GPU drivers.
 Failed to swap framebuffers. Try to update your GPU drivers.
 == 
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
+Could not connect dummy
+== 
+
 Match %d of %d
 == 
 
@@ -1821,7 +1821,22 @@ Multi-View
 Following %s
 == 
 
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== 
+
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
 %d/%d KiB (%.1f KiB/s)
+== 
+
+No local servers found (ports %d-%d)
 == 
 
 Example of usage
@@ -1840,6 +1855,16 @@ Folder Link
 map not included
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
+[Hertz]
+Hz
+== 
+
 Aim bind
 == 
 
@@ -1855,7 +1880,25 @@ Tee
 DDRace HUD
 == 
 
+Show client IDs (scoreboard, chat, spectator)
+== 
+
 Show only chat messages from team members
+== 
+
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
 == 
 
 Round %d/%d
@@ -1870,6 +1913,30 @@ Round %d/%d
 == 
 
 Team %d (%d/%d)
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
 == 
 
 Moved ingame

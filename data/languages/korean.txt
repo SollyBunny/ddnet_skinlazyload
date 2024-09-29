@@ -280,9 +280,6 @@ Pistol
 Player
 == 플레이어
 
-Player options
-== 플레이어 옵션
-
 Players
 == 플레이어
 
@@ -534,9 +531,6 @@ Successfully saved the replay!
 Replay feature is disabled!
 == 리플레이 기능을 비활성화했습니다!
 
-The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
-== 텍스처 %s 의 너비 또는 높이를 %d 으로 나눌 수 없습니다. 이는 시각적 오류를 발생시킬 수 있습니다.
-
 Warning
 == 주의
 
@@ -701,9 +695,6 @@ Pause
 
 Time
 == 시간
-
-Reload
-== 새로고침
 
 Deactivate
 == 비활성화
@@ -1359,9 +1350,6 @@ Show health, shields and ammo
 DDRace HUD
 == DDRace HUD
 
-Show client IDs in scoreboard
-== 점수판에 클라이언트 ID 표시
-
 Show DDRace HUD
 == DDRace HUD 표시
 
@@ -1563,6 +1551,15 @@ Copy info
 Create a random skin
 == 무작위 스킨 생성
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
+Could not connect dummy
+== 
+
 Error playing demo
 == 
 
@@ -1573,6 +1570,9 @@ Saving settings to '%s' failed
 == 
 
 Error saving settings
+== 
+
+The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 
 
 Loading demo file from storage
@@ -1645,6 +1645,12 @@ Render complete
 Are you sure that you want to restart?
 == 
 
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== 
+
 There's an unsaved map in the editor, you might want to save it.
 == 
 
@@ -1669,7 +1675,16 @@ Videos directory
 Video was saved to '%s'
 == 
 
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
+== 
+
 %d/%d KiB (%.1f KiB/s)
+== 
+
+No local servers found (ports %d-%d)
 == 
 
 Example of usage
@@ -1784,6 +1799,12 @@ Delete folder
 Unable to delete the folder '%s'. Make sure it's empty first.
 == 
 
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
 Loading…
 == 
 
@@ -1794,6 +1815,10 @@ Activate all
 == 
 
 Deactivate all
+== 
+
+[Hertz]
+Hz
 == 
 
 Player info change cooldown
@@ -1812,6 +1837,9 @@ Info Messages
 == 
 
 Show local time always
+== 
+
+Show client IDs (scoreboard, chat, spectator)
 == 
 
 Always show chat
@@ -1865,6 +1893,21 @@ Regular background color
 Entities background color
 == 
 
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
+== 
+
 Round %d/%d
 == 
 
@@ -1877,6 +1920,30 @@ Round %d/%d
 == 
 
 Team %d (%d/%d)
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
 == 
 
 Moved ingame

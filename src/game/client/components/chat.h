@@ -11,7 +11,9 @@
 
 #include <game/client/component.h>
 #include <game/client/lineinput.h>
+#include <game/client/render.h>
 #include <game/client/skin.h>
+#include <game/generated/protocol7.h>
 
 class CChat : public CComponent
 {
@@ -45,13 +47,9 @@ class CChat : public CComponent
 		int m_QuadContainerIndex;
 
 		char m_aSkinName[std::size(g_Config.m_ClPlayerSkin)];
-		CSkin::SSkinTextures m_RenderSkin;
-		CSkin::SSkinMetrics m_RenderSkinMetrics;
-		bool m_CustomColoredSkin;
-		ColorRGBA m_ColorBody;
-		ColorRGBA m_ColorFeet;
-
 		bool m_HasRenderTee;
+		CTeeRenderInfo m_TeeRenderInfo;
+
 		float m_TextYOffset;
 
 		int m_TimesRepeated;

@@ -57,7 +57,7 @@ void CUIElement::SUIElementRect::Reset()
 void CUIElement::SUIElementRect::Draw(const CUIRect *pRect, ColorRGBA Color, int Corners, float Rounding)
 {
 	bool NeedsRecreate = false;
-	if(m_UIRectQuadContainer == -1 || m_Width != pRect->w || m_Height != pRect->h || mem_comp(&m_QuadColor, &Color, sizeof(Color)) != 0)
+	if(m_UIRectQuadContainer == -1 || m_Width != pRect->w || m_Height != pRect->h || m_QuadColor != Color)
 	{
 		m_pParent->Ui()->Graphics()->DeleteQuadContainer(m_UIRectQuadContainer);
 		NeedsRecreate = true;
@@ -408,6 +408,10 @@ bool CUi::OnInput(const IInput::CEvent &Event)
 			m_HotkeysPressed |= HOTKEY_UP;
 		else if(Event.m_Key == KEY_DOWN)
 			m_HotkeysPressed |= HOTKEY_DOWN;
+		else if(Event.m_Key == KEY_LEFT)
+			m_HotkeysPressed |= HOTKEY_LEFT;
+		else if(Event.m_Key == KEY_RIGHT)
+			m_HotkeysPressed |= HOTKEY_RIGHT;
 		else if(Event.m_Key == KEY_MOUSE_WHEEL_UP)
 			m_HotkeysPressed |= HOTKEY_SCROLL_UP;
 		else if(Event.m_Key == KEY_MOUSE_WHEEL_DOWN)
@@ -1004,6 +1008,25 @@ bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float
 	return ReturnValue;
 }
 
+bool CUi::DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, bool HotkeyEnabled)
+{
+	CUIRect QuickSearch = *pRect;
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+	DoLabel(&QuickSearch, FONT_ICON_MAGNIFYING_GLASS, FontSize, TEXTALIGN_ML);
+	const float SearchWidth = TextRender()->TextWidth(FontSize, FONT_ICON_MAGNIFYING_GLASS);
+	TextRender()->SetRenderFlags(0);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	QuickSearch.VSplitLeft(SearchWidth + 5.0f, nullptr, &QuickSearch);
+	if(HotkeyEnabled && Input()->ModifierIsPressed() && Input()->KeyPress(KEY_F))
+	{
+		SetActiveItem(pLineInput);
+		pLineInput->SelectAll();
+	}
+	pLineInput->SetEmptyText(Localize("Search"));
+	return DoClearableEditBox(pLineInput, &QuickSearch, FontSize);
+}
+
 int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const std::function<const char *()> &GetTextLambda, const CUIRect *pRect, const SMenuButtonProperties &Props)
 {
 	CUIRect Text = *pRect, DropDownIcon;
@@ -1282,21 +1305,24 @@ float CUi::DoScrollbarV(const void *pId, const CUIRect *pRect, float Current)
 	}
 	else if(HotItem() == pId)
 	{
-		if(MouseButton(0))
+		if(InsideHandle)
+		{
+			if(MouseButton(0))
+			{
+				SetActiveItem(pId);
+				m_ActiveScrollbarOffset = MouseY() - Handle.y;
+				Grabbed = true;
+			}
+		}
+		else if(MouseButtonClicked(0))
 		{
 			SetActiveItem(pId);
-			m_ActiveScrollbarOffset = MouseY() - Handle.y;
+			m_ActiveScrollbarOffset = Handle.h / 2.0f;
 			Grabbed = true;
 		}
 	}
-	else if(MouseButtonClicked(0) && !InsideHandle && InsideRail)
-	{
-		SetActiveItem(pId);
-		m_ActiveScrollbarOffset = Handle.h / 2.0f;
-		Grabbed = true;
-	}
 
-	if(InsideHandle && !MouseButton(0))
+	if(InsideRail && !MouseButton(0))
 	{
 		SetHotItem(pId);
 	}
@@ -1332,9 +1358,18 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 	Rail.VSplitLeft(pColorInner ? 8.0f : clamp(33.0f, Rail.h, Rail.w / 3.0f), &Handle, 0);
 	Handle.x += (Rail.w - Handle.w) * Current;
 
+	CUIRect HandleArea = Handle;
+	if(!pColorInner)
+	{
+		HandleArea.h = pRect->h * 0.9f;
+		HandleArea.y = pRect->y + pRect->h * 0.05f;
+		HandleArea.w += 6.0f;
+		HandleArea.x -= 3.0f;
+	}
+
 	// logic
 	const bool InsideRail = MouseHovered(&Rail);
-	const bool InsideHandle = MouseHovered(&Handle);
+	const bool InsideHandle = MouseHovered(&HandleArea);
 	bool Grabbed = false; // whether to apply the offset
 
 	if(CheckActiveItem(pId))
@@ -1352,21 +1387,30 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 	}
 	else if(HotItem() == pId)
 	{
-		if(MouseButton(0))
+		if(InsideHandle)
+		{
+			if(MouseButton(0))
+			{
+				SetActiveItem(pId);
+				m_ActiveScrollbarOffset = MouseX() - Handle.x;
+				Grabbed = true;
+			}
+		}
+		else if(MouseButtonClicked(0))
 		{
 			SetActiveItem(pId);
-			m_ActiveScrollbarOffset = MouseX() - Handle.x;
+			m_ActiveScrollbarOffset = Handle.w / 2.0f;
 			Grabbed = true;
 		}
 	}
-	else if(MouseButtonClicked(0) && !InsideHandle && InsideRail)
+
+	if(!pColorInner && (InsideHandle || Grabbed) && (CheckActiveItem(pId) || HotItem() == pId))
 	{
-		SetActiveItem(pId);
-		m_ActiveScrollbarOffset = Handle.w / 2.0f;
-		Grabbed = true;
+		Handle.h += 3.0f;
+		Handle.y -= 1.5f;
 	}
 
-	if(InsideHandle && !MouseButton(0))
+	if(InsideRail && !MouseButton(0))
 	{
 		SetHotItem(pId);
 	}
@@ -1381,19 +1425,20 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 	}
 
 	// render
+	const ColorRGBA HandleColor = ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId);
 	if(pColorInner)
 	{
 		CUIRect Slider;
 		Handle.VMargin(-2.0f, &Slider);
 		Slider.HMargin(-3.0f, &Slider);
-		Slider.Draw(ColorRGBA(0.15f, 0.15f, 0.15f, 1.0f), IGraphics::CORNER_ALL, 5.0f);
+		Slider.Draw(ColorRGBA(0.15f, 0.15f, 0.15f, 1.0f).Multiply(HandleColor), IGraphics::CORNER_ALL, 5.0f);
 		Slider.Margin(2.0f, &Slider);
-		Slider.Draw(*pColorInner, IGraphics::CORNER_ALL, 3.0f);
+		Slider.Draw(pColorInner->Multiply(HandleColor), IGraphics::CORNER_ALL, 3.0f);
 	}
 	else
 	{
 		Rail.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, Rail.h / 2.0f);
-		Handle.Draw(ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId), IGraphics::CORNER_ALL, Handle.h / 2.0f);
+		Handle.Draw(HandleColor, IGraphics::CORNER_ALL, Rail.h / 2.0f);
 	}
 
 	return ReturnValue;

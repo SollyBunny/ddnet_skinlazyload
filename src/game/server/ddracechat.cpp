@@ -42,19 +42,21 @@ void CGameContext::ConCredits(IConsole::IResult *pResult, void *pUserData)
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
 		"trafilaw, Zwelf, Patiga, Konsti, ElXreno, MikiGamer,");
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"Fireball, Banana090, axblk, yangfl, Kaffeine,");
+		"Fireball, Banana090, axblk, yangfl, Kaffeine, Zodiac,");
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"Zodiac, c0d3d3v, GiuCcc, Ravie, Robyt3, simpygirl,");
+		"c0d3d3v, GiuCcc, Ravie, Robyt3, simpygirl, sjrc6, Cellegen,");
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"sjrc6, Cellegen, srdante, Nouaa, Voxel, luk51,");
+		"srdante, Nouaa, Voxel, luk51, Vy0x2, Avolicious, louis,");
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"Vy0x2, Avolicious, louis, Marmare314, hus3h,");
+		"Marmare314, hus3h, ArijanJ, tarunsamanta2k20, Possseidon,");
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"ArijanJ, tarunsamanta2k20, Possseidon, M0REKZ,");
+		"M0REKZ, Teero, furo, dobrykafe, Moiman, JSaurusRex,");
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"Teero, furo, dobrykafe, Moiman, JSaurusRex,");
+		"Steinchen, ewancg, gerdoe-jr, BlaiZephyr, KebsCS, bencie,");
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"Steinchen, ewancg, gerdoe-jr, BlaiZephyr & others");
+		"DynamoFox, MilkeeyCat, iMilchshake, SchrodingerZhu,");
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
+		"catseyenebulous, Rei-Tw, Matodor, Emilcha, art0007i & others");
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
 		"Based on DDRace by the DDRace developers,");
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
@@ -505,16 +507,22 @@ void CGameContext::ConDND(IConsole::IResult *pResult, void *pUserData)
 	if(!pPlayer)
 		return;
 
-	if(pPlayer->m_DND)
-	{
-		pPlayer->m_DND = false;
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "You will receive global chat and server messages");
-	}
-	else
-	{
-		pPlayer->m_DND = true;
-		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "You will not receive any further global chat and server messages");
-	}
+	pPlayer->m_DND = pResult->NumArguments() == 0 ? !pPlayer->m_DND : pResult->GetInteger(0);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", pPlayer->m_DND ? "You will not receive any further global chat and server messages" : "You will receive global chat and server messages");
+}
+
+void CGameContext::ConWhispers(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientId(pResult->m_ClientId))
+		return;
+
+	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];
+	if(!pPlayer)
+		return;
+
+	pPlayer->m_Whispers = pResult->NumArguments() == 0 ? !pPlayer->m_Whispers : pResult->GetInteger(0);
+	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", pPlayer->m_Whispers ? "You will receive whispers" : "You will not receive any further whispers");
 }
 
 void CGameContext::ConMap(IConsole::IResult *pResult, void *pUserData)
@@ -559,7 +567,7 @@ void CGameContext::ConMapInfo(IConsole::IResult *pResult, void *pUserData)
 	if(pResult->NumArguments() > 0)
 		pSelf->Score()->MapInfo(pResult->m_ClientId, pResult->GetString(0));
 	else
-		pSelf->Score()->MapInfo(pResult->m_ClientId, g_Config.m_SvMap);
+		pSelf->Score()->MapInfo(pResult->m_ClientId, pSelf->Server()->GetMapName());
 }
 
 void CGameContext::ConTimeout(IConsole::IResult *pResult, void *pUserData)
@@ -744,6 +752,15 @@ void CGameContext::ConSwap(IConsole::IResult *pResult, void *pUserData)
 		return;
 	}
 
+	if(g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
+	{
+		pSelf->Console()->Print(
+			IConsole::OUTPUT_LEVEL_STANDARD,
+			"chatresp",
+			"Swap is not available on forced solo servers.");
+		return;
+	}
+
 	CGameTeams &Teams = pSelf->m_pController->Teams();
 
 	int Team = Teams.m_Core.Team(pResult->m_ClientId);
@@ -804,7 +821,7 @@ void CGameContext::ConSwap(IConsole::IResult *pResult, void *pUserData)
 	}
 
 	CPlayer *pSwapPlayer = pSelf->m_apPlayers[TargetClientId];
-	if((Team == TEAM_FLOCK || Teams.TeamFlock(Team)) && g_Config.m_SvTeam != 3)
+	if(Team == TEAM_FLOCK || Teams.TeamFlock(Team))
 	{
 		CCharacter *pChr = pPlayer->GetCharacter();
 		CCharacter *pSwapChr = pSwapPlayer->GetCharacter();

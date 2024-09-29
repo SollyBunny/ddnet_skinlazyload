@@ -12,6 +12,7 @@
 
 #include "kernel.h"
 #include "message.h"
+#include <engine/shared/jsonwriter.h>
 #include <engine/shared/protocol.h>
 #include <game/generated/protocol.h>
 #include <game/generated/protocol7.h>
@@ -250,9 +251,10 @@ public:
 	virtual int GetAuthedState(int ClientId) const = 0;
 	virtual const char *GetAuthName(int ClientId) const = 0;
 	virtual void Kick(int ClientId, const char *pReason) = 0;
-	virtual void Ban(int ClientId, int Seconds, const char *pReason) = 0;
+	virtual void Ban(int ClientId, int Seconds, const char *pReason, bool VerbatimReason) = 0;
 	virtual void RedirectClient(int ClientId, int Port, bool Verbose = false) = 0;
 	virtual void ChangeMap(const char *pMap) = 0;
+	virtual void ReloadMap() = 0;
 
 	virtual void DemoRecorder_HandleAutoStart() = 0;
 
@@ -271,7 +273,8 @@ public:
 	virtual bool DnsblWhite(int ClientId) = 0;
 	virtual bool DnsblPending(int ClientId) = 0;
 	virtual bool DnsblBlack(int ClientId) = 0;
-	virtual const char *GetAnnouncementLine(const char *pFileName) = 0;
+	virtual const char *GetAnnouncementLine() = 0;
+	virtual void ReadAnnouncementsFile(const char *pFileName) = 0;
 	virtual bool ClientPrevIngame(int ClientId) = 0;
 	virtual const char *GetNetErrorString(int ClientId) = 0;
 	virtual void ResetNetErrorString(int ClientId) = 0;
@@ -365,10 +368,10 @@ public:
 	/**
 	 * Used to report custom player info to master servers.
 	 *
-	 * @param aBuf Should be the json key values to add, starting with a ',' beforehand, like: ',"skin": "default", "team": 1'
+	 * @param pJsonWriter A pointer to a CJsonStringWriter which the custom data will be added to.
 	 * @param i The client id.
 	 */
-	virtual void OnUpdatePlayerServerInfo(char *aBuf, int BufSize, int Id) = 0;
+	virtual void OnUpdatePlayerServerInfo(CJsonStringWriter *pJSonWriter, int Id) = 0;
 };
 
 extern IGameServer *CreateGameServer();

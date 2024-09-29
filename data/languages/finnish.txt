@@ -280,9 +280,6 @@ Player
 Player country:
 == Pelaajan maa:
 
-Player options
-== Pelaajavalinnat
-
 Players
 == Pelaajat
 
@@ -708,9 +705,6 @@ Kill
 
 Pause
 == Pysäytä
-
-Reload
-== Päivitä
 
 Deactivate
 == Deaktivoi
@@ -1634,9 +1628,6 @@ Show local time always
 DDRace HUD
 == DDrace-HUD
 
-Show client IDs in scoreboard
-== Näytä asiakas-ID:t pistetaulukossa
-
 Show DDRace HUD
 == Näytä DDRace-HUD
 
@@ -1832,14 +1823,48 @@ Loading sound files
 Moved ingame
 == Liikui pelissä
 
+Could not resolve connect address '%s'. See local console for details.
+== 
+
+Connect address error
+== 
+
+Could not connect dummy
+== 
+
 [Spectating]
 Following %s
+== 
+
+Save skin
+== 
+
+Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
+== 
+
+Unable to save the skin
+== 
+
+Unable to save the skin with a reserved name
 == 
 
 %d/%d KiB (%.1f KiB/s)
 == 
 
+No local servers found (ports %d-%d)
+== 
+
 Example of usage
+== 
+
+Dummy is not allowed on this server
+== 
+
+Please wait…
+== 
+
+[Hertz]
+Hz
 == 
 
 Converse
@@ -1848,7 +1873,25 @@ Converse
 Tee
 == 
 
+Show client IDs (scoreboard, chat, spectator)
+== 
+
 Show only chat messages from team members
+== 
+
+Basic
+== 
+
+Custom
+== 
+
+Are you sure that you want to delete '%s'?
+== 
+
+Delete skin
+== 
+
+Unable to delete skin
 == 
 
 Round %d/%d
@@ -1863,6 +1906,30 @@ Round %d/%d
 == 
 
 Team %d (%d/%d)
+== 
+
+[skins]
+Body
+== 
+
+[skins]
+Marking
+== 
+
+[skins]
+Decoration
+== 
+
+[skins]
+Hands
+== 
+
+[skins]
+Feet
+== 
+
+[skins]
+Eyes
 == 
 
 Spree

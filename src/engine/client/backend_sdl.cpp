@@ -443,7 +443,9 @@ static bool BackendInitGlew(EBackendType BackendType, int &GlewMajor, int &GlewM
 #ifdef CONF_GLEW_HAS_CONTEXT_INIT
 		if(GLEW_OK != glewContextInit())
 #else
-		if(GLEW_OK != glewInit())
+		GLenum InitResult = glewInit();
+		const char *pVideoDriver = SDL_GetCurrentVideoDriver();
+		if(GLEW_OK != InitResult && pVideoDriver && !str_comp(pVideoDriver, "wayland") && GLEW_ERROR_NO_GLX_DISPLAY != InitResult)
 #endif
 			return false;
 
@@ -903,8 +905,7 @@ static void DisplayToVideoMode(CVideoMode *pVMode, SDL_DisplayMode *pMode, int H
 void CGraphicsBackend_SDL_GL::GetVideoModes(CVideoMode *pModes, int MaxModes, int *pNumModes, int HiDPIScale, int MaxWindowWidth, int MaxWindowHeight, int ScreenId)
 {
 	SDL_DisplayMode DesktopMode;
-	int maxModes = SDL_GetNumDisplayModes(ScreenId);
-	int numModes = 0;
+	int MaxModesAvailable = SDL_GetNumDisplayModes(ScreenId);
 
 	// Only collect fullscreen modes when requested, that makes sure in windowed mode no refresh rates are shown that aren't supported without
 	// fullscreen anyway(except fullscreen desktop)
@@ -919,49 +920,50 @@ void CGraphicsBackend_SDL_GL::GetVideoModes(CVideoMode *pModes, int MaxModes, in
 	constexpr int ModeCount = 256;
 	SDL_DisplayMode aModes[ModeCount];
 	int NumModes = 0;
-	for(int i = 0; i < maxModes && NumModes < ModeCount; i++)
+	for(int i = 0; i < MaxModesAvailable && NumModes < ModeCount; i++)
 	{
-		SDL_DisplayMode mode;
-		if(SDL_GetDisplayMode(ScreenId, i, &mode) < 0)
+		SDL_DisplayMode Mode;
+		if(SDL_GetDisplayMode(ScreenId, i, &Mode) < 0)
 		{
 			dbg_msg("gfx", "unable to get display mode: %s", SDL_GetError());
 			continue;
 		}
 
-		aModes[NumModes] = mode;
+		aModes[NumModes] = Mode;
 		++NumModes;
 	}
 
-	auto &&ModeInsert = [&](SDL_DisplayMode &mode) {
-		if(numModes < MaxModes)
+	int NumModesInserted = 0;
+	auto &&ModeInsert = [&](SDL_DisplayMode &Mode) {
+		if(NumModesInserted < MaxModes)
 		{
 			// if last mode was equal, ignore this one --- in fullscreen this can really only happen if the screen
 			// supports different color modes
 			// in non fullscren these are the modes that show different refresh rate, but are basically the same
-			if(numModes > 0 && pModes[numModes - 1].m_WindowWidth == mode.w && pModes[numModes - 1].m_WindowHeight == mode.h && (pModes[numModes - 1].m_RefreshRate == mode.refresh_rate || (mode.refresh_rate != DesktopMode.refresh_rate && !CollectFullscreenModes)))
+			if(NumModesInserted > 0 && pModes[NumModesInserted - 1].m_WindowWidth == Mode.w && pModes[NumModesInserted - 1].m_WindowHeight == Mode.h && (pModes[NumModesInserted - 1].m_RefreshRate == Mode.refresh_rate || (Mode.refresh_rate != DesktopMode.refresh_rate && !CollectFullscreenModes)))
 				return;
 
-			DisplayToVideoMode(&pModes[numModes], &mode, HiDPIScale, !CollectFullscreenModes ? DesktopMode.refresh_rate : mode.refresh_rate);
-			numModes++;
+			DisplayToVideoMode(&pModes[NumModesInserted], &Mode, HiDPIScale, !CollectFullscreenModes ? DesktopMode.refresh_rate : Mode.refresh_rate);
+			NumModesInserted++;
 		}
 	};
 
 	for(int i = 0; i < NumModes; i++)
 	{
-		SDL_DisplayMode &mode = aModes[i];
+		SDL_DisplayMode &Mode = aModes[i];
 
-		if(mode.w > MaxWindowWidth || mode.h > MaxWindowHeight)
+		if(Mode.w > MaxWindowWidth || Mode.h > MaxWindowHeight)
 			continue;
 
-		ModeInsert(mode);
+		ModeInsert(Mode);
 
 		if(IsFullscreenDestkop)
 			break;
 
-		if(numModes >= MaxModes)
+		if(NumModesInserted >= MaxModes)
 			break;
 	}
-	*pNumModes = numModes;
+	*pNumModes = NumModesInserted;
 }
 
 void CGraphicsBackend_SDL_GL::GetCurrentVideoMode(CVideoMode &CurMode, int HiDPIScale, int MaxWindowWidth, int MaxWindowHeight, int ScreenId)
@@ -1019,6 +1021,13 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		SDL_GetVersion(&Linked);
 		dbg_msg("sdl", "SDL version %d.%d.%d (compiled = %d.%d.%d)", Linked.major, Linked.minor, Linked.patch,
 			Compiled.major, Compiled.minor, Compiled.patch);
+
+#if CONF_PLATFORM_LINUX && SDL_VERSION_ATLEAST(2, 0, 22)
+		// needed to workaround SDL from forcing exclusively X11 if linking against the GLX flavour of GLEW instead of the EGL one
+		// w/o this on Wayland systems (no XWayland support) SDL's Video subsystem will fail to load (starting from SDL2.30+)
+		if(Linked.major == 2 && Linked.minor >= 30)
+			SDL_SetHint(SDL_HINT_VIDEODRIVER, "x11,wayland");
+#endif
 	}
 
 	if(!SDL_WasInit(SDL_INIT_VIDEO))

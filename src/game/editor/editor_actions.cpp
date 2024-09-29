@@ -320,7 +320,7 @@ void CEditorActionDeleteQuad::Redo()
 CEditorActionEditQuadPoint::CEditorActionEditQuadPoint(CEditor *pEditor, int GroupIndex, int LayerIndex, int QuadIndex, std::vector<CPoint> const &vPreviousPoints, std::vector<CPoint> const &vCurrentPoints) :
 	CEditorActionLayerBase(pEditor, GroupIndex, LayerIndex), m_QuadIndex(QuadIndex), m_vPreviousPoints(vPreviousPoints), m_vCurrentPoints(vCurrentPoints)
 {
-	str_format(m_aDisplayText, sizeof(m_aDisplayText), "Edit quad points");
+	str_copy(m_aDisplayText, "Edit quad points");
 }
 
 void CEditorActionEditQuadPoint::Undo()
@@ -539,6 +539,22 @@ void CEditorActionAddLayer::Undo()
 {
 	// Undo: remove layer from vector but keep it in case we want to add it back
 	auto &vLayers = m_pEditor->m_Map.m_vpGroups[m_GroupIndex]->m_vpLayers;
+
+	if(m_pLayer->m_Type == LAYERTYPE_TILES)
+	{
+		std::shared_ptr<CLayerTiles> pLayerTiles = std::static_pointer_cast<CLayerTiles>(m_pLayer);
+		if(pLayerTiles->m_Front)
+			m_pEditor->m_Map.m_pFrontLayer = nullptr;
+		else if(pLayerTiles->m_Tele)
+			m_pEditor->m_Map.m_pTeleLayer = nullptr;
+		else if(pLayerTiles->m_Speedup)
+			m_pEditor->m_Map.m_pSpeedupLayer = nullptr;
+		else if(pLayerTiles->m_Switch)
+			m_pEditor->m_Map.m_pSwitchLayer = nullptr;
+		else if(pLayerTiles->m_Tune)
+			m_pEditor->m_Map.m_pTuneLayer = nullptr;
+	}
+
 	vLayers.erase(vLayers.begin() + m_LayerIndex);
 
 	m_pEditor->m_Map.m_vpGroups[m_GroupIndex]->m_Collapse = false;
@@ -552,6 +568,22 @@ void CEditorActionAddLayer::Redo()
 {
 	// Redo: add back the removed layer contained in this class
 	auto &vLayers = m_pEditor->m_Map.m_vpGroups[m_GroupIndex]->m_vpLayers;
+
+	if(m_pLayer->m_Type == LAYERTYPE_TILES)
+	{
+		std::shared_ptr<CLayerTiles> pLayerTiles = std::static_pointer_cast<CLayerTiles>(m_pLayer);
+		if(pLayerTiles->m_Front)
+			m_pEditor->m_Map.m_pFrontLayer = std::static_pointer_cast<CLayerFront>(m_pLayer);
+		else if(pLayerTiles->m_Tele)
+			m_pEditor->m_Map.m_pTeleLayer = std::static_pointer_cast<CLayerTele>(m_pLayer);
+		else if(pLayerTiles->m_Speedup)
+			m_pEditor->m_Map.m_pSpeedupLayer = std::static_pointer_cast<CLayerSpeedup>(m_pLayer);
+		else if(pLayerTiles->m_Switch)
+			m_pEditor->m_Map.m_pSwitchLayer = std::static_pointer_cast<CLayerSwitch>(m_pLayer);
+		else if(pLayerTiles->m_Tune)
+			m_pEditor->m_Map.m_pTuneLayer = std::static_pointer_cast<CLayerTune>(m_pLayer);
+	}
+
 	vLayers.insert(vLayers.begin() + m_LayerIndex, m_pLayer);
 
 	m_pEditor->m_Map.m_vpGroups[m_GroupIndex]->m_Collapse = false;
@@ -628,7 +660,7 @@ CEditorActionGroup::CEditorActionGroup(CEditor *pEditor, int GroupIndex, bool De
 	if(m_Delete)
 		str_format(m_aDisplayText, sizeof(m_aDisplayText), "Delete group %d", m_GroupIndex);
 	else
-		str_format(m_aDisplayText, sizeof(m_aDisplayText), "New group");
+		str_copy(m_aDisplayText, "New group", sizeof(m_aDisplayText));
 }
 
 void CEditorActionGroup::Undo()
@@ -1198,7 +1230,7 @@ CEditorActionTileArt::CEditorActionTileArt(CEditor *pEditor, int PreviousImageCo
 	IEditorAction(pEditor), m_PreviousImageCount(PreviousImageCount), m_vImageIndexMap(vImageIndexMap)
 {
 	str_copy(m_aTileArtFile, pTileArtFile);
-	str_format(m_aDisplayText, sizeof(m_aDisplayText), "Tile art");
+	str_copy(m_aDisplayText, "Tile art");
 }
 
 void CEditorActionTileArt::Undo()
@@ -1266,7 +1298,7 @@ CEditorCommandAction::CEditorCommandAction(CEditor *pEditor, EType Type, int *pS
 	switch(m_Type)
 	{
 	case EType::ADD:
-		str_format(m_aDisplayText, sizeof(m_aDisplayText), "Add command");
+		str_copy(m_aDisplayText, "Add command");
 		break;
 	case EType::EDIT:
 		str_format(m_aDisplayText, sizeof(m_aDisplayText), "Edit command %d", m_CommandIndex);

@@ -11,6 +11,7 @@
 #include <game/client/ui_listbox.h>
 #include <game/mapitems.h>
 
+#include <game/editor/enums.h>
 #include <game/editor/mapitems/envelope.h>
 #include <game/editor/mapitems/layer.h>
 #include <game/editor/mapitems/layer_front.h>
@@ -38,6 +39,8 @@
 #include "layer_selector.h"
 #include "map_view.h"
 #include "smooth_value.h"
+#include <game/editor/prompt.h>
+#include <game/editor/quick_action.h>
 
 #include <deque>
 #include <functional>
@@ -60,7 +63,8 @@ enum
 
 	DIALOG_NONE = 0,
 	DIALOG_FILE,
-	DIALOG_MAPSETTINGS_ERROR
+	DIALOG_MAPSETTINGS_ERROR,
+	DIALOG_QUICK_PROMPT,
 };
 
 class CEditorImage;
@@ -196,7 +200,8 @@ public:
 	void CreateDefault(IGraphics::CTextureHandle EntitiesTexture);
 
 	// io
-	bool Save(const char *pFilename);
+	bool Save(const char *pFilename, const std::function<void(const char *pErrorMessage)> &ErrorHandler);
+	bool PerformPreSaveSanityChecks(const std::function<void(const char *pErrorMessage)> &ErrorHandler);
 	bool Load(const char *pFilename, int StorageType, const std::function<void(const char *pErrorMessage)> &ErrorHandler);
 	void PerformSanityChecks(const std::function<void(const char *pErrorMessage)> &ErrorHandler);
 
@@ -278,6 +283,7 @@ class CEditor : public IEditor
 	std::vector<std::reference_wrapper<CEditorComponent>> m_vComponents;
 	CMapView m_MapView;
 	CLayerSelector m_LayerSelector;
+	CPrompt m_Prompt;
 
 	bool m_EditorWasUsedBefore = false;
 
@@ -319,7 +325,33 @@ public:
 	const CMapView *MapView() const { return &m_MapView; }
 	CLayerSelector *LayerSelector() { return &m_LayerSelector; }
 
+	void SelectNextLayer();
+	void SelectPreviousLayer();
+
+	void FillGameTiles(EGameTileOp FillTile) const;
+	bool CanFillGameTiles() const;
+	void AddQuadOrSound();
+	void AddGroup();
+	void AddSoundLayer();
+	void AddTileLayer();
+	void AddQuadsLayer();
+	void AddSwitchLayer();
+	void AddFrontLayer();
+	void AddTuneLayer();
+	void AddSpeedupLayer();
+	void AddTeleLayer();
+	void DeleteSelectedLayer();
+	void LayerSelectImage();
+	bool IsNonGameTileLayerSelected() const;
+	void MapDetails();
+#define REGISTER_QUICK_ACTION(name, text, callback, disabled, active, button_color, description) CQuickAction m_QuickAction##name;
+#include <game/editor/quick_actions.h>
+#undef REGISTER_QUICK_ACTION
+
 	CEditor() :
+#define REGISTER_QUICK_ACTION(name, text, callback, disabled, active, button_color, description) m_QuickAction##name(text, description, callback, disabled, active, button_color),
+#include <game/editor/quick_actions.h>
+#undef REGISTER_QUICK_ACTION
 		m_ZoomEnvelopeX(1.0f, 0.1f, 600.0f),
 		m_ZoomEnvelopeY(640.0f, 0.1f, 32000.0f),
 		m_MapSettingsCommandContext(m_MapSettingsBackend.NewContext(&m_SettingsCommandInput))
@@ -610,7 +642,8 @@ public:
 	IGraphics::CTextureHandle m_FilePreviewImage;
 	int m_FilePreviewSound;
 	EPreviewState m_FilePreviewState;
-	CImageInfo m_FilePreviewImageInfo;
+	int m_FilePreviewImageWidth;
+	int m_FilePreviewImageHeight;
 	bool m_FileDialogOpening;
 
 	int m_ToolbarPreviewSound;
@@ -826,9 +859,9 @@ public:
 	void DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, const CUIRect *pRect, float FontSize, float DropdownMaxHeight, int Corners = IGraphics::CORNER_ALL, const char *pToolTip = nullptr);
 
 	template<typename T>
-	int DoEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CLineInput *pLineInput, const CUIRect *pEditBoxRect, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &fnMatchCallback);
+	int DoEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CLineInput *pLineInput, const CUIRect *pEditBoxRect, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &pfnMatchCallback);
 	template<typename T>
-	int RenderEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CUIRect View, CLineInput *pLineInput, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &fnMatchCallback);
+	int RenderEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CUIRect View, CLineInput *pLineInput, int x, float MaxHeight, bool AutoWidth, const std::vector<T> &vData, const FDropdownRenderCallback<T> &pfnMatchCallback);
 
 	void RenderBackground(CUIRect View, IGraphics::CTextureHandle Texture, float Size, float Brightness) const;
 
@@ -877,6 +910,7 @@ public:
 	static bool CallbackAddTileart(const char *pFilepath, int StorageType, void *pUser);
 	static bool CallbackSaveImage(const char *pFileName, int StorageType, void *pUser);
 	static bool CallbackSaveSound(const char *pFileName, int StorageType, void *pUser);
+	static bool CallbackCustomEntities(const char *pFileName, int StorageType, void *pUser);
 
 	void PopupSelectImageInvoke(int Current, float x, float y);
 	int PopupSelectImageResult();
@@ -1097,8 +1131,8 @@ public:
 	float EnvelopeToScreenX(const CUIRect &View, float x) const;
 	float ScreenToEnvelopeY(const CUIRect &View, float y) const;
 	float EnvelopeToScreenY(const CUIRect &View, float y) const;
-	float ScreenToEnvelopeDX(const CUIRect &View, float dx);
-	float ScreenToEnvelopeDY(const CUIRect &View, float dy);
+	float ScreenToEnvelopeDX(const CUIRect &View, float DeltaX);
+	float ScreenToEnvelopeDY(const CUIRect &View, float DeltaY);
 
 	// DDRace
 

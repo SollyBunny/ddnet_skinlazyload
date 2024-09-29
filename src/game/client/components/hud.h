@@ -49,6 +49,20 @@ class CHud : public CComponent
 	SScoreInfo m_aScoreInfo[2];
 	STextContainerIndex m_FPSTextContainerIndex;
 	STextContainerIndex m_DDRaceEffectsTextContainerIndex;
+	STextContainerIndex m_PlayerAngleTextContainerIndex;
+	char m_aPlayerAngleText[128];
+	STextContainerIndex m_aPlayerSpeedTextContainers[2];
+	char m_aaPlayerSpeedText[2][128];
+	int m_aPlayerSpeed[2];
+	enum class ESpeedChange
+	{
+		NONE,
+		INCREASE,
+		DECREASE
+	};
+	ESpeedChange m_aLastPlayerSpeedChange[2];
+	STextContainerIndex m_aPlayerPositionContainers[2];
+	char m_aaPlayerPositionText[2][128];
 
 	void RenderCursor();
 
@@ -65,10 +79,16 @@ class CHud : public CComponent
 	void RenderDummyActions();
 	void RenderMovementInformation(const int ClientId);
 
+	void UpdateMovementInformationTextContainer(STextContainerIndex &TextContainer, float FontSize, float Value, char *pPrevValue, size_t Size);
+	void RenderMovementInformationTextContainer(STextContainerIndex &TextContainer, const ColorRGBA &Color, float X, float Y);
+
 	void RenderGameTimer();
 	void RenderPauseNotification();
 	void RenderSuddenDeath();
+
 	void RenderScoreHud();
+	int m_LastLocalClientId = -1;
+
 	void RenderSpectatorHud();
 	void RenderWarmupTimer();
 	void RenderLocalTime(float x);
@@ -84,11 +104,12 @@ public:
 	virtual void OnReset() override;
 	virtual void OnRender() override;
 	virtual void OnInit() override;
+	virtual void OnNewSnapshot() override;
 
 	// DDRace
 
 	virtual void OnMessage(int MsgType, void *pRawMsg) override;
-	void RenderNinjaBarPos(float x, const float y, const float width, const float height, float Progress, float Alpha = 1.0f);
+	void RenderNinjaBarPos(float x, const float y, const float Width, const float Height, float Progress, float Alpha = 1.0f);
 
 private:
 	void RenderRecord();

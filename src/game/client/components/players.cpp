@@ -1,11 +1,13 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 
+#include <engine/client/enums.h>
 #include <engine/demo.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <game/gamecore.h>
 #include <game/generated/client_data.h>
+#include <game/generated/client_data7.h>
 #include <game/generated/protocol.h>
 
 #include <game/mapitems.h>
@@ -28,6 +30,54 @@
 #include <base/math.h>
 
 void CPlayers::RenderHand(const CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir, float AngleOffset, vec2 PostRotOffset, float Alpha)
+{
+	if(pInfo->m_aSixup[g_Config.m_ClDummy].m_aTextures[protocol7::SKINPART_BODY].IsValid())
+		RenderHand7(pInfo, CenterPos, Dir, AngleOffset, PostRotOffset, Alpha);
+	else
+		RenderHand6(pInfo, CenterPos, Dir, AngleOffset, PostRotOffset, Alpha);
+}
+
+void CPlayers::RenderHand7(const CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir, float AngleOffset, vec2 PostRotOffset, float Alpha)
+{
+	// in-game hand size is 15 when tee size is 64
+	float BaseSize = 15.0f * (pInfo->m_Size / 64.0f);
+
+	vec2 HandPos = CenterPos + Dir;
+	float Angle = angle(Dir);
+	if(Dir.x < 0)
+		Angle -= AngleOffset;
+	else
+		Angle += AngleOffset;
+
+	vec2 DirX = Dir;
+	vec2 DirY(-Dir.y, Dir.x);
+
+	if(Dir.x < 0)
+		DirY = -DirY;
+
+	HandPos += DirX * PostRotOffset.x;
+	HandPos += DirY * PostRotOffset.y;
+
+	ColorRGBA Color = pInfo->m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_HANDS];
+	Color.a = Alpha;
+	IGraphics::CQuadItem QuadOutline(HandPos.x, HandPos.y, 2 * BaseSize, 2 * BaseSize);
+	IGraphics::CQuadItem QuadHand = QuadOutline;
+
+	Graphics()->TextureSet(pInfo->m_aSixup[g_Config.m_ClDummy].m_aTextures[protocol7::SKINPART_HANDS]);
+	Graphics()->QuadsBegin();
+	Graphics()->SetColor(Color);
+	Graphics()->QuadsSetRotation(Angle);
+
+	RenderTools()->SelectSprite7(client_data7::SPRITE_TEE_HAND_OUTLINE);
+	Graphics()->QuadsDraw(&QuadOutline, 1);
+	RenderTools()->SelectSprite7(client_data7::SPRITE_TEE_HAND);
+	Graphics()->QuadsDraw(&QuadHand, 1);
+
+	Graphics()->QuadsSetRotation(0);
+	Graphics()->QuadsEnd();
+}
+
+void CPlayers::RenderHand6(const CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir, float AngleOffset, vec2 PostRotOffset, float Alpha)
 {
 	vec2 HandPos = CenterPos + Dir;
 	float Angle = angle(Dir);
@@ -156,8 +206,21 @@ void CPlayers::RenderHookCollLine(
 		Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), IntraTick);
 	// draw hook collision line
 	{
+		bool Aim = (Player.m_PlayerFlags & PLAYERFLAG_AIM);
+		if(!Client()->ServerCapAnyPlayerFlag())
+		{
+			for(int i = 0; i < NUM_DUMMIES; i++)
+			{
+				if(ClientId == m_pClient->m_aLocalIds[i])
+				{
+					Aim = GameClient()->m_Controls.m_aShowHookColl[i];
+					break;
+				}
+			}
+		}
+
 		bool AlwaysRenderHookColl = GameClient()->m_GameInfo.m_AllowHookColl && (Local ? g_Config.m_ClShowHookCollOwn : g_Config.m_ClShowHookCollOther) == 2;
-		bool RenderHookCollPlayer = ClientId >= 0 && Player.m_PlayerFlags & PLAYERFLAG_AIM && (Local ? g_Config.m_ClShowHookCollOwn : g_Config.m_ClShowHookCollOther) > 0;
+		bool RenderHookCollPlayer = ClientId >= 0 && Aim && (Local ? g_Config.m_ClShowHookCollOwn : g_Config.m_ClShowHookCollOther) > 0;
 		if(Local && GameClient()->m_GameInfo.m_AllowHookColl && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 			RenderHookCollPlayer = GameClient()->m_Controls.m_aShowHookColl[g_Config.m_ClDummy] && g_Config.m_ClShowHookCollOwn > 0;
 
@@ -464,12 +527,11 @@ void CPlayers::RenderPlayer(
 	// do skidding
 	if(!InAir && WantOtherDir && length(Vel * 50) > 500.0f)
 	{
-		static int64_t SkidSoundTime = 0;
-		if(time() - SkidSoundTime > time_freq() / 10)
+		if(time() - m_SkidSoundTime > time_freq() / 10)
 		{
 			if(g_Config.m_SndGame)
-				m_pClient->m_Sounds.PlayAt(CSounds::CHN_WORLD, SOUND_PLAYER_SKID, 0.25f, Position);
-			SkidSoundTime = time();
+				m_pClient->m_Sounds.PlayAt(CSounds::CHN_WORLD, SOUND_PLAYER_SKID, 1.0f, Position);
+			m_SkidSoundTime = time();
 		}
 
 		m_pClient->m_Effects.SkidTrail(
@@ -791,10 +853,9 @@ void CPlayers::OnRender()
 			const auto *pSkin = m_pClient->m_Skins.FindOrNullptr("x_ninja");
 			if(pSkin != nullptr)
 			{
-				aRenderInfo[i].m_OriginalRenderSkin = pSkin->m_OriginalSkin;
-				aRenderInfo[i].m_ColorableRenderSkin = pSkin->m_ColorableSkin;
-				aRenderInfo[i].m_BloodColor = pSkin->m_BloodColor;
-				aRenderInfo[i].m_SkinMetrics = pSkin->m_Metrics;
+				aRenderInfo[i].m_aSixup[g_Config.m_ClDummy].Reset();
+
+				aRenderInfo[i].Apply(pSkin);
 				aRenderInfo[i].m_CustomColoredSkin = IsTeamplay;
 				if(!IsTeamplay)
 				{
@@ -804,12 +865,8 @@ void CPlayers::OnRender()
 			}
 		}
 	}
-	const CSkin *pSkin = m_pClient->m_Skins.Find("x_spec");
 	CTeeRenderInfo RenderInfoSpec;
-	RenderInfoSpec.m_OriginalRenderSkin = pSkin->m_OriginalSkin;
-	RenderInfoSpec.m_ColorableRenderSkin = pSkin->m_ColorableSkin;
-	RenderInfoSpec.m_BloodColor = pSkin->m_BloodColor;
-	RenderInfoSpec.m_SkinMetrics = pSkin->m_Metrics;
+	RenderInfoSpec.Apply(m_pClient->m_Skins.Find("x_spec"));
 	RenderInfoSpec.m_CustomColoredSkin = false;
 	RenderInfoSpec.m_Size = 64.0f;
 	const int LocalClientId = m_pClient->m_Snap.m_LocalClientId;

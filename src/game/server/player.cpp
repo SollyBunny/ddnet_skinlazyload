@@ -116,6 +116,7 @@ void CPlayer::Reset()
 
 	m_Paused = PAUSE_NONE;
 	m_DND = false;
+	m_Whispers = true;
 
 	m_LastPause = 0;
 	m_Score.reset();
@@ -752,6 +753,11 @@ bool CPlayer::CanOverrideDefaultEmote() const
 	return m_LastEyeEmote == 0 || m_LastEyeEmote + (int64_t)g_Config.m_SvEyeEmoteChangeDelay * Server()->TickSpeed() < Server()->Tick();
 }
 
+bool CPlayer::CanSpec() const
+{
+	return m_pCharacter->IsGrounded() && m_pCharacter->m_Pos == m_pCharacter->m_PrevPos;
+}
+
 void CPlayer::ProcessPause()
 {
 	if(m_ForcePauseTime && m_ForcePauseTime < Server()->Tick())
@@ -760,7 +766,7 @@ void CPlayer::ProcessPause()
 		Pause(PAUSE_NONE, true);
 	}
 
-	if(m_Paused == PAUSE_SPEC && !m_pCharacter->IsPaused() && m_pCharacter->IsGrounded() && m_pCharacter->m_Pos == m_pCharacter->m_PrevPos)
+	if(m_Paused == PAUSE_SPEC && !m_pCharacter->IsPaused() && CanSpec())
 	{
 		m_pCharacter->Pause(true);
 		GameServer()->CreateDeath(m_pCharacter->m_Pos, m_ClientId, GameServer()->m_pController->GetMaskForPlayerWorldEvent(m_ClientId));
@@ -919,7 +925,7 @@ void CPlayer::ProcessScoreResult(CScorePlayerResult &Result)
 			}
 			Server()->ExpireServerInfo();
 			int Birthday = Result.m_Data.m_Info.m_Birthday;
-			if(Birthday != 0 && !m_BirthdayAnnounced)
+			if(Birthday != 0 && !m_BirthdayAnnounced && GetCharacter())
 			{
 				char aBuf[512];
 				str_format(aBuf, sizeof(aBuf),
@@ -931,6 +937,8 @@ void CPlayer::ProcessScoreResult(CScorePlayerResult &Result)
 					Server()->ClientName(m_ClientId), Birthday, Birthday > 1 ? "s" : "");
 				GameServer()->SendBroadcast(aBuf, m_ClientId);
 				m_BirthdayAnnounced = true;
+
+				GameServer()->CreateBirthdayEffect(GetCharacter()->m_Pos, GetCharacter()->TeamMask());
 			}
 			GameServer()->SendRecord(m_ClientId);
 			break;

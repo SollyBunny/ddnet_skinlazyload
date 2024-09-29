@@ -14,6 +14,7 @@
 #include <engine/config.h>
 #include <engine/editor.h>
 #include <engine/friends.h>
+#include <engine/gfx/image_manipulation.h>
 #include <engine/graphics.h>
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
@@ -503,7 +504,11 @@ int CMenus::DoKeyReader(const void *pId, const CUIRect *pRect, int Key, int Modi
 	else if(NewKey == 0)
 		aBuf[0] = '\0';
 	else
-		str_format(aBuf, sizeof(aBuf), "%s%s", CBinds::GetKeyBindModifiersName(*pNewModifierCombination), Input()->KeyName(NewKey));
+	{
+		char aModifiers[128];
+		CBinds::GetKeyBindModifiersName(*pNewModifierCombination, aModifiers, sizeof(aModifiers));
+		str_format(aBuf, sizeof(aBuf), "%s%s", aModifiers, Input()->KeyName(NewKey));
+	}
 
 	const ColorRGBA Color = m_Binder.m_pKeyReaderId == pId && m_Binder.m_TakeKey ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.4f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * Ui()->ButtonColorMul(pId));
 	pRect->Draw(Color, IGraphics::CORNER_ALL, 5.0f);
@@ -898,14 +903,9 @@ void CMenus::ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserD
 	if(pResult->NumArguments())
 	{
 		CMenus *pSelf = (CMenus *)pUserData;
-		pSelf->UpdateBackgroundEntities();
+		if(str_comp(g_Config.m_ClBackgroundEntities, pSelf->m_pClient->m_Background.MapName()) != 0)
+			pSelf->m_pClient->m_Background.LoadBackground();
 	}
-}
-
-void CMenus::UpdateBackgroundEntities()
-{
-	if(str_comp(g_Config.m_ClBackgroundEntities, m_pClient->m_Background.MapName()) != 0)
-		m_pClient->m_Background.LoadBackground();
 }
 
 void CMenus::ConchainUpdateMusicState(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -1209,7 +1209,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		pButtonText = Localize("Ok");
 		if(Client()->ReconnectTime() > 0)
 		{
-			str_format(aBuf, sizeof(aBuf), Localize("Reconnect in %d sec"), (int)((Client()->ReconnectTime() - time_get()) / time_freq()));
+			str_format(aBuf, sizeof(aBuf), Localize("Reconnect in %d sec"), (int)((Client()->ReconnectTime() - time_get()) / time_freq()) + 1);
 			pTitle = Client()->ErrorString();
 			pExtraText = aBuf;
 			pButtonText = Localize("Abort");
@@ -1282,6 +1282,11 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		pExtraText = m_aMessageBody;
 		pButtonText = m_aMessageButton;
 		TopAlign = true;
+	}
+	else if(m_Popup == POPUP_SAVE_SKIN)
+	{
+		pTitle = Localize("Save skin");
+		pExtraText = Localize("Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.");
 	}
 
 	CUIRect Box, Part;
@@ -1395,7 +1400,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	}
 	else if(m_Popup == POPUP_PASSWORD)
 	{
-		CUIRect Label, TextBox, TryAgain, Abort;
+		CUIRect AddressLabel, Address, Icon, Name, Label, TextBox, TryAgain, Abort;
 
 		Box.HSplitBottom(20.f, &Box, &Part);
 		Box.HSplitBottom(24.f, &Box, &Part);
@@ -1410,15 +1415,14 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		if(DoButton_Menu(&s_ButtonAbort, Localize("Abort"), 0, &Abort) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 			m_Popup = POPUP_NONE;
 
+		char aAddr[NETADDR_MAXSTRSIZE];
+		net_addr_str(&Client()->ServerAddress(), aAddr, sizeof(aAddr), true);
+
 		static CButtonContainer s_ButtonTryAgain;
 		if(DoButton_Menu(&s_ButtonTryAgain, Localize("Try again"), 0, &TryAgain) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
-		{
-			char aAddr[NETADDR_MAXSTRSIZE];
-			net_addr_str(&Client()->ServerAddress(), aAddr, sizeof(aAddr), true);
 			Client()->Connect(aAddr, g_Config.m_Password);
-		}
 
-		Box.HSplitBottom(60.f, &Box, &Part);
+		Box.HSplitBottom(32.f, &Box, &Part);
 		Box.HSplitBottom(24.f, &Box, &Part);
 
 		Part.VSplitLeft(60.0f, 0, &Label);
@@ -1427,6 +1431,35 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		TextBox.VSplitRight(60.0f, &TextBox, 0);
 		Ui()->DoLabel(&Label, Localize("Password"), 18.0f, TEXTALIGN_ML);
 		Ui()->DoClearableEditBox(&m_PasswordInput, &TextBox, 12.0f);
+
+		Box.HSplitBottom(32.f, &Box, &Part);
+		Box.HSplitBottom(24.f, &Box, &Part);
+
+		Part.VSplitLeft(60.0f, 0, &AddressLabel);
+		AddressLabel.VSplitLeft(100.0f, 0, &Address);
+		Address.VSplitLeft(20.0f, 0, &Address);
+		Ui()->DoLabel(&AddressLabel, Localize("Address"), 18.0f, TEXTALIGN_ML);
+		Ui()->DoLabel(&Address, aAddr, 18.0f, TEXTALIGN_ML);
+
+		Box.HSplitBottom(32.f, &Box, &Part);
+		Box.HSplitBottom(24.f, &Box, &Part);
+
+		const CServerBrowser::CServerEntry *pEntry = ServerBrowser()->Find(Client()->ServerAddress());
+		if(pEntry != nullptr && pEntry->m_GotInfo)
+		{
+			Part.VSplitLeft(60.0f, 0, &Icon);
+			Icon.VSplitLeft(100.0f, 0, &Name);
+			Icon.VSplitLeft(80.0f, &Icon, 0);
+			Name.VSplitLeft(20.0f, 0, &Name);
+
+			const SCommunityIcon *pIcon = FindCommunityIcon(pEntry->m_Info.m_aCommunityId);
+			if(pIcon != nullptr)
+				RenderCommunityIcon(pIcon, Icon, true);
+			else
+				Ui()->DoLabel(&Icon, Localize("Name"), 18.0f, TEXTALIGN_ML);
+
+			Ui()->DoLabel(&Name, pEntry->m_Info.m_aName, 18.0f, TEXTALIGN_ML);
+		}
 	}
 	else if(m_Popup == POPUP_LANGUAGE)
 	{
@@ -1728,6 +1761,52 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			m_Popup = POPUP_NONE;
 			SetActive(false);
 		}
+	}
+	else if(m_Popup == POPUP_SAVE_SKIN)
+	{
+		CUIRect Label, TextBox, Yes, No;
+
+		Box.HSplitBottom(20.f, &Box, &Part);
+		Box.HSplitBottom(24.f, &Box, &Part);
+		Part.VMargin(80.0f, &Part);
+
+		Part.VSplitMid(&No, &Yes);
+
+		Yes.VMargin(20.0f, &Yes);
+		No.VMargin(20.0f, &No);
+
+		static CButtonContainer s_ButtonNo;
+		if(DoButton_Menu(&s_ButtonNo, Localize("No"), 0, &No) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
+			m_Popup = POPUP_NONE;
+
+		static CButtonContainer s_ButtonYes;
+		if(DoButton_Menu(&s_ButtonYes, Localize("Yes"), m_SkinNameInput.IsEmpty() ? 1 : 0, &Yes) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
+		{
+			if(m_SkinNameInput.GetLength())
+			{
+				if(m_SkinNameInput.GetString()[0] != 'x' && m_SkinNameInput.GetString()[1] != '_')
+				{
+					if(m_pClient->m_Skins7.SaveSkinfile(m_SkinNameInput.GetString(), m_Dummy))
+					{
+						m_Popup = POPUP_NONE;
+						m_SkinListNeedsUpdate = true;
+					}
+					else
+						PopupMessage(Localize("Error"), Localize("Unable to save the skin"), Localize("Ok"), POPUP_SAVE_SKIN);
+				}
+				else
+					PopupMessage(Localize("Error"), Localize("Unable to save the skin with a reserved name"), Localize("Ok"), POPUP_SAVE_SKIN);
+			}
+		}
+
+		Box.HSplitBottom(60.f, &Box, &Part);
+		Box.HSplitBottom(24.f, &Box, &Part);
+
+		Part.VMargin(60.0f, &Label);
+		Label.VSplitLeft(100.0f, &Label, &TextBox);
+		TextBox.VSplitLeft(20.0f, nullptr, &TextBox);
+		Ui()->DoLabel(&Label, Localize("Name"), 18.0f, TEXTALIGN_ML);
+		Ui()->DoClearableEditBox(&m_SkinNameInput, &TextBox, 12.0f);
 	}
 	else
 	{
@@ -2231,14 +2310,16 @@ void CMenus::RenderBackground()
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.045f);
 	const float Size = 15.0f;
-	const float OffsetTime = std::fmod(LocalTime() * 0.15f, 2.0f);
+	const float OffsetTime = std::fmod(Client()->GlobalTime() * 0.15f, 2.0f);
 	IGraphics::CQuadItem aCheckerItems[64];
 	size_t NumCheckerItems = 0;
-	for(int y = -2; y < (int)(ScreenWidth / Size); y++)
+	const int NumItemsWidth = std::ceil(ScreenWidth / Size);
+	const int NumItemsHeight = std::ceil(ScreenHeight / Size);
+	for(int y = -2; y < NumItemsHeight; y++)
 	{
-		for(int x = -2; x < (int)(ScreenHeight / Size); x++)
+		for(int x = 0; x < NumItemsWidth + 4; x += 2)
 		{
-			aCheckerItems[NumCheckerItems] = IGraphics::CQuadItem((x - OffsetTime) * Size * 2 + (y & 1) * Size, (y + OffsetTime) * Size, Size, Size);
+			aCheckerItems[NumCheckerItems] = IGraphics::CQuadItem((x - 2 * OffsetTime + (y & 1)) * Size, (y + OffsetTime) * Size, Size, Size);
 			NumCheckerItems++;
 			if(NumCheckerItems == std::size(aCheckerItems))
 			{
@@ -2316,16 +2397,7 @@ int CMenus::MenuImageScan(const char *pName, int IsDir, int DirType, void *pUser
 
 	MenuImage.m_OrgTexture = pSelf->Graphics()->LoadTextureRaw(Info, 0, aPath);
 
-	// create gray scale version
-	unsigned char *pData = static_cast<unsigned char *>(Info.m_pData);
-	const size_t Step = Info.PixelSize();
-	for(size_t i = 0; i < Info.m_Width * Info.m_Height; i++)
-	{
-		int v = (pData[i * Step] + pData[i * Step + 1] + pData[i * Step + 2]) / 3;
-		pData[i * Step] = v;
-		pData[i * Step + 1] = v;
-		pData[i * Step + 2] = v;
-	}
+	ConvertToGrayscale(Info);
 	MenuImage.m_GreyTexture = pSelf->Graphics()->LoadTextureRawMove(Info, 0, aPath);
 
 	str_truncate(MenuImage.m_aName, sizeof(MenuImage.m_aName), pName, str_length(pName) - str_length(pExtension));

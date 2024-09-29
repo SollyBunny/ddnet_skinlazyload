@@ -100,8 +100,12 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	if(m_Active && !Input()->ModifierIsPressed() && !Input()->ShiftIsPressed() && !Input()->AltIsPressed())
 	{
 		if(Ui()->ConsumeHotkey(CUi::HOTKEY_DOWN))
-			m_ListBoxNewSelOffset += 1;
+			m_ListBoxNewSelOffset += m_ListBoxItemsPerRow;
 		else if(Ui()->ConsumeHotkey(CUi::HOTKEY_UP))
+			m_ListBoxNewSelOffset -= m_ListBoxItemsPerRow;
+		else if(Ui()->ConsumeHotkey(CUi::HOTKEY_RIGHT) && m_ListBoxItemsPerRow > 1)
+			m_ListBoxNewSelOffset += 1;
+		else if(Ui()->ConsumeHotkey(CUi::HOTKEY_LEFT) && m_ListBoxItemsPerRow > 1)
 			m_ListBoxNewSelOffset -= 1;
 		else if(Ui()->ConsumeHotkey(CUi::HOTKEY_PAGE_UP))
 			m_ListBoxNewSelOffset = -ItemsPerRow * RowsPerScroll * 4;
@@ -160,24 +164,20 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 	}
 
 	CListboxItem Item = DoNextRow();
-	bool ItemClicked = false;
-
-	if(Item.m_Visible && Ui()->DoButtonLogic(pId, 0, &Item.m_Rect))
+	const int ItemClicked = Item.m_Visible ? Ui()->DoButtonLogic(pId, 0, &Item.m_Rect) : 0;
+	if(ItemClicked)
 	{
-		ItemClicked = true;
 		m_ListBoxNewSelected = ThisItemIndex;
 		m_ListBoxItemSelected = true;
 		m_Active = true;
 	}
-	else
-		ItemClicked = false;
 
 	// process input, regard selected index
 	if(m_ListBoxNewSelected == ThisItemIndex)
 	{
 		if(m_Active)
 		{
-			if(Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || (ItemClicked && Ui()->DoDoubleClickLogic(pId)))
+			if(Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || (ItemClicked == 1 && Ui()->DoDoubleClickLogic(pId)))
 			{
 				m_ListBoxItemActivated = true;
 				Ui()->SetActiveItem(nullptr);
