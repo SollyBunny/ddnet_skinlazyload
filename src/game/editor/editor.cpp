@@ -1393,6 +1393,7 @@ void CEditor::DoToolbarSounds(CUIRect ToolBar)
 		static int s_PlayPauseButton, s_StopButton, s_SeekBar = 0;
 		DoAudioPreview(ToolBarBottom, &s_PlayPauseButton, &s_StopButton, &s_SeekBar, m_ToolbarPreviewSound);
 	}
+
 }
 
 static void Rotate(const CPoint *pCenter, CPoint *pPoint, float Rotation)
