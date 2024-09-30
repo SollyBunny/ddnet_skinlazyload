@@ -190,15 +190,16 @@ void CPlayers::RenderHookCollLine(
 	float Angle;
 	if(Local && (!m_pClient->m_Snap.m_SpecInfo.m_Active || m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW) && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
-		// just use the direct input if it's the local player we are rendering
-		Angle = angle(m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom);
+		vec2 mouse = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom;
+		mouse.x = (int)mouse.x;
+		mouse.y = (int)mouse.y;
+		Angle = angle(mouse);
 	}
 	else
 	{
 		Angle = GetPlayerTargetAngle(&Prev, &Player, ClientId, IntraTick);
 	}
 
-	vec2 Direction = direction(Angle);
 	vec2 Position;
 	if(in_range(ClientId, MAX_CLIENTS - 1))
 		Position = m_pClient->m_aClients[ClientId].m_RenderPos;
@@ -230,29 +231,13 @@ void CPlayers::RenderHookCollLine(
 #endif
 		if((AlwaysRenderHookColl || RenderHookCollPlayer) && RenderHookCollVideo && m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookFireSpeed > 0.1)
 		{
-			vec2 ExDirection = Direction;
-			if(Local && (!m_pClient->m_Snap.m_SpecInfo.m_Active || m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW) && Client()->State() != IClient::STATE_DEMOPLAYBACK)
-			{
-				ExDirection = normalize(
-					vec2((int)((int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].x * m_pClient->m_Camera.m_Zoom),
-						(int)((int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].y * m_pClient->m_Camera.m_Zoom)));
-				// fix direction if mouse is exactly in the center
-				if(!(int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].x && !(int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].y) {
-					ExDirection = vec2(1, 0);
-				} else {
-					ExDirection = normalize(vec2((int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].x, (int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].y));
-					ExDirection.x = round_to_int(ExDirection.x * 256.0f) / 256.0f;
-					ExDirection.y = round_to_int(ExDirection.y * 256.0f) / 256.0f;
-				}
-			}
+			vec2 ExDirection = direction(Angle);
 			vec2 ExDif = ExDirection * m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookFireSpeed;
 
-			vec2 InitPos = Position;
-			vec2 OldPos = InitPos + ExDirection * CCharacterCore::PhysicalSize() * 1.5f;
+			vec2 OldPos = Position + ExDirection * CCharacterCore::PhysicalSize() * 1.5f;
 			vec2 NewPos = OldPos;
-			vec2 FinishPos;
 
-			ColorRGBA HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl));
+			ColorRGBA HookCollColor;
 
 			while(1)
 			{
@@ -260,22 +245,25 @@ void CPlayers::RenderHookCollLine(
 				OldPos = NewPos;
 				NewPos = OldPos + ExDif;
 
-				if(distance(InitPos, NewPos) > m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength)
+				if(distance(Position, NewPos) > m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength)
 				{
-					FinishPos = NewPos;
+					HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl));
+					NewPos = NewPos;
 					break;
 				}
 
-				int Hit = Collision()->IntersectLineTeleHook(OldPos, NewPos, &FinishPos, 0x0);
+				int Hit = Collision()->IntersectLineTeleHook(OldPos, NewPos, &NewPos, 0x0);
 
 				if(Hit)
 				{
-					if (Hit != TILE_NOHOOK)
+					if (Hit == TILE_NOHOOK)
+						HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl));
+					else
 						HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
 					break;
 				}
 
-				if(ClientId >= 0 && m_pClient->IntersectCharacter(OldPos, FinishPos, FinishPos, ClientId) != -1)
+				if(ClientId >= 0 && m_pClient->IntersectCharacter(OldPos, NewPos, NewPos, ClientId) != -1)
 				{
 					HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl));
 					break;
@@ -289,14 +277,14 @@ void CPlayers::RenderHookCollLine(
 
 			Graphics()->TextureClear();
 			HookCollColor = HookCollColor.WithAlpha(Alpha);
-			if(g_Config.m_ClHookCollSize > 0)
+			if(Local && g_Config.m_ClHookCollSize > 0)
 			{
 				float LineWidth = 0.5f + (float)(g_Config.m_ClHookCollSize - 1) * 0.25f;
 				vec2 PerpToAngle = normalize(vec2(ExDirection.y, -ExDirection.x)) * GameClient()->m_Camera.m_Zoom;
-				vec2 Pos0 = FinishPos + PerpToAngle * -LineWidth;
-				vec2 Pos1 = FinishPos + PerpToAngle * LineWidth;
-				vec2 Pos2 = InitPos + PerpToAngle * -LineWidth;
-				vec2 Pos3 = InitPos + PerpToAngle * LineWidth;
+				vec2 Pos0 = NewPos + PerpToAngle * -LineWidth;
+				vec2 Pos1 = NewPos + PerpToAngle * LineWidth;
+				vec2 Pos2 = Position + PerpToAngle * -LineWidth;
+				vec2 Pos3 = Position + PerpToAngle * LineWidth;
 				IGraphics::CFreeformItem FreeformItem(Pos0.x, Pos0.y, Pos1.x, Pos1.y, Pos2.x, Pos2.y, Pos3.x, Pos3.y);
 				Graphics()->QuadsBegin();
 				Graphics()->SetColor(HookCollColor);
@@ -305,23 +293,19 @@ void CPlayers::RenderHookCollLine(
 			}
 			else
 			{
-				IGraphics::CLineItem LineItem(InitPos.x, InitPos.y, NewPos.x, NewPos.y);
+				IGraphics::CLineItem LineItem(Position.x, Position.y, NewPos.x, NewPos.y);
 				Graphics()->LinesBegin();
 				Graphics()->SetColor(HookCollColor);
 				Graphics()->LinesDraw(&LineItem, 1);
 				Graphics()->LinesEnd();
 			}
-			InitPos = FinishPos + (ExDirection * (
-				m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength * 2 - distance(InitPos, FinishPos)
-			));
-			IGraphics::CLineItem LineItem(FinishPos.x, FinishPos.y, InitPos.x, InitPos.y);
-			static ColorRGBA HookExtendCollColor = ColorRGBA();
-			HookExtendCollColor.r = 0;
-			HookExtendCollColor.g = 0;
-			HookExtendCollColor.b = 0;
-			HookExtendCollColor.a = Alpha;
+			OldPos = Position + ExDirection * m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength * 2;
+			IGraphics::CLineItem LineItem(OldPos.x, OldPos.y, NewPos.x, NewPos.y);
+			HookCollColor.r = 0;
+			HookCollColor.g = 0;
+			HookCollColor.b = 0;
 			Graphics()->LinesBegin();
-			Graphics()->SetColor(HookExtendCollColor);
+			Graphics()->SetColor(HookCollColor);
 			Graphics()->LinesDraw(&LineItem, 1);
 			Graphics()->LinesEnd();
 		}
@@ -459,7 +443,11 @@ void CPlayers::RenderPlayer(
 	if(Local && (!m_pClient->m_Snap.m_SpecInfo.m_Active || m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW) && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		// just use the direct input if it's the local player we are rendering
-		Angle = angle(m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom);
+		// Angle = angle(m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom);
+		vec2 mouse = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom;
+		mouse.x = (int)mouse.x;
+		mouse.y = (int)mouse.y;
+		Angle = angle(mouse);
 	}
 	else
 	{
