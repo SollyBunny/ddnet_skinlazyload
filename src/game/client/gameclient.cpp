@@ -128,6 +128,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Background, // render instead of m_MapLayersBackground when g_Config.m_ClOverlayEntities == 100
 					      &m_MapLayersBackground, // first to render
 					      &m_Particles.m_RenderTrail,
+					      &m_Particles.m_RenderTrailExtra,
 					      &m_Items,
 					      &m_Ghost,
 					      &m_Players,
@@ -531,7 +532,7 @@ void CGameClient::OnConnected()
 	const char *pLoadMapContent = Localize("Initializing map logic");
 	// render loading before skip is calculated
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0, false);
-	m_Layers.Init(Kernel());
+	m_Layers.Init(Kernel()->RequestInterface<IMap>(), false);
 	m_Collision.Init(Layers());
 	m_GameWorld.m_Core.InitSwitchers(m_Collision.m_HighestSwitchNumber);
 	m_RaceHelper.Init(this);
@@ -1105,7 +1106,7 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 			return;
 
 		CNetMsg_Sv_MapSoundGlobal *pMsg = (CNetMsg_Sv_MapSoundGlobal *)pRawMsg;
-		m_MapSounds.Play(pMsg->m_SoundId);
+		m_MapSounds.Play(CSounds::CHN_GLOBAL, pMsg->m_SoundId);
 	}
 }
 
@@ -1286,7 +1287,7 @@ void CGameClient::ProcessEvents()
 			if(!Config()->m_SndGame)
 				continue;
 
-			m_MapSounds.PlayAt(pEvent->m_SoundId, vec2(pEvent->m_X, pEvent->m_Y));
+			m_MapSounds.PlayAt(CSounds::CHN_WORLD, pEvent->m_SoundId, vec2(pEvent->m_X, pEvent->m_Y));
 		}
 	}
 }
@@ -1545,30 +1546,21 @@ void CGameClient::OnNewSnapshot()
 					}
 					IntsToStr(&pInfo->m_Clan0, 3, pClient->m_aClan, std::size(pClient->m_aClan));
 					pClient->m_Country = pInfo->m_Country;
+
 					IntsToStr(&pInfo->m_Skin0, 6, pClient->m_aSkinName, std::size(pClient->m_aSkinName));
+					if(pClient->m_aSkinName[0] == '\0' ||
+						(!m_GameInfo.m_AllowXSkins && (pClient->m_aSkinName[0] == 'x' && pClient->m_aSkinName[1] == '_')))
+					{
+						str_copy(pClient->m_aSkinName, "default");
+					}
 
 					pClient->m_UseCustomColor = pInfo->m_UseCustomColor;
 					pClient->m_ColorBody = pInfo->m_ColorBody;
 					pClient->m_ColorFeet = pInfo->m_ColorFeet;
 
-					// prepare the info
-					if(!m_GameInfo.m_AllowXSkins && (pClient->m_aSkinName[0] == 'x' && pClient->m_aSkinName[1] == '_'))
-						str_copy(pClient->m_aSkinName, "default");
-
-					pClient->m_SkinInfo.m_ColorBody = color_cast<ColorRGBA>(ColorHSLA(pClient->m_ColorBody).UnclampLighting(ColorHSLA::DARKEST_LGT));
-					pClient->m_SkinInfo.m_ColorFeet = color_cast<ColorRGBA>(ColorHSLA(pClient->m_ColorFeet).UnclampLighting(ColorHSLA::DARKEST_LGT));
 					pClient->m_SkinInfo.m_Size = 64;
-
-					// find new skin
 					pClient->m_SkinInfo.Apply(m_Skins.Find(pClient->m_aSkinName));
-					pClient->m_SkinInfo.m_CustomColoredSkin = pClient->m_UseCustomColor;
-
-					if(!pClient->m_UseCustomColor)
-					{
-						pClient->m_SkinInfo.m_ColorBody = ColorRGBA(1, 1, 1);
-						pClient->m_SkinInfo.m_ColorFeet = ColorRGBA(1, 1, 1);
-					}
-
+					pClient->m_SkinInfo.ApplyColors(pClient->m_UseCustomColor, pClient->m_ColorBody, pClient->m_ColorFeet);
 					pClient->UpdateRenderInfo(IsTeamPlay());
 				}
 			}
@@ -1687,6 +1679,7 @@ void CGameClient::OnNewSnapshot()
 					pClient->m_ShotgunHitDisabled = pCharacterData->m_Flags & CHARACTERFLAG_SHOTGUN_HIT_DISABLED;
 					pClient->m_HookHitDisabled = pCharacterData->m_Flags & CHARACTERFLAG_HOOK_HIT_DISABLED;
 					pClient->m_Super = pCharacterData->m_Flags & CHARACTERFLAG_SUPER;
+					pClient->m_Invincible = pCharacterData->m_Flags & CHARACTERFLAG_INVINCIBLE;
 
 					// Endless
 					pClient->m_EndlessHook = pCharacterData->m_Flags & CHARACTERFLAG_ENDLESS_HOOK;
@@ -2461,6 +2454,7 @@ void CGameClient::CClientData::Reset()
 	m_ShotgunHitDisabled = false;
 	m_HookHitDisabled = false;
 	m_Super = false;
+	m_Invincible = false;
 	m_HasTelegunGun = false;
 	m_HasTelegunGrenade = false;
 	m_HasTelegunLaser = false;
@@ -3698,6 +3692,7 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 	if(m_ExtrasSkinLoaded)
 	{
 		Graphics()->UnloadTexture(&m_ExtrasSkin.m_SpriteParticleSnowflake);
+		Graphics()->UnloadTexture(&m_ExtrasSkin.m_SpriteParticleSparkle);
 
 		for(auto &SpriteParticle : m_ExtrasSkin.m_aSpriteParticles)
 			SpriteParticle = IGraphics::CTextureHandle();
@@ -3732,7 +3727,11 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 	else if(PngLoaded && Graphics()->CheckImageDivisibility(aPath, ImgInfo, g_pData->m_aSprites[SPRITE_PART_SNOWFLAKE].m_pSet->m_Gridx, g_pData->m_aSprites[SPRITE_PART_SNOWFLAKE].m_pSet->m_Gridy, true) && Graphics()->IsImageFormatRgba(aPath, ImgInfo))
 	{
 		m_ExtrasSkin.m_SpriteParticleSnowflake = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_SNOWFLAKE]);
+		m_ExtrasSkin.m_SpriteParticleSparkle = Graphics()->LoadSpriteTexture(ImgInfo, &g_pData->m_aSprites[SPRITE_PART_SPARKLE]);
+
 		m_ExtrasSkin.m_aSpriteParticles[0] = m_ExtrasSkin.m_SpriteParticleSnowflake;
+		m_ExtrasSkin.m_aSpriteParticles[1] = m_ExtrasSkin.m_SpriteParticleSparkle;
+
 		m_ExtrasSkinLoaded = true;
 	}
 	ImgInfo.Free();
@@ -3741,7 +3740,7 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 void CGameClient::RefreshSkins()
 {
 	const auto SkinStartLoadTime = time_get_nanoseconds();
-	m_Skins.Refresh([&](int) {
+	m_Skins.Refresh([&]() {
 		// if skin refreshing takes to long, swap to a loading screen
 		if(time_get_nanoseconds() - SkinStartLoadTime > 500ms)
 		{
@@ -3751,15 +3750,7 @@ void CGameClient::RefreshSkins()
 
 	for(auto &Client : m_aClients)
 	{
-		if(Client.m_aSkinName[0] != '\0')
-		{
-			Client.m_SkinInfo.Apply(m_Skins.Find(Client.m_aSkinName));
-		}
-		else
-		{
-			Client.m_SkinInfo.m_OriginalRenderSkin.Reset();
-			Client.m_SkinInfo.m_ColorableRenderSkin.Reset();
-		}
+		Client.m_SkinInfo.Apply(m_Skins.Find(Client.m_aSkinName));
 		Client.UpdateRenderInfo(IsTeamPlay());
 	}
 
