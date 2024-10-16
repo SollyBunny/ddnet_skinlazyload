@@ -248,7 +248,7 @@ void CPlayers::RenderHookCollLine(
 				if(distance(Position, NewPos) > m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength)
 				{
 					HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl));
-					NewPos = NewPos;
+					NewPos = OldPos;
 					break;
 				}
 
