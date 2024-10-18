@@ -188,7 +188,7 @@ int CControls::SnapInput(int *pData)
 	else
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_PLAYING;
 
-	if(m_pClient->m_Scoreboard.Active())
+	if(m_pClient->m_Scoreboard.Active() || g_Config.m_ClPingNameCircle)
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags |= PLAYERFLAG_SCOREBOARD;
 
 	if(m_pClient->m_Controls.m_aShowHookColl[g_Config.m_ClDummy] && Client()->ServerCapAnyPlayerFlag())
@@ -212,7 +212,7 @@ int CControls::SnapInput(int *pData)
 		pos *= m_pClient->m_Camera.m_Zoom;
 
 		// scale TargetX, TargetY by zoom.
-		if(!m_pClient->m_Snap.m_SpecInfo.m_Active)
+		if(!m_pClient->m_Snap.m_SpecInfo.m_Active && !g_Config.m_ClOldMouseZoom)
 		{
 			pos *= ((float)g_Config.m_ClMousePositionMultiplier / 100.0);;
 		}
@@ -249,7 +249,7 @@ int CControls::SnapInput(int *pData)
 			m_aInputData[g_Config.m_ClDummy].m_Direction = 1;
 
 		// scale TargetX, TargetY by zoom.
-		if(!m_pClient->m_Snap.m_SpecInfo.m_Active)
+		if(!m_pClient->m_Snap.m_SpecInfo.m_Active && !g_Config.m_ClOldMouseZoom)
 		{
 			m_aInputData[g_Config.m_ClDummy].m_TargetX *= m_pClient->m_Camera.m_Zoom;
 			m_aInputData[g_Config.m_ClDummy].m_TargetY *= m_pClient->m_Camera.m_Zoom;
@@ -432,6 +432,18 @@ void CControls::ClampMousePos()
 		MouseDistance = length(m_aMousePos[g_Config.m_ClDummy]);
 		if(MouseDistance > MouseMax)
 			m_aMousePos[g_Config.m_ClDummy] = normalize_pre_length(m_aMousePos[g_Config.m_ClDummy], MouseDistance) * MouseMax;
+
+		if(g_Config.m_ClLimitMouseToScreen)
+		{
+			float Width, Height;
+			RenderTools()->CalcScreenParams(Graphics()->ScreenAspect(), 1.0f, &Width, &Height);
+			Height /= 2.0f;
+			Width /= 2.0f;
+			if(g_Config.m_ClLimitMouseToScreen == 2)
+				Width = Height;
+			m_aMousePos[g_Config.m_ClDummy].y = clamp(m_aMousePos[g_Config.m_ClDummy].y, -Height, Height);
+			m_aMousePos[g_Config.m_ClDummy].x = clamp(m_aMousePos[g_Config.m_ClDummy].x, -Width, Width);
+		}
 	}
 }
 
@@ -447,4 +459,49 @@ float CControls::GetMaxMouseDistance() const
 	float DeadZone = g_Config.m_ClDyncam ? g_Config.m_ClDyncamDeadzone : g_Config.m_ClMouseDeadzone;
 	float MaxDistance = g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance;
 	return minimum((FollowFactor != 0 ? CameraMaxDistance / FollowFactor + DeadZone : MaxDistance), MaxDistance);
+}
+
+bool CControls::CheckNewInput()
+{
+	CNetObj_PlayerInput TestInput = m_aInputData[g_Config.m_ClDummy];
+	TestInput.m_Direction = 0;
+	if(m_aInputDirectionLeft[g_Config.m_ClDummy] && !m_aInputDirectionRight[g_Config.m_ClDummy])
+		TestInput.m_Direction = -1;
+	if(!m_aInputDirectionLeft[g_Config.m_ClDummy] && m_aInputDirectionRight[g_Config.m_ClDummy])
+		TestInput.m_Direction = 1;
+
+	bool NewInput = false;
+	if(m_FastInput.m_Direction != TestInput.m_Direction)
+		NewInput = true;
+	if(m_FastInput.m_Hook != TestInput.m_Hook)
+		NewInput = true;
+	if(m_FastInput.m_Fire != TestInput.m_Fire)
+		NewInput = true;
+	if(m_FastInput.m_Jump != TestInput.m_Jump)
+		NewInput = true;
+	if(m_FastInput.m_NextWeapon != TestInput.m_NextWeapon)
+		NewInput = true;
+	if(m_FastInput.m_PrevWeapon != TestInput.m_PrevWeapon)
+		NewInput = true;
+	if(m_FastInput.m_WantedWeapon != TestInput.m_WantedWeapon)
+		NewInput = true;
+
+	if(g_Config.m_ClSubTickAiming)
+	{
+		TestInput.m_TargetX = (int)m_aMousePos[g_Config.m_ClDummy].x;
+		TestInput.m_TargetY = (int)m_aMousePos[g_Config.m_ClDummy].y;
+		if(!g_Config.m_ClOldMouseZoom)
+		{
+			TestInput.m_TargetX *= m_pClient->m_Camera.m_Zoom;
+			TestInput.m_TargetY *= m_pClient->m_Camera.m_Zoom;
+		}
+	}
+
+	m_FastInput = TestInput;
+
+	if (NewInput) 
+	{
+		return true;
+	}
+	return false;
 }

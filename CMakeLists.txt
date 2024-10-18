@@ -2141,6 +2141,9 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   websockets.cpp
   websockets.h
 )
+set_src(ENGINE_EXTERNAL GLOB src/engine/external
+  remimu.h
+)
 set_src(ENGINE_GFX GLOB src/engine/gfx
   image.cpp
   image_loader.cpp
@@ -2168,6 +2171,7 @@ set_src(GAME_SHARED GLOB src/game
   mapitems_ex_types.h
   prng.cpp
   prng.h
+  tater_variables.h
   teamscore.cpp
   teamscore.h
   tuning.h
@@ -2220,7 +2224,7 @@ set(LIBS
 # Targets
 add_library(engine-gfx EXCLUDE_FROM_ALL OBJECT ${ENGINE_GFX})
 target_include_directories(engine-gfx PRIVATE ${PNG_INCLUDE_DIRS})
-add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_UUID_SHARED} ${BASE})
+add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_EXTERNAL} ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_UUID_SHARED} ${BASE})
 add_library(game-shared EXCLUDE_FROM_ALL OBJECT ${GAME_SHARED} ${GAME_GENERATED_SHARED})
 list(APPEND TARGETS_OWN engine-gfx engine-shared game-shared)
 
@@ -2330,6 +2334,8 @@ if(CLIENT)
     components/background.h
     components/binds.cpp
     components/binds.h
+    components/bindwheel.cpp
+    components/bindwheel.h
     components/broadcast.cpp
     components/broadcast.h
     components/camera.cpp
@@ -2383,14 +2389,22 @@ if(CLIENT)
     components/motd.h
     components/nameplates.cpp
     components/nameplates.h
+    components/outlines.cpp
+    components/outlines.h
     components/particles.cpp
     components/particles.h
+    components/player_indicator.cpp
+    components/player_indicator.h
     components/players.cpp
     components/players.h
     components/race_demo.cpp
     components/race_demo.h
+    components/rainbow.cpp
+    components/rainbow.h
     components/scoreboard.cpp
     components/scoreboard.h
+    components/skinprofiles.cpp
+    components/skinprofiles.h
     components/skins.cpp
     components/skins.h
     components/skins7.cpp
@@ -2401,8 +2415,12 @@ if(CLIENT)
     components/spectator.h
     components/statboard.cpp
     components/statboard.h
+    components/tater.cpp
+    components/tater.h
     components/tooltips.cpp
     components/tooltips.h
+    components/verify.cpp
+    components/verify.h
     components/voting.cpp
     components/voting.h
     gameclient.cpp

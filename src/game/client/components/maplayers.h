@@ -32,7 +32,11 @@ class CMapLayers : public CComponent
 	CMapImages *m_pImages;
 
 	int m_Type;
-	bool m_OnlineOnly;
+	int m_CurrentLocalTick;
+	int m_LastLocalTick;
+	bool m_EnvelopeUpdate;
+
+	void MapScreenToGroup(float CenterX, float CenterY, CMapItemGroup *pGroup, float Zoom = 1.0f);
 
 	struct STileLayerVisuals
 	{
@@ -133,6 +137,9 @@ protected:
 	virtual bool CanRenderMenuBackground() { return true; }
 
 public:
+	bool m_OnlineOnly;
+
+
 	enum
 	{
 		TYPE_BACKGROUND = 0,
