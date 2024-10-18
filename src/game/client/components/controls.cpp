@@ -208,28 +208,30 @@ int CControls::SnapInput(int *pData)
 
 		// set the target anyway though so that we can keep seeing our surroundings,
 		// even if chat or menu are activated
-		m_aInputData[g_Config.m_ClDummy].m_TargetX = (int)m_aMousePos[g_Config.m_ClDummy].x;
-		m_aInputData[g_Config.m_ClDummy].m_TargetY = (int)m_aMousePos[g_Config.m_ClDummy].y;
+		vec2 pos = m_aMousePos[g_Config.m_ClDummy];
+		pos *= m_pClient->m_Camera.m_Zoom;
 
 		// scale TargetX, TargetY by zoom.
 		if(!m_pClient->m_Snap.m_SpecInfo.m_Active)
 		{
-			m_aInputData[g_Config.m_ClDummy].m_TargetX *= m_pClient->m_Camera.m_Zoom;
-			m_aInputData[g_Config.m_ClDummy].m_TargetY *= m_pClient->m_Camera.m_Zoom;
+			pos *= ((float)g_Config.m_ClMousePositionMultiplier / 100.0);;
 		}
+
+		m_aInputData[g_Config.m_ClDummy].m_TargetX = (int)pos.x;
+		m_aInputData[g_Config.m_ClDummy].m_TargetY = (int)pos.y;
 
 		// send once a second just to be sure
 		Send = Send || time_get() > m_LastSendTime + time_freq();
 	}
 	else
 	{
-		m_aInputData[g_Config.m_ClDummy].m_TargetX = (int)m_aMousePos[g_Config.m_ClDummy].x;
-		m_aInputData[g_Config.m_ClDummy].m_TargetY = (int)m_aMousePos[g_Config.m_ClDummy].y;
+		m_aInputData[g_Config.m_ClDummy].m_TargetX = (int)(m_aMousePos[g_Config.m_ClDummy].x * ((float)g_Config.m_ClMousePositionMultiplier / 100.0));
+		m_aInputData[g_Config.m_ClDummy].m_TargetY = (int)(m_aMousePos[g_Config.m_ClDummy].y * ((float)g_Config.m_ClMousePositionMultiplier / 100.0));
 
 		if(g_Config.m_ClSubTickAiming && m_aMousePosOnAction[g_Config.m_ClDummy] != vec2(0.0f, 0.0f))
 		{
-			m_aInputData[g_Config.m_ClDummy].m_TargetX = (int)m_aMousePosOnAction[g_Config.m_ClDummy].x;
-			m_aInputData[g_Config.m_ClDummy].m_TargetY = (int)m_aMousePosOnAction[g_Config.m_ClDummy].y;
+			m_aInputData[g_Config.m_ClDummy].m_TargetX = (int)(m_aMousePosOnAction[g_Config.m_ClDummy].x * ((float)g_Config.m_ClMousePositionMultiplier / 100.0));
+			m_aInputData[g_Config.m_ClDummy].m_TargetY = (int)(m_aMousePosOnAction[g_Config.m_ClDummy].y * ((float)g_Config.m_ClMousePositionMultiplier / 100.0));
 			m_aMousePosOnAction[g_Config.m_ClDummy] = vec2(0.0f, 0.0f);
 		}
 

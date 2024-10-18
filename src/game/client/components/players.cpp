@@ -190,7 +190,7 @@ void CPlayers::RenderHookCollLine(
 	float Angle;
 	if(Local && (!m_pClient->m_Snap.m_SpecInfo.m_Active || m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW) && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
-		vec2 mouse = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom;
+		vec2 mouse = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom * ((float)g_Config.m_ClMousePositionMultiplier / 100.0);
 		mouse.x = (int)mouse.x;
 		mouse.y = (int)mouse.y;
 		Angle = angle(mouse);
@@ -444,7 +444,7 @@ void CPlayers::RenderPlayer(
 	{
 		// just use the direct input if it's the local player we are rendering
 		// Angle = angle(m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom);
-		vec2 mouse = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom;
+		vec2 mouse = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom * ((float)g_Config.m_ClMousePositionMultiplier / 100.0);
 		mouse.x = (int)mouse.x;
 		mouse.y = (int)mouse.y;
 		Angle = angle(mouse);
