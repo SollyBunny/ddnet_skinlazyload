@@ -31,6 +31,7 @@ public:
 	std::chrono::nanoseconds LastRefreshTime() const { return m_LastRefreshTime; }
 
 	const std::unordered_map<std::string_view, std::unique_ptr<CSkin>> &GetSkinsUnsafe() const { return m_Skins; }
+	int GetNumSkins() const { return m_Skins.size(); }
 	const CSkin *FindOrNullptr(const char *pName, bool IgnorePrefix = false);
 	const CSkin *Find(const char *pName);
 

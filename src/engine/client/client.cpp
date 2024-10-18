@@ -2135,7 +2135,6 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 								{
 									str_format(aBuf, sizeof(aBuf), ";%s", aBufEmote);
 									str_append(aBufMsg, aBuf);
-									HasMsg = true;
 								}
 							}
 							if(IsSixup())
@@ -2144,8 +2143,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 								Msg7.m_Mode = protocol7::CHAT_ALL;
 								Msg7.m_Target = -1;
 								Msg7.m_pMessage = aBufMsg;
-								if(HasMsg)
-									SendPackMsg(Conn, &Msg7, MSGFLAG_VITAL, true);
+								SendPackMsg(Conn, &Msg7, MSGFLAG_VITAL, true);
 							}
 							else
 							{
@@ -2154,8 +2152,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 								MsgP.m_pMessage = aBufMsg;
 								CMsgPacker PackerTimeout(&MsgP);
 								MsgP.Pack(&PackerTimeout);
-								if(HasMsg)
-									SendMsg(Conn, &PackerTimeout, MSGFLAG_VITAL);
+								SendMsg(Conn, &PackerTimeout, MSGFLAG_VITAL);
 							}
 						}
 						m_aCodeRunAfterJoin[Conn] = true;

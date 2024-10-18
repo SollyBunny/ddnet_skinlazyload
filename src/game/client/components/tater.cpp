@@ -115,7 +115,7 @@ void CTater::RandomSkin(void *pUserData)
 {
 	CTater *pThis = static_cast<CTater *>(pUserData);
 	// get the skin count
-	int skinCount = pThis->m_pClient->m_Skins.Num();
+	int skinCount = pThis->m_pClient->m_Skins.GetNumSkins();
 
 	// get a random skin number
 	int skinNumber = std::rand() % skinCount;
