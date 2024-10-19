@@ -38,22 +38,6 @@ void CBindWheel::ConBind(IConsole::IResult *pResult, void *pUserData)
 	pThis->updateBinds(bindpos, description, command);
 }
 
-void CBindWheel::ConchainBindwheel(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
-{
-	pfnCallback(pResult, pCallbackUserData);
-	if(pResult->NumArguments() == 3)
-	{
-		int bindpos = pResult->GetInteger(0);
-		char command[MAX_BINDWHEEL_CMD];
-		char description[MAX_BINDWHEEL_DESC];
-		str_format(description, sizeof(description), "%s", pResult->GetString(1));
-		str_format(command, sizeof(command), "%s", pResult->GetString(2));
-
-		CBindWheel *pThis = static_cast<CBindWheel *>(pUserData);
-		pThis->updateBinds(bindpos, description, command);
-	}
-}
-
 void CBindWheel::OnConsoleInit()
 {
 	IConfigManager *pConfigManager = Kernel()->RequestInterface<IConfigManager>();
@@ -62,7 +46,6 @@ void CBindWheel::OnConsoleInit()
 
 	Console()->Register("+bindwheel", "", CFGFLAG_CLIENT, ConBindwheel, this, "Open bindwheel selector");
 	Console()->Register("bindwheel", "i[bindwheel] s[description:128] s[command:10]", CFGFLAG_CLIENT, ConBind, this, "Edit the command");
-	Console()->Chain("bindwheel", ConchainBindwheel, this);
 
 	for(int i = 0; i < NUM_BINDWHEEL; i++)
 	{
@@ -197,6 +180,11 @@ void CBindWheel::Binwheel(int Bind)
 
 void CBindWheel::updateBinds(int Bindpos, char *Description, char *Command)
 {
+	if (Bindpos < 0 || Bindpos >= NUM_BINDWHEEL) {
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "updateBinds", "Out of range 0-7");
+		return;
+	}
+
 	str_format(m_BindWheelList[Bindpos].command, sizeof(m_BindWheelList[Bindpos].command), "%s", Command);
 	str_format(m_BindWheelList[Bindpos].description, sizeof(m_BindWheelList[Bindpos].description), "%s", Description);
 

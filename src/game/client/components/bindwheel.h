@@ -30,7 +30,6 @@ public:
 	};
 	SClientBindWheel m_BindWheelList[NUM_BINDWHEEL];
 
-
 	CBindWheel();
 	virtual int Sizeof() const override { return sizeof(*this); }
 
@@ -39,7 +38,6 @@ public:
 	virtual void OnConsoleInit() override;
 	virtual void OnRelease() override;
 	virtual bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
-	static void ConchainBindwheel(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	
 	void updateBinds(int Bindpos, char *Description, char *Command);
 	void Binwheel(int Bind);
