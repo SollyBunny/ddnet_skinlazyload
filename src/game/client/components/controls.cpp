@@ -209,7 +209,8 @@ int CControls::SnapInput(int *pData)
 		// set the target anyway though so that we can keep seeing our surroundings,
 		// even if chat or menu are activated
 		vec2 pos = m_aMousePos[g_Config.m_ClDummy];
-		pos *= m_pClient->m_Camera.m_Zoom;
+		if(!g_Config.m_ClOldMouseZoom)
+			pos *= m_pClient->m_Camera.m_Zoom;
 
 		// scale TargetX, TargetY by zoom.
 		if(!m_pClient->m_Snap.m_SpecInfo.m_Active && !g_Config.m_ClOldMouseZoom)
@@ -488,18 +489,17 @@ bool CControls::CheckNewInput()
 
 	if(g_Config.m_ClSubTickAiming)
 	{
-		TestInput.m_TargetX = (int)m_aMousePos[g_Config.m_ClDummy].x;
-		TestInput.m_TargetY = (int)m_aMousePos[g_Config.m_ClDummy].y;
+		vec2 mouse = m_aMousePos[g_Config.m_ClDummy];
+		mouse *= (float)g_Config.m_ClMousePositionMultiplier / 100.0f;
 		if(!g_Config.m_ClOldMouseZoom)
-		{
-			TestInput.m_TargetX *= m_pClient->m_Camera.m_Zoom;
-			TestInput.m_TargetY *= m_pClient->m_Camera.m_Zoom;
-		}
+			mouse *= m_pClient->m_Camera.m_Zoom;
+		TestInput.m_TargetX = (int)mouse.x;
+		TestInput.m_TargetY = (int)mouse.y;
 	}
 
 	m_FastInput = TestInput;
 
-	if (NewInput) 
+	if (NewInput)
 	{
 		return true;
 	}
