@@ -2957,13 +2957,13 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 
 		RightView.HSplitTop(LineSize, &Button, &RightView);
 		static bool HookCollPressed = false;
-		if (DoButton_CheckBox(&HookCollPressed, Localize("+hookcoll"), HookCollPressed, &Button))
+		if(DoButton_CheckBox(&HookCollPressed, Localize("+hookcoll"), HookCollPressed, &Button))
 			HookCollPressed = !HookCollPressed;
 		RightView.HSplitTop(2 * MarginSmall, nullptr, &RightView);
 
 		auto DoHookCollision = [this](const vec2 &Pos, const float &Length, const int &Size, const ColorRGBA &Color, const bool &Invert) {
 			ColorRGBA ColorModified = Color;
-			if (Invert)
+			if(Invert)
 				ColorModified = color_invert(ColorModified);
 			ColorModified = ColorModified.WithAlpha((float)g_Config.m_ClHookCollAlpha / 100);
 			Graphics()->TextureClear();
