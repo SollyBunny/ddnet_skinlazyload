@@ -2930,7 +2930,10 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		}
 
 		LeftView.HSplitTop(2 * LineSize, &Button, &LeftView);
-		Ui()->DoScrollbarOption(&g_Config.m_ClHookCollSize, &g_Config.m_ClHookCollSize, &Button, Localize("Hook collision line width"), 0, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE);
+		Ui()->DoScrollbarOption(&g_Config.m_ClHookCollSize, &g_Config.m_ClHookCollSize, &Button, Localize("Width of your own hook collision line"), 0, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE);
+
+		LeftView.HSplitTop(2 * LineSize, &Button, &LeftView);
+		Ui()->DoScrollbarOption(&g_Config.m_ClHookCollSizeOther, &g_Config.m_ClHookCollSizeOther, &Button, Localize("Width of others hook collision line"), 0, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE);
 
 		LeftView.HSplitTop(2 * LineSize, &Button, &LeftView);
 		Ui()->DoScrollbarOption(&g_Config.m_ClHookCollAlpha, &g_Config.m_ClHookCollAlpha, &Button, Localize("Hook collision line opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_MULTILINE, "%");
@@ -2952,13 +2955,23 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		Ui()->DoLabel(&Label, Localize("Preview"), HeadlineFontSize, TEXTALIGN_ML);
 		RightView.HSplitTop(2 * MarginSmall, nullptr, &RightView);
 
-		auto DoHookCollision = [this](const vec2 &Pos, const float &Length, const ColorRGBA &Color) {
+		RightView.HSplitTop(LineSize, &Button, &RightView);
+		static bool HookCollPressed = false;
+		if (DoButton_CheckBox(&HookCollPressed, Localize("+hookcoll"), HookCollPressed, &Button))
+			HookCollPressed = !HookCollPressed;
+		RightView.HSplitTop(2 * MarginSmall, nullptr, &RightView);
+
+		auto DoHookCollision = [this](const vec2 &Pos, const float &Length, const int &Size, const ColorRGBA &Color, const bool &Invert) {
+			ColorRGBA ColorModified = Color;
+			if (Invert)
+				ColorModified = color_invert(ColorModified);
+			ColorModified = ColorModified.WithAlpha((float)g_Config.m_ClHookCollAlpha / 100);
 			Graphics()->TextureClear();
-			if(g_Config.m_ClHookCollSize > 0)
+			if(Size > 0)
 			{
 				Graphics()->QuadsBegin();
-				Graphics()->SetColor(Color.WithAlpha((float)g_Config.m_ClHookCollAlpha / 100));
-				float LineWidth = 0.5f + (float)(g_Config.m_ClHookCollSize - 1) * 0.25f;
+				Graphics()->SetColor(ColorModified);
+				float LineWidth = 0.5f + (float)(Size - 1) * 0.25f;
 				IGraphics::CQuadItem QuadItem(Pos.x, Pos.y - LineWidth, Length, LineWidth * 2.f);
 				Graphics()->QuadsDrawTL(&QuadItem, 1);
 				Graphics()->QuadsEnd();
@@ -2966,7 +2979,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 			else
 			{
 				Graphics()->LinesBegin();
-				Graphics()->SetColor(Color.WithAlpha((float)g_Config.m_ClHookCollAlpha / 100));
+				Graphics()->SetColor(ColorModified);
 				IGraphics::CLineItem LineItem(Pos.x, Pos.y, Pos.x + Length, Pos.y);
 				Graphics()->LinesDraw(&LineItem, 1);
 				Graphics()->LinesEnd();
@@ -2986,53 +2999,71 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		const float LineLength = 150.f;
 		const float LeftMargin = 30.f;
 
-		CUIRect PreviewNoColl;
-		RightView.HSplitTop(50.0f, &PreviewNoColl, &RightView);
-		RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
-		vec2 TeeRenderPos = vec2(PreviewNoColl.x + LeftMargin, PreviewNoColl.y + PreviewNoColl.h / 2.0f);
-		DoHookCollision(TeeRenderPos, PreviewNoColl.w - LineLength, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl)));
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
+		const int TileScale = 32.0f;
 
-		CUIRect NoHookTileRect;
-		PreviewNoColl.VSplitRight(LineLength, &PreviewNoColl, &NoHookTileRect);
-		NoHookTileRect.VSplitLeft(50.0f, &NoHookTileRect, nullptr);
-		NoHookTileRect.Margin(10.0f, &NoHookTileRect);
+		{ // Unhookable Tile Preview
+			CUIRect PreviewNoColl;
+			RightView.HSplitTop(50.0f, &PreviewNoColl, &RightView);
+			RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
+			vec2 TeeRenderPos = vec2(PreviewNoColl.x + LeftMargin, PreviewNoColl.y + PreviewNoColl.h / 2.0f);
+			DoHookCollision(TeeRenderPos, PreviewNoColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl)), HookCollPressed);
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
-		// Render unhookable tile
-		int TileScale = 32.0f;
-		Graphics()->TextureClear();
-		Graphics()->TextureSet(m_pClient->m_MapImages.GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH));
-		Graphics()->BlendNormal();
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-		RenderTools()->RenderTile(NoHookTileRect.x, NoHookTileRect.y, TILE_NOHOOK, TileScale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+			CUIRect NoHookTileRect;
+			PreviewNoColl.VSplitRight(LineLength, &PreviewNoColl, &NoHookTileRect);
+			NoHookTileRect.VSplitLeft(50.0f, &NoHookTileRect, nullptr);
+			NoHookTileRect.Margin(10.0f, &NoHookTileRect);
 
-		CUIRect PreviewColl;
-		RightView.HSplitTop(50.0f, &PreviewColl, &RightView);
-		RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
-		TeeRenderPos = vec2(PreviewColl.x + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
-		DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl)));
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
+			// Render unhookable tile
+			Graphics()->TextureClear();
+			Graphics()->TextureSet(m_pClient->m_MapImages.GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH));
+			Graphics()->BlendNormal();
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+			RenderTools()->RenderTile(NoHookTileRect.x, NoHookTileRect.y, TILE_NOHOOK, TileScale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+		}
 
-		CUIRect HookTileRect;
-		PreviewColl.VSplitRight(LineLength, &PreviewColl, &HookTileRect);
-		HookTileRect.VSplitLeft(50.0f, &HookTileRect, nullptr);
-		HookTileRect.Margin(10.0f, &HookTileRect);
+		{ // Hookable Tile Preview
+			CUIRect PreviewColl;
+			RightView.HSplitTop(50.0f, &PreviewColl, &RightView);
+			RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
+			vec2 TeeRenderPos = vec2(PreviewColl.x + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
+			DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl)), HookCollPressed);
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
-		// Render hookable tile
-		Graphics()->TextureClear();
-		Graphics()->TextureSet(m_pClient->m_MapImages.GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH));
-		Graphics()->BlendNormal();
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-		RenderTools()->RenderTile(HookTileRect.x, HookTileRect.y, TILE_SOLID, TileScale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+			CUIRect HookTileRect;
+			PreviewColl.VSplitRight(LineLength, &PreviewColl, &HookTileRect);
+			HookTileRect.VSplitLeft(50.0f, &HookTileRect, nullptr);
+			HookTileRect.Margin(10.0f, &HookTileRect);
 
-		CUIRect PreviewCollTee;
-		RightView.HSplitTop(50.0f, &PreviewCollTee, &RightView);
-		RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
-		TeeRenderPos = vec2(PreviewCollTee.x + LeftMargin, PreviewCollTee.y + PreviewCollTee.h / 2.0f);
-		const vec2 DummyRenderPos = vec2(PreviewCollTee.x + PreviewCollTee.w - LineLength - 5.f + LeftMargin, PreviewCollTee.y + PreviewCollTee.h / 2.0f);
-		DoHookCollision(TeeRenderPos, PreviewCollTee.w - LineLength - 15.f, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)));
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &DummySkinInfo, 0, vec2(1.0f, 0.0f), DummyRenderPos);
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
+			// Render hookable tile
+			Graphics()->TextureClear();
+			Graphics()->TextureSet(m_pClient->m_MapImages.GetEntities(MAP_IMAGE_ENTITY_LAYER_TYPE_ALL_EXCEPT_SWITCH));
+			Graphics()->BlendNormal();
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+			RenderTools()->RenderTile(HookTileRect.x, HookTileRect.y, TILE_SOLID, TileScale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+		}
+
+		{ // Hook Dummy Preivew
+			CUIRect PreviewCollTee;
+			RightView.HSplitTop(50.0f, &PreviewCollTee, &RightView);
+			RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
+			vec2 TeeRenderPos = vec2(PreviewCollTee.x + LeftMargin, PreviewCollTee.y + PreviewCollTee.h / 2.0f);
+			const vec2 DummyRenderPos = vec2(PreviewCollTee.x + PreviewCollTee.w - LineLength - 5.f + LeftMargin, PreviewCollTee.y + PreviewCollTee.h / 2.0f);
+			DoHookCollision(TeeRenderPos, PreviewCollTee.w - LineLength - 15.f, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)), HookCollPressed);
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &DummySkinInfo, 0, vec2(1.0f, 0.0f), DummyRenderPos);
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
+		}
+
+		{ // Hook Dummy Preivew Reverse
+			CUIRect PreviewCollTee;
+			RightView.HSplitTop(50.0f, &PreviewCollTee, &RightView);
+			RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
+			vec2 TeeRenderPos = vec2(PreviewCollTee.x + LeftMargin, PreviewCollTee.y + PreviewCollTee.h / 2.0f);
+			const vec2 DummyRenderPos = vec2(PreviewCollTee.x + PreviewCollTee.w - LineLength - 5.f + LeftMargin, PreviewCollTee.y + PreviewCollTee.h / 2.0f);
+			DoHookCollision(TeeRenderPos, PreviewCollTee.w - LineLength - 15.f, g_Config.m_ClHookCollSizeOther, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)), false);
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), DummyRenderPos);
+			RenderTools()->RenderTee(CAnimState::GetIdle(), &DummySkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
+		}
 	}
 	else if(s_CurTab == APPEARANCE_TAB_INFO_MESSAGES)
 	{
