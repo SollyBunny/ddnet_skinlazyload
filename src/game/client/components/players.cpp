@@ -282,9 +282,10 @@ void CPlayers::RenderHookCollLine(
 
 			Graphics()->TextureClear();
 			HookCollColor = HookCollColor.WithAlpha(Alpha);
-			if(Local && g_Config.m_ClHookCollSize > 0)
+			const int HookCollSize = Local ? g_Config.m_ClHookCollSize : g_Config.m_ClHookCollSizeOther;
+			if(HookCollSize > 0)
 			{
-				float LineWidth = 0.5f + (float)(g_Config.m_ClHookCollSize - 1) * 0.25f;
+				float LineWidth = 0.5f + (float)(HookCollSize - 1) * 0.25f;
 				vec2 PerpToAngle = normalize(vec2(ExDirection.y, -ExDirection.x)) * GameClient()->m_Camera.m_Zoom;
 				vec2 Pos0 = NewPos + PerpToAngle * -LineWidth;
 				vec2 Pos1 = NewPos + PerpToAngle * LineWidth;
