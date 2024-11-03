@@ -2956,9 +2956,9 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		RightView.HSplitTop(2 * MarginSmall, nullptr, &RightView);
 
 		RightView.HSplitTop(LineSize, &Button, &RightView);
-		static bool HookCollPressed = false;
-		if(DoButton_CheckBox(&HookCollPressed, Localize("+hookcoll"), HookCollPressed, &Button))
-			HookCollPressed = !HookCollPressed;
+		static bool s_HookCollPressed = false;
+		if(DoButton_CheckBox(&s_HookCollPressed, Localize("+hookcoll"), s_HookCollPressed, &Button))
+			s_HookCollPressed = !s_HookCollPressed;
 		RightView.HSplitTop(2 * MarginSmall, nullptr, &RightView);
 
 		auto DoHookCollision = [this](const vec2 &Pos, const float &Length, const int &Size, const ColorRGBA &Color, const bool &Invert) {
@@ -3006,7 +3006,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 			RightView.HSplitTop(50.0f, &PreviewNoColl, &RightView);
 			RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
 			vec2 TeeRenderPos = vec2(PreviewNoColl.x + LeftMargin, PreviewNoColl.y + PreviewNoColl.h / 2.0f);
-			DoHookCollision(TeeRenderPos, PreviewNoColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl)), HookCollPressed);
+			DoHookCollision(TeeRenderPos, PreviewNoColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl)), s_HookCollPressed);
 			RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
 			CUIRect NoHookTileRect;
@@ -3027,7 +3027,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 			RightView.HSplitTop(50.0f, &PreviewColl, &RightView);
 			RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
 			vec2 TeeRenderPos = vec2(PreviewColl.x + LeftMargin, PreviewColl.y + PreviewColl.h / 2.0f);
-			DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl)), HookCollPressed);
+			DoHookCollision(TeeRenderPos, PreviewColl.w - LineLength, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl)), s_HookCollPressed);
 			RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 
 			CUIRect HookTileRect;
@@ -3049,7 +3049,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 			RightView.HSplitTop(4 * MarginSmall, nullptr, &RightView);
 			vec2 TeeRenderPos = vec2(PreviewCollTee.x + LeftMargin, PreviewCollTee.y + PreviewCollTee.h / 2.0f);
 			const vec2 DummyRenderPos = vec2(PreviewCollTee.x + PreviewCollTee.w - LineLength - 5.f + LeftMargin, PreviewCollTee.y + PreviewCollTee.h / 2.0f);
-			DoHookCollision(TeeRenderPos, PreviewCollTee.w - LineLength - 15.f, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)), HookCollPressed);
+			DoHookCollision(TeeRenderPos, PreviewCollTee.w - LineLength - 15.f, g_Config.m_ClHookCollSize, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl)), s_HookCollPressed);
 			RenderTools()->RenderTee(CAnimState::GetIdle(), &DummySkinInfo, 0, vec2(1.0f, 0.0f), DummyRenderPos);
 			RenderTools()->RenderTee(CAnimState::GetIdle(), &OwnSkinInfo, 0, vec2(1.0f, 0.0f), TeeRenderPos);
 		}
