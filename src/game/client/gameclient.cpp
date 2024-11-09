@@ -620,7 +620,7 @@ void CGameClient::OnReset()
 
 	// m_Snap was cleared in InvalidateSnapshot
 
-	std::fill(std::begin(m_aLocalTuneZone), std::end(m_aLocalTuneZone), 0);
+	std::fill(std::begin(m_aLocalTuneZone), std::end(m_aLocalTuneZone), -1);
 	std::fill(std::begin(m_aReceivedTuning), std::end(m_aReceivedTuning), false);
 	std::fill(std::begin(m_aExpectingTuningForZone), std::end(m_aExpectingTuningForZone), -1);
 	std::fill(std::begin(m_aExpectingTuningSince), std::end(m_aExpectingTuningSince), 0);
@@ -971,7 +971,6 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		m_aReceivedTuning[Conn] = true;
 		// apply new tuning
 		m_aTuning[Conn] = NewTuning;
-		TuningList()[0] = NewTuning;
 		return;
 	}
 
@@ -2969,6 +2968,7 @@ void CGameClient::UpdatePrediction()
 		{
 			if(m_aReceivedTuning[g_Config.m_ClDummy])
 			{
+				TuningList()[m_aExpectingTuningForZone[g_Config.m_ClDummy]] = m_aTuning[g_Config.m_ClDummy];
 				m_GameWorld.TuningList()[m_aExpectingTuningForZone[g_Config.m_ClDummy]] = m_aTuning[g_Config.m_ClDummy];
 				m_aReceivedTuning[g_Config.m_ClDummy] = false;
 				m_aExpectingTuningForZone[g_Config.m_ClDummy] = -1;
