@@ -7,6 +7,8 @@
 #include <game/generated/protocol.h>
 #include <game/mapitems.h>
 
+#include <engine/shared/config.h>
+
 static constexpr int gs_PickupPhysSize = 14;
 
 void CPickup::Tick()
@@ -131,7 +133,7 @@ void CPickup::Tick()
 
 void CPickup::Move()
 {
-	if(GameWorld()->GameTick() % (int)(GameWorld()->GameTickSpeed() * 0.15f) == 0)
+	if(GameWorld()->GameTick() % (int)(g_Config.m_SvTickRate * 0.15f) == 0)
 	{
 		int Flags;
 		int index = Collision()->IsMover(m_Pos.x, m_Pos.y, &Flags);

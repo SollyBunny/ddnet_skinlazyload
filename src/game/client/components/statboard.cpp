@@ -349,7 +349,7 @@ void CStatboard::RenderGlobalStats()
 		}
 		// FPM
 		{
-			float Fpm = pStats->GetFPM(Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed());
+			float Fpm = pStats->GetFPM(Client()->GameTick(g_Config.m_ClDummy), g_Config.m_SvTickRate);
 			str_format(aBuf, sizeof(aBuf), "%.1f", Fpm);
 			tw = TextRender()->TextWidth(FontSize, aBuf, -1, -1.0f);
 			TextRender()->Text(x - tw + px, y + (LineHeight * 0.95f - FontSize) / 2.f, FontSize, aBuf, -1.0f);
@@ -527,7 +527,7 @@ void CStatboard::FormatStats(char *pDest, size_t DestSize)
 			pStats->m_Suicides, // Suicides
 			fdratio, // fdratio
 			pStats->m_Frags - pStats->m_Deaths, // Net
-			pStats->GetFPM(Client()->GameTick(g_Config.m_ClDummy), Client()->GameTickSpeed()), // FPM
+			pStats->GetFPM(Client()->GameTick(g_Config.m_ClDummy), g_Config.m_SvTickRate), // FPM
 			pStats->m_CurrentSpree, // CurSpree
 			pStats->m_BestSpree, // BestSpree
 			aWeaponFD, // WeaponFD

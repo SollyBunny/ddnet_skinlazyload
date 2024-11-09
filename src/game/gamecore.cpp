@@ -267,7 +267,7 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 				m_HookPos = m_Pos + TargetDirection * PhysicalSize() * 1.5f;
 				m_HookDir = TargetDirection;
 				SetHookedPlayer(-1);
-				m_HookTick = (float)SERVER_TICK_SPEED * (1.25f - m_Tuning.m_HookDuration);
+				m_HookTick = (float)g_Config.m_SvTickRate * (1.25f - m_Tuning.m_HookDuration);
 				m_TriggeredEvents |= COREEVENT_HOOK_LAUNCH;
 			}
 		}
@@ -445,7 +445,7 @@ void CCharacterCore::Tick(bool UseInput, bool DoDeferredTick)
 
 		// release hook (max default hook time is 1.25 s)
 		m_HookTick++;
-		if(m_HookedPlayer != -1 && (m_HookTick > SERVER_TICK_SPEED + SERVER_TICK_SPEED / 5 || (m_pWorld && !m_pWorld->m_apCharacters[m_HookedPlayer])))
+		if(m_HookedPlayer != -1 && (m_HookTick > g_Config.m_SvTickRate * 1.2 || (m_pWorld && !m_pWorld->m_apCharacters[m_HookedPlayer])))
 		{
 			SetHookedPlayer(-1);
 			m_HookState = HOOK_RETRACTED;

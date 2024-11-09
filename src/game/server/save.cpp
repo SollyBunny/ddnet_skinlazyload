@@ -80,7 +80,7 @@ void CSaveTee::Save(CCharacter *pChr, bool AddPenalty)
 		m_Time = 0;
 
 	if(AddPenalty && pChr->m_StartTime)
-		m_Time += g_Config.m_SvSaveSwapGamesPenalty * pChr->Server()->TickSpeed();
+		m_Time += g_Config.m_SvSaveSwapGamesPenalty * g_Config.m_SvTickRate;
 
 	m_Pos = pChr->m_Pos;
 	m_PrevPos = pChr->m_PrevPos;

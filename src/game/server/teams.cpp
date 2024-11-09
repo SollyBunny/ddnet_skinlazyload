@@ -103,7 +103,7 @@ void CGameTeams::OnCharacterStart(int ClientId)
 		Waiting = true;
 		pStartingChar->m_DDRaceState = DDRACE_NONE;
 
-		if(m_aLastChat[ClientId] + Server()->TickSpeed() + g_Config.m_SvChatDelay < Tick)
+		if(m_aLastChat[ClientId] + g_Config.m_SvTickRate + g_Config.m_SvChatDelay < Tick)
 		{
 			char aBuf[128];
 			str_format(
@@ -114,7 +114,7 @@ void CGameTeams::OnCharacterStart(int ClientId)
 			GameServer()->SendChatTarget(ClientId, aBuf);
 			m_aLastChat[ClientId] = Tick;
 		}
-		if(m_aLastChat[i] + Server()->TickSpeed() + g_Config.m_SvChatDelay < Tick)
+		if(m_aLastChat[i] + g_Config.m_SvTickRate + g_Config.m_SvChatDelay < Tick)
 		{
 			char aBuf[128];
 			str_format(
@@ -247,8 +247,8 @@ void CGameTeams::Tick()
 		}
 	}
 
-	int Frequency = Server()->TickSpeed() * 60;
-	int Remainder = Server()->TickSpeed() * 30;
+	int Frequency = g_Config.m_SvTickRate * 60;
+	int Remainder = g_Config.m_SvTickRate * 30;
 	uint64_t TeamHasWantedStartTime = 0;
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
@@ -336,7 +336,7 @@ void CGameTeams::CheckTeamFinished(int Team)
 		if(PlayersCount > 0)
 		{
 			int TimeTicks = Server()->Tick() - GetStartTime(apTeamPlayers[0]);
-			float Time = (float)TimeTicks / (float)Server()->TickSpeed();
+			float Time = (float)TimeTicks / (float)g_Config.m_SvTickRate;
 			if(TimeTicks <= 0)
 			{
 				return;
@@ -700,7 +700,7 @@ void CGameTeams::OnFinish(CPlayer *Player, int TimeTicks, const char *pTimestamp
 	if(!Player || !Player->IsPlaying())
 		return;
 
-	float Time = TimeTicks / (float)Server()->TickSpeed();
+	float Time = TimeTicks / (float)g_Config.m_SvTickRate;
 
 	// TODO:DDRace:btd: this ugly
 	const int ClientId = Player->GetCid();
@@ -723,7 +723,7 @@ void CGameTeams::OnFinish(CPlayer *Player, int TimeTicks, const char *pTimestamp
 	if(Time - pData->m_BestTime < 0)
 	{
 		// new record \o/
-		pData->m_RecordStopTick = Server()->Tick() + Server()->TickSpeed();
+		pData->m_RecordStopTick = Server()->Tick() + g_Config.m_SvTickRate;
 		pData->m_RecordFinishTime = Time;
 
 		if(Diff >= 60)
@@ -760,7 +760,7 @@ void CGameTeams::OnFinish(CPlayer *Player, int TimeTicks, const char *pTimestamp
 	}
 	else
 	{
-		pData->m_RecordStopTick = Server()->Tick() + Server()->TickSpeed();
+		pData->m_RecordStopTick = Server()->Tick() + g_Config.m_SvTickRate;
 		pData->m_RecordFinishTime = Time;
 	}
 
@@ -914,7 +914,7 @@ void CGameTeams::SwapTeamCharacters(CPlayer *pPrimaryPlayer, CPlayer *pTargetPla
 
 	char aBuf[128];
 
-	int Since = (Server()->Tick() - m_aLastSwap[pTargetPlayer->GetCid()]) / Server()->TickSpeed();
+	int Since = (Server()->Tick() - m_aLastSwap[pTargetPlayer->GetCid()]) / g_Config.m_SvTickRate;
 	if(Since < g_Config.m_SvSaveSwapGamesDelay)
 	{
 		str_format(aBuf, sizeof(aBuf),
@@ -1148,7 +1148,7 @@ void CGameTeams::OnCharacterDeath(int ClientId, int Weapon)
 			GameServer()->SendChatTeam(Team, aBuf);
 			GameServer()->SendChatTeam(Team, "Enter /practice mode or restart to avoid the entire team being killed in 60 seconds");
 
-			m_aTeamUnfinishableKillTick[Team] = Server()->Tick() + 60 * Server()->TickSpeed();
+			m_aTeamUnfinishableKillTick[Team] = Server()->Tick() + 60 * g_Config.m_SvTickRate;
 			ChangeTeamState(Team, CGameTeams::TEAMSTATE_STARTED_UNFINISHABLE);
 		}
 		SetForceCharacterTeam(ClientId, TEAM_FLOCK);

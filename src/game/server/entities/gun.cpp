@@ -31,7 +31,7 @@ CGun::CGun(CGameWorld *pGameWorld, vec2 Pos, bool Freeze, bool Explosive, int La
 
 void CGun::Tick()
 {
-	if(Server()->Tick() % (int)(Server()->TickSpeed() * 0.15f) == 0)
+	if(Server()->Tick() % (int)(g_Config.m_SvTickRate * 0.15f) == 0)
 	{
 		int Flags;
 		m_EvalTick = Server()->Tick();
@@ -88,9 +88,9 @@ void CGun::Fire()
 		const int &TargetClientId = pTarget->GetPlayer()->GetCid();
 		const bool &TargetIsSolo = pTarget->Teams()->m_Core.GetSolo(TargetClientId);
 		if((TargetIsSolo &&
-			   m_aLastFireSolo[TargetClientId] + Server()->TickSpeed() / g_Config.m_SvPlasmaPerSec > Server()->Tick()) ||
+			   m_aLastFireSolo[TargetClientId] + g_Config.m_SvTickRate / g_Config.m_SvPlasmaPerSec > Server()->Tick()) ||
 			(!TargetIsSolo &&
-				m_aLastFireTeam[TargetTeam] + Server()->TickSpeed() / g_Config.m_SvPlasmaPerSec > Server()->Tick()))
+				m_aLastFireTeam[TargetTeam] + g_Config.m_SvTickRate / g_Config.m_SvPlasmaPerSec > Server()->Tick()))
 		{
 			continue;
 		}
@@ -168,7 +168,7 @@ void CGun::Snap(int SnappingClient)
 			GameServer()->m_apPlayers[SnappingClient]->m_SpectatorId != SPEC_FREEVIEW)
 			pChar = GameServer()->GetPlayerChar(GameServer()->m_apPlayers[SnappingClient]->m_SpectatorId);
 
-		int Tick = (Server()->Tick() % Server()->TickSpeed()) % 11;
+		int Tick = (Server()->Tick() % g_Config.m_SvTickRate) % 11;
 		if(pChar && m_Layer == LAYER_SWITCH && m_Number > 0 &&
 			!Switchers()[m_Number].m_aStatus[pChar->Team()] && (!Tick))
 			return;

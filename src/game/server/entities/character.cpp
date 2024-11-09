@@ -274,18 +274,18 @@ void CCharacter::HandleNinja()
 	if(m_Core.m_ActiveWeapon != WEAPON_NINJA)
 		return;
 
-	if((Server()->Tick() - m_Core.m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000))
+	if((Server()->Tick() - m_Core.m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * g_Config.m_SvTickRate / 1000))
 	{
 		// time's up, return
 		RemoveNinja();
 		return;
 	}
 
-	int NinjaTime = m_Core.m_Ninja.m_ActivationTick + (g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000) - Server()->Tick();
+	int NinjaTime = m_Core.m_Ninja.m_ActivationTick + (g_pData->m_Weapons.m_Ninja.m_Duration * g_Config.m_SvTickRate / 1000) - Server()->Tick();
 
-	if(NinjaTime % Server()->TickSpeed() == 0 && NinjaTime / Server()->TickSpeed() <= 5)
+	if(NinjaTime % g_Config.m_SvTickRate == 0 && NinjaTime / g_Config.m_SvTickRate <= 5)
 	{
-		GameServer()->CreateDamageInd(m_Pos, 0, NinjaTime / Server()->TickSpeed(), TeamMask() & GameServer()->ClientsMaskExcludeClientVersionAndHigher(VERSION_DDNET_NEW_HUD));
+		GameServer()->CreateDamageInd(m_Pos, 0, NinjaTime / g_Config.m_SvTickRate, TeamMask() & GameServer()->ClientsMaskExcludeClientVersionAndHigher(VERSION_DDNET_NEW_HUD));
 	}
 
 	GameServer()->m_pController->SetArmorProgress(this, NinjaTime);
@@ -469,7 +469,7 @@ void CCharacter::FireWeapon()
 		// Timer stuff to avoid shrieking orchestra caused by unfreeze-plasma
 		if(m_PainSoundTimer <= 0 && !(m_LatestPrevInput.m_Fire & 1))
 		{
-			m_PainSoundTimer = 1 * Server()->TickSpeed();
+			m_PainSoundTimer = 1 * g_Config.m_SvTickRate;
 			GameServer()->CreateSound(m_Pos, SOUND_PLAYER_PAIN_LONG, TeamMask()); // NOLINT(clang-analyzer-unix.Malloc)
 		}
 		return;
@@ -540,7 +540,7 @@ void CCharacter::FireWeapon()
 		if(Hits)
 		{
 			float FireDelay = GetTuning(m_TuneZone)->m_HammerHitFireDelay;
-			m_ReloadTimer = FireDelay * Server()->TickSpeed() / 1000;
+			m_ReloadTimer = FireDelay * g_Config.m_SvTickRate / 1000;
 		}
 	}
 	break;
@@ -549,7 +549,7 @@ void CCharacter::FireWeapon()
 	{
 		if(!m_Core.m_Jetpack || !m_pPlayer->m_NinjaJetpack || m_Core.m_HasTelegunGun)
 		{
-			int Lifetime = (int)(Server()->TickSpeed() * GetTuning(m_TuneZone)->m_GunLifetime);
+			int Lifetime = (int)(g_Config.m_SvTickRate * GetTuning(m_TuneZone)->m_GunLifetime);
 
 			new CProjectile(
 				GameWorld(),
@@ -580,7 +580,7 @@ void CCharacter::FireWeapon()
 
 	case WEAPON_GRENADE:
 	{
-		int Lifetime = (int)(Server()->TickSpeed() * GetTuning(m_TuneZone)->m_GrenadeLifetime);
+		int Lifetime = (int)(g_Config.m_SvTickRate * GetTuning(m_TuneZone)->m_GrenadeLifetime);
 
 		new CProjectile(
 			GameWorld(),
@@ -614,7 +614,7 @@ void CCharacter::FireWeapon()
 		m_NumObjectsHit = 0;
 
 		m_Core.m_Ninja.m_ActivationDir = Direction;
-		m_Core.m_Ninja.m_CurrentMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime * Server()->TickSpeed() / 1000;
+		m_Core.m_Ninja.m_CurrentMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime * g_Config.m_SvTickRate / 1000;
 		m_Core.m_Ninja.m_OldVelAmount = length(m_Core.m_Vel);
 
 		GameServer()->CreateSound(m_Pos, SOUND_NINJA_FIRE, TeamMask()); // NOLINT(clang-analyzer-unix.Malloc)
@@ -628,7 +628,7 @@ void CCharacter::FireWeapon()
 	{
 		float FireDelay;
 		GetTuning(m_TuneZone)->Get(38 + m_Core.m_ActiveWeapon, &FireDelay);
-		m_ReloadTimer = FireDelay * Server()->TickSpeed() / 1000;
+		m_ReloadTimer = FireDelay * g_Config.m_SvTickRate / 1000;
 	}
 }
 
@@ -913,7 +913,7 @@ void CCharacter::TickDeferred()
 		m_Core.Write(&Current);
 
 		// only allow dead reckoning for a top of 3 seconds
-		if(m_Core.m_Reset || m_ReckoningTick + Server()->TickSpeed() * 3 < Server()->Tick() || mem_comp(&Predicted, &Current, sizeof(CNetObj_Character)) != 0)
+		if(m_Core.m_Reset || m_ReckoningTick + g_Config.m_SvTickRate * 3 < Server()->Tick() || mem_comp(&Predicted, &Current, sizeof(CNetObj_Character)) != 0)
 		{
 			m_ReckoningTick = Server()->Tick();
 			m_SendCore = m_Core;
@@ -959,7 +959,7 @@ void CCharacter::StopRecording()
 	{
 		CPlayerData *pData = GameServer()->Score()->PlayerData(m_pPlayer->GetCid());
 
-		if(pData->m_RecordStopTick - Server()->Tick() <= Server()->TickSpeed() && pData->m_RecordStopTick != -1)
+		if(pData->m_RecordStopTick - Server()->Tick() <= g_Config.m_SvTickRate && pData->m_RecordStopTick != -1)
 			Server()->SaveDemo(m_pPlayer->GetCid(), pData->m_RecordFinishTime);
 		else
 			Server()->StopRecord(m_pPlayer->GetCid());
@@ -1010,7 +1010,7 @@ bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 {
 	if(Dmg)
 	{
-		SetEmote(EMOTE_PAIN, Server()->Tick() + 500 * Server()->TickSpeed() / 1000);
+		SetEmote(EMOTE_PAIN, Server()->Tick() + 500 * g_Config.m_SvTickRate / 1000);
 	}
 
 	vec2 Temp = m_Core.m_Vel + Force;
@@ -1101,7 +1101,7 @@ void CCharacter::SnapCharacter(int SnappingClient, int Id)
 
 	if(Emote == EMOTE_NORMAL)
 	{
-		if(5 * Server()->TickSpeed() - ((Server()->Tick() - m_LastAction) % (5 * Server()->TickSpeed())) < 5)
+		if(5 * g_Config.m_SvTickRate - ((Server()->Tick() - m_LastAction) % (5 * g_Config.m_SvTickRate)) < 5)
 			Emote = EMOTE_BLINK;
 	}
 
@@ -1154,9 +1154,9 @@ void CCharacter::SnapCharacter(int SnappingClient, int Id)
 		pCharacter->m_AmmoCount = AmmoCount;
 
 		if(m_FreezeTime > 0 || m_Core.m_DeepFrozen)
-			pCharacter->m_AmmoCount = m_Core.m_FreezeStart + g_Config.m_SvFreezeDelay * Server()->TickSpeed();
+			pCharacter->m_AmmoCount = m_Core.m_FreezeStart + g_Config.m_SvFreezeDelay * g_Config.m_SvTickRate;
 		else if(Weapon == WEAPON_NINJA)
-			pCharacter->m_AmmoCount = m_Core.m_Ninja.m_ActivationTick + g_pData->m_Weapons.m_Ninja.m_Duration * Server()->TickSpeed() / 1000;
+			pCharacter->m_AmmoCount = m_Core.m_Ninja.m_ActivationTick + g_pData->m_Weapons.m_Ninja.m_Duration * g_Config.m_SvTickRate / 1000;
 
 		pCharacter->m_Health = Health;
 		pCharacter->m_Armor = Armor;
@@ -1362,10 +1362,10 @@ void CCharacter::HandleBroadcast()
 		m_LastTimeCpBroadcasted = m_LastTimeCp;
 		m_LastBroadcast = Server()->Tick();
 	}
-	else if((m_pPlayer->m_TimerType == CPlayer::TIMERTYPE_BROADCAST || m_pPlayer->m_TimerType == CPlayer::TIMERTYPE_GAMETIMER_AND_BROADCAST) && m_DDRaceState == DDRACE_STARTED && m_LastBroadcast + Server()->TickSpeed() * g_Config.m_SvTimeInBroadcastInterval <= Server()->Tick())
+	else if((m_pPlayer->m_TimerType == CPlayer::TIMERTYPE_BROADCAST || m_pPlayer->m_TimerType == CPlayer::TIMERTYPE_GAMETIMER_AND_BROADCAST) && m_DDRaceState == DDRACE_STARTED && m_LastBroadcast + g_Config.m_SvTickRate * g_Config.m_SvTimeInBroadcastInterval <= Server()->Tick())
 	{
 		char aBuf[32];
-		int Time = (int64_t)100 * ((float)(Server()->Tick() - m_StartTime) / ((float)Server()->TickSpeed()));
+		int Time = (int64_t)100 * ((float)(Server()->Tick() - m_StartTime) / ((float)g_Config.m_SvTickRate));
 		str_time(Time, TIME_HOURS, aBuf, sizeof(aBuf));
 		GameServer()->SendBroadcast(aBuf, m_pPlayer->GetCid(), false);
 		m_LastTimeCpBroadcasted = m_LastTimeCp;
@@ -1472,7 +1472,7 @@ void CCharacter::SetTimeCheckpoint(int TimeCheckpoint)
 	{
 		m_LastTimeCp = TimeCheckpoint;
 		m_aCurrentTimeCp[m_LastTimeCp] = m_Time;
-		m_TimeCpBroadcastEndTick = Server()->Tick() + Server()->TickSpeed() * 2;
+		m_TimeCpBroadcastEndTick = Server()->Tick() + g_Config.m_SvTickRate * 2;
 		if(m_pPlayer->GetClientVersion() >= VERSION_DDRACE)
 		{
 			CPlayerData *pData = GameServer()->Score()->PlayerData(m_pPlayer->GetCid());
@@ -1695,14 +1695,14 @@ void CCharacter::HandleTiles(int Index)
 	else if(Collision()->GetSwitchType(MapIndex) == TILE_SWITCHTIMEDOPEN && Team() != TEAM_SUPER && Collision()->GetSwitchNumber(MapIndex) > 0)
 	{
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aStatus[Team()] = true;
-		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aEndTick[Team()] = Server()->Tick() + 1 + Collision()->GetSwitchDelay(MapIndex) * Server()->TickSpeed();
+		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aEndTick[Team()] = Server()->Tick() + 1 + Collision()->GetSwitchDelay(MapIndex) * g_Config.m_SvTickRate;
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aType[Team()] = TILE_SWITCHTIMEDOPEN;
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aLastUpdateTick[Team()] = Server()->Tick();
 	}
 	else if(Collision()->GetSwitchType(MapIndex) == TILE_SWITCHTIMEDCLOSE && Team() != TEAM_SUPER && Collision()->GetSwitchNumber(MapIndex) > 0)
 	{
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aStatus[Team()] = false;
-		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aEndTick[Team()] = Server()->Tick() + 1 + Collision()->GetSwitchDelay(MapIndex) * Server()->TickSpeed();
+		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aEndTick[Team()] = Server()->Tick() + 1 + Collision()->GetSwitchDelay(MapIndex) * g_Config.m_SvTickRate;
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aType[Team()] = TILE_SWITCHTIMEDCLOSE;
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aLastUpdateTick[Team()] = Server()->Tick();
 	}
@@ -1811,7 +1811,7 @@ void CCharacter::HandleTiles(int Index)
 		int sec = Collision()->GetSwitchNumber(MapIndex);
 		int Team = Teams()->m_Core.Team(m_Core.m_Id);
 
-		m_StartTime -= (min * 60 + sec) * Server()->TickSpeed();
+		m_StartTime -= (min * 60 + sec) * g_Config.m_SvTickRate;
 
 		if((g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO || (Team != TEAM_FLOCK && !Teams()->TeamFlock(Team))) && Team != TEAM_SUPER)
 		{
@@ -1835,7 +1835,7 @@ void CCharacter::HandleTiles(int Index)
 		int sec = Collision()->GetSwitchNumber(MapIndex);
 		int Team = Teams()->m_Core.Team(m_Core.m_Id);
 
-		m_StartTime += (min * 60 + sec) * Server()->TickSpeed();
+		m_StartTime += (min * 60 + sec) * g_Config.m_SvTickRate;
 		if(m_StartTime > Server()->Tick())
 			m_StartTime = Server()->Tick();
 
@@ -2097,9 +2097,9 @@ void CCharacter::DDRaceTick()
 	}
 	if(m_FreezeTime > 0)
 	{
-		if(m_FreezeTime % Server()->TickSpeed() == Server()->TickSpeed() - 1)
+		if(m_FreezeTime % g_Config.m_SvTickRate == g_Config.m_SvTickRate - 1)
 		{
-			GameServer()->CreateDamageInd(m_Pos, 0, (m_FreezeTime + 1) / Server()->TickSpeed(), TeamMask() & GameServer()->ClientsMaskExcludeClientVersionAndHigher(VERSION_DDNET_NEW_HUD));
+			GameServer()->CreateDamageInd(m_Pos, 0, (m_FreezeTime + 1) / g_Config.m_SvTickRate, TeamMask() & GameServer()->ClientsMaskExcludeClientVersionAndHigher(VERSION_DDNET_NEW_HUD));
 		}
 		m_FreezeTime--;
 		m_Input.m_Direction = 0;
@@ -2136,7 +2136,7 @@ void CCharacter::DDRaceTick()
 
 void CCharacter::DDRacePostCoreTick()
 {
-	m_Time = (float)(Server()->Tick() - m_StartTime) / ((float)Server()->TickSpeed());
+	m_Time = (float)(Server()->Tick() - m_StartTime) / ((float)g_Config.m_SvTickRate);
 
 	if(m_Core.m_EndlessHook || (m_Core.m_Super && g_Config.m_SvEndlessSuperHook))
 		m_Core.m_HookTick = 0;
@@ -2215,12 +2215,12 @@ void CCharacter::DDRacePostCoreTick()
 
 bool CCharacter::Freeze(int Seconds)
 {
-	if(Seconds <= 0 || m_Core.m_Super || m_Core.m_Invincible || m_FreezeTime > Seconds * Server()->TickSpeed())
+	if(Seconds <= 0 || m_Core.m_Super || m_Core.m_Invincible || m_FreezeTime > Seconds * g_Config.m_SvTickRate)
 		return false;
-	if(m_FreezeTime == 0 || m_Core.m_FreezeStart < Server()->Tick() - Server()->TickSpeed())
+	if(m_FreezeTime == 0 || m_Core.m_FreezeStart < Server()->Tick() - g_Config.m_SvTickRate)
 	{
 		m_Armor = 0;
-		m_FreezeTime = Seconds * Server()->TickSpeed();
+		m_FreezeTime = Seconds * g_Config.m_SvTickRate;
 		m_Core.m_FreezeStart = Server()->Tick();
 		return true;
 	}
@@ -2391,10 +2391,10 @@ void CCharacter::Rescue()
 {
 	if(m_SetSavePos[GetPlayer()->m_RescueMode] && !m_Core.m_Super && !m_Core.m_Invincible)
 	{
-		if(m_LastRescue + (int64_t)g_Config.m_SvRescueDelay * Server()->TickSpeed() > Server()->Tick() && !Teams()->IsPractice(Team()))
+		if(m_LastRescue + (int64_t)g_Config.m_SvRescueDelay * g_Config.m_SvTickRate > Server()->Tick() && !Teams()->IsPractice(Team()))
 		{
 			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "You have to wait %d seconds until you can rescue yourself", (int)((m_LastRescue + (int64_t)g_Config.m_SvRescueDelay * Server()->TickSpeed() - Server()->Tick()) / Server()->TickSpeed()));
+			str_format(aBuf, sizeof(aBuf), "You have to wait %d seconds until you can rescue yourself", (int)((m_LastRescue + (int64_t)g_Config.m_SvRescueDelay * g_Config.m_SvTickRate - Server()->Tick()) / g_Config.m_SvTickRate));
 			GameServer()->SendChatTarget(GetPlayer()->GetCid(), aBuf);
 			return;
 		}

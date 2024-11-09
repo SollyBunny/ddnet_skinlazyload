@@ -453,7 +453,7 @@ void CGameContext::SnapSwitchers(int SnappingClient)
 		pSwitchState->m_aStatus[i / 32] |= (Status << (i % 32));
 
 		int EndTick = Switchers()[i].m_aEndTick[Team];
-		if(EndTick > 0 && EndTick < Server()->Tick() + 3 * Server()->TickSpeed() && Switchers()[i].m_aLastUpdateTick[Team] < Server()->Tick())
+		if(EndTick > 0 && EndTick < Server()->Tick() + 3 * g_Config.m_SvTickRate && Switchers()[i].m_aLastUpdateTick[Team] < Server()->Tick())
 		{
 			// only keep track of EndTicks that have less than three second left and are not currently being updated by a player being present on a switch tile, to limit how often these are sent
 			vEndTicks.emplace_back(Switchers()[i].m_aEndTick[Team], i);
@@ -702,7 +702,7 @@ void CGameContext::SendChat(int ChatterClientId, int Team, const char *pText, in
 void CGameContext::SendStartWarning(int ClientId, const char *pMessage)
 {
 	CCharacter *pChr = GetPlayerChar(ClientId);
-	if(pChr && pChr->m_LastStartWarning < Server()->Tick() - 3 * Server()->TickSpeed())
+	if(pChr && pChr->m_LastStartWarning < Server()->Tick() - 3 * g_Config.m_SvTickRate)
 	{
 		SendChatTarget(ClientId, pMessage);
 		pChr->m_LastStartWarning = Server()->Tick();
@@ -767,12 +767,19 @@ void CGameContext::SendBroadcast(const char *pText, int ClientId, bool IsImporta
 	if(!m_apPlayers[ClientId])
 		return;
 
-	if(!IsImportant && m_apPlayers[ClientId]->m_LastBroadcastImportance && m_apPlayers[ClientId]->m_LastBroadcast > Server()->Tick() - Server()->TickSpeed() * 10)
+	if(!IsImportant && m_apPlayers[ClientId]->m_LastBroadcastImportance && m_apPlayers[ClientId]->m_LastBroadcast > Server()->Tick() - g_Config.m_SvTickRate * 10)
 		return;
 
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientId);
 	m_apPlayers[ClientId]->m_LastBroadcast = Server()->Tick();
 	m_apPlayers[ClientId]->m_LastBroadcastImportance = IsImportant;
+}
+
+void CGameContext::SendTickRate(int ClientId)
+{
+	CMsgPacker Msg(NETMSG_TICK_RATE);
+	Msg.AddInt(g_Config.m_SvTickRate);
+	Server()->SendMsg(&Msg, MSGFLAG_VITAL, ClientId);
 }
 
 void CGameContext::StartVote(const char *pDesc, const char *pCommand, const char *pReason, const char *pSixupDesc)
@@ -1162,9 +1169,9 @@ void CGameContext::OnTick()
 								continue;
 
 							if(m_apPlayers[j] && !m_apPlayers[j]->IsAfk() && m_apPlayers[j]->GetTeam() != TEAM_SPECTATORS &&
-								((Server()->Tick() - m_apPlayers[j]->m_JoinTick) / (Server()->TickSpeed() * 60) > g_Config.m_SvVoteVetoTime ||
+								((Server()->Tick() - m_apPlayers[j]->m_JoinTick) / (g_Config.m_SvTickRate * 60) > g_Config.m_SvVoteVetoTime ||
 									(m_apPlayers[j]->GetCharacter() && m_apPlayers[j]->GetCharacter()->m_DDRaceState == DDRACE_STARTED &&
-										(Server()->Tick() - m_apPlayers[j]->GetCharacter()->m_StartTime) / (Server()->TickSpeed() * 60) > g_Config.m_SvVoteVetoTime)))
+										(Server()->Tick() - m_apPlayers[j]->GetCharacter()->m_StartTime) / (g_Config.m_SvTickRate * 60) > g_Config.m_SvVoteVetoTime)))
 							{
 								if(CurVote == 0)
 									Veto = true;
@@ -1251,7 +1258,7 @@ void CGameContext::OnTick()
 		}
 	}
 
-	if(Server()->Tick() % (g_Config.m_SvAnnouncementInterval * Server()->TickSpeed() * 60) == 0)
+	if(Server()->Tick() % (g_Config.m_SvAnnouncementInterval * g_Config.m_SvTickRate * 60) == 0)
 	{
 		const char *pLine = Server()->GetAnnouncementLine();
 		if(pLine)
@@ -1634,7 +1641,7 @@ void CGameContext::OnClientEnter(int ClientId)
 	}
 
 	// initial chat delay
-	if(g_Config.m_SvChatInitialDelay != 0 && m_apPlayers[ClientId]->m_JoinTick > m_NonEmptySince + 10 * Server()->TickSpeed())
+	if(g_Config.m_SvChatInitialDelay != 0 && m_apPlayers[ClientId]->m_JoinTick > m_NonEmptySince + 10 * g_Config.m_SvTickRate)
 	{
 		char aBuf[128];
 		NETADDR Addr;
@@ -1907,7 +1914,7 @@ void *CGameContext::PreProcessMsg(int *pMsgId, CUnpacker *pUnpacker, int ClientI
 		{
 			protocol7::CNetMsg_Cl_SkinChange *pMsg = (protocol7::CNetMsg_Cl_SkinChange *)pRawMsg;
 			if(g_Config.m_SvSpamprotection && pPlayer->m_LastChangeInfo &&
-				pPlayer->m_LastChangeInfo + Server()->TickSpeed() * g_Config.m_SvInfoChangeDelay > Server()->Tick())
+				pPlayer->m_LastChangeInfo + g_Config.m_SvTickRate * g_Config.m_SvInfoChangeDelay > Server()->Tick())
 				return 0;
 
 			pPlayer->m_LastChangeInfo = Server()->Tick();
@@ -2134,7 +2141,7 @@ void CGameContext::OnSayNetMessage(const CNetMsg_Cl_Say *pMsg, int ClientId, con
 		*(const_cast<char *>(pEnd)) = 0;
 
 	// drop empty and autocreated spam messages (more than 32 characters per second)
-	if(Length == 0 || (pMsg->m_pMessage[0] != '/' && (g_Config.m_SvSpamprotection && pPlayer->m_LastChat && pPlayer->m_LastChat + Server()->TickSpeed() * ((31 + Length) / 32) > Server()->Tick())))
+	if(Length == 0 || (pMsg->m_pMessage[0] != '/' && (g_Config.m_SvSpamprotection && pPlayer->m_LastChat && pPlayer->m_LastChat + g_Config.m_SvTickRate * ((31 + Length) / 32) > Server()->Tick())))
 		return;
 
 	int GameTeam = GetDDRaceTeam(pPlayer->GetCid());
@@ -2171,7 +2178,7 @@ void CGameContext::OnSayNetMessage(const CNetMsg_Cl_Say *pMsg, int ClientId, con
 		}
 		else
 		{
-			if(g_Config.m_SvSpamprotection && !str_startswith(pMsg->m_pMessage + 1, "timeout ") && pPlayer->m_aLastCommands[0] && pPlayer->m_aLastCommands[0] + Server()->TickSpeed() > Server()->Tick() && pPlayer->m_aLastCommands[1] && pPlayer->m_aLastCommands[1] + Server()->TickSpeed() > Server()->Tick() && pPlayer->m_aLastCommands[2] && pPlayer->m_aLastCommands[2] + Server()->TickSpeed() > Server()->Tick() && pPlayer->m_aLastCommands[3] && pPlayer->m_aLastCommands[3] + Server()->TickSpeed() > Server()->Tick())
+			if(g_Config.m_SvSpamprotection && !str_startswith(pMsg->m_pMessage + 1, "timeout ") && pPlayer->m_aLastCommands[0] && pPlayer->m_aLastCommands[0] + g_Config.m_SvTickRate > Server()->Tick() && pPlayer->m_aLastCommands[1] && pPlayer->m_aLastCommands[1] + g_Config.m_SvTickRate > Server()->Tick() && pPlayer->m_aLastCommands[2] && pPlayer->m_aLastCommands[2] + g_Config.m_SvTickRate > Server()->Tick() && pPlayer->m_aLastCommands[3] && pPlayer->m_aLastCommands[3] + g_Config.m_SvTickRate > Server()->Tick())
 				return;
 
 			int64_t Now = Server()->Tick();
@@ -2465,7 +2472,7 @@ void CGameContext::OnVoteNetMessage(const CNetMsg_Cl_Vote *pMsg, int ClientId)
 
 	CPlayer *pPlayer = m_apPlayers[ClientId];
 
-	if(g_Config.m_SvSpamprotection && pPlayer->m_LastVoteTry && pPlayer->m_LastVoteTry + Server()->TickSpeed() * 3 > Server()->Tick())
+	if(g_Config.m_SvSpamprotection && pPlayer->m_LastVoteTry && pPlayer->m_LastVoteTry + g_Config.m_SvTickRate * 3 > Server()->Tick())
 		return;
 
 	int64_t Now = Server()->Tick();
@@ -2498,14 +2505,14 @@ void CGameContext::OnSetTeamNetMessage(const CNetMsg_Cl_SetTeam *pMsg, int Clien
 
 	CPlayer *pPlayer = m_apPlayers[ClientId];
 
-	if(pPlayer->GetTeam() == pMsg->m_Team || (g_Config.m_SvSpamprotection && pPlayer->m_LastSetTeam && pPlayer->m_LastSetTeam + Server()->TickSpeed() * g_Config.m_SvTeamChangeDelay > Server()->Tick()))
+	if(pPlayer->GetTeam() == pMsg->m_Team || (g_Config.m_SvSpamprotection && pPlayer->m_LastSetTeam && pPlayer->m_LastSetTeam + g_Config.m_SvTickRate * g_Config.m_SvTeamChangeDelay > Server()->Tick()))
 		return;
 
 	// Kill Protection
 	CCharacter *pChr = pPlayer->GetCharacter();
 	if(pChr)
 	{
-		int CurrTime = (Server()->Tick() - pChr->m_StartTime) / Server()->TickSpeed();
+		int CurrTime = (Server()->Tick() - pChr->m_StartTime) / g_Config.m_SvTickRate;
 		if(g_Config.m_SvKillProtection != 0 && CurrTime >= (60 * g_Config.m_SvKillProtection) && pChr->m_DDRaceState == DDRACE_STARTED)
 		{
 			SendChatTarget(ClientId, "Kill Protection enabled. If you really want to join the spectators, first type /kill");
@@ -2516,7 +2523,7 @@ void CGameContext::OnSetTeamNetMessage(const CNetMsg_Cl_SetTeam *pMsg, int Clien
 	if(pPlayer->m_TeamChangeTick > Server()->Tick())
 	{
 		pPlayer->m_LastSetTeam = Server()->Tick();
-		int TimeLeft = (pPlayer->m_TeamChangeTick - Server()->Tick()) / Server()->TickSpeed();
+		int TimeLeft = (pPlayer->m_TeamChangeTick - Server()->Tick()) / g_Config.m_SvTickRate;
 		char aTime[32];
 		str_time((int64_t)TimeLeft * 100, TIME_HOURS, aTime, sizeof(aTime));
 		char aBuf[128];
@@ -2589,7 +2596,7 @@ void CGameContext::OnSetSpectatorModeNetMessage(const CNetMsg_Cl_SetSpectatorMod
 			return;
 
 	CPlayer *pPlayer = m_apPlayers[ClientId];
-	if((g_Config.m_SvSpamprotection && pPlayer->m_LastSetSpectatorMode && pPlayer->m_LastSetSpectatorMode + Server()->TickSpeed() / 4 > Server()->Tick()))
+	if((g_Config.m_SvSpamprotection && pPlayer->m_LastSetSpectatorMode && pPlayer->m_LastSetSpectatorMode + g_Config.m_SvTickRate / 4 > Server()->Tick()))
 		return;
 
 	pPlayer->m_LastSetSpectatorMode = Server()->Tick();
@@ -2603,7 +2610,7 @@ void CGameContext::OnSetSpectatorModeNetMessage(const CNetMsg_Cl_SetSpectatorMod
 void CGameContext::OnChangeInfoNetMessage(const CNetMsg_Cl_ChangeInfo *pMsg, int ClientId)
 {
 	CPlayer *pPlayer = m_apPlayers[ClientId];
-	if(g_Config.m_SvSpamprotection && pPlayer->m_LastChangeInfo && pPlayer->m_LastChangeInfo + Server()->TickSpeed() * g_Config.m_SvInfoChangeDelay > Server()->Tick())
+	if(g_Config.m_SvSpamprotection && pPlayer->m_LastChangeInfo && pPlayer->m_LastChangeInfo + g_Config.m_SvTickRate * g_Config.m_SvInfoChangeDelay > Server()->Tick())
 		return;
 
 	bool SixupNeedsUpdate = false;
@@ -2614,7 +2621,7 @@ void CGameContext::OnChangeInfoNetMessage(const CNetMsg_Cl_ChangeInfo *pMsg, int
 	if(g_Config.m_SvSpamprotection)
 	{
 		CNetMsg_Sv_ChangeInfoCooldown ChangeInfoCooldownMsg;
-		ChangeInfoCooldownMsg.m_WaitUntil = Server()->Tick() + Server()->TickSpeed() * g_Config.m_SvInfoChangeDelay;
+		ChangeInfoCooldownMsg.m_WaitUntil = Server()->Tick() + g_Config.m_SvTickRate * g_Config.m_SvInfoChangeDelay;
 		Server()->SendPackMsg(&ChangeInfoCooldownMsg, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientId);
 	}
 
@@ -2714,7 +2721,7 @@ void CGameContext::OnEmoticonNetMessage(const CNetMsg_Cl_Emoticon *pMsg, int Cli
 	CPlayer *pPlayer = m_apPlayers[ClientId];
 
 	auto &&CheckPreventEmote = [&](int64_t LastEmote, int64_t DelayInMs) {
-		return (LastEmote * (int64_t)1000) + (int64_t)Server()->TickSpeed() * DelayInMs > ((int64_t)Server()->Tick() * (int64_t)1000);
+		return (LastEmote * (int64_t)1000) + (int64_t)g_Config.m_SvTickRate * DelayInMs > ((int64_t)Server()->Tick() * (int64_t)1000);
 	};
 
 	if(g_Config.m_SvSpamprotection && CheckPreventEmote((int64_t)pPlayer->m_LastEmote, (int64_t)g_Config.m_SvEmoticonMsDelay))
@@ -2781,7 +2788,7 @@ void CGameContext::OnEmoticonNetMessage(const CNetMsg_Cl_Emoticon *pMsg, int Cli
 		default:
 			break;
 		}
-		pChr->SetEmote(EmoteType, Server()->Tick() + 2 * Server()->TickSpeed());
+		pChr->SetEmote(EmoteType, Server()->Tick() + 2 * g_Config.m_SvTickRate);
 	}
 }
 
@@ -2796,7 +2803,7 @@ void CGameContext::OnKillNetMessage(const CNetMsg_Cl_Kill *pMsg, int ClientId)
 		return;
 	}
 	CPlayer *pPlayer = m_apPlayers[ClientId];
-	if(pPlayer->m_LastKill && pPlayer->m_LastKill + Server()->TickSpeed() * g_Config.m_SvKillDelay > Server()->Tick())
+	if(pPlayer->m_LastKill && pPlayer->m_LastKill + g_Config.m_SvTickRate * g_Config.m_SvKillDelay > Server()->Tick())
 		return;
 	if(pPlayer->IsPaused())
 		return;
@@ -2806,7 +2813,7 @@ void CGameContext::OnKillNetMessage(const CNetMsg_Cl_Kill *pMsg, int ClientId)
 		return;
 
 	// Kill Protection
-	int CurrTime = (Server()->Tick() - pChr->m_StartTime) / Server()->TickSpeed();
+	int CurrTime = (Server()->Tick() - pChr->m_StartTime) / g_Config.m_SvTickRate;
 	if(g_Config.m_SvKillProtection != 0 && CurrTime >= (60 * g_Config.m_SvKillProtection) && pChr->m_DDRaceState == DDRACE_STARTED)
 	{
 		SendChatTarget(ClientId, "Kill Protection enabled. If you really want to kill, type /kill");
@@ -3188,7 +3195,7 @@ void CGameContext::ConSetTeam(IConsole::IResult *pResult, void *pUserData)
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", aBuf);
 
 	pSelf->m_apPlayers[ClientId]->Pause(CPlayer::PAUSE_NONE, false); // reset /spec and /pause to allow rejoin
-	pSelf->m_apPlayers[ClientId]->m_TeamChangeTick = pSelf->Server()->Tick() + pSelf->Server()->TickSpeed() * Delay * 60;
+	pSelf->m_apPlayers[ClientId]->m_TeamChangeTick = pSelf->Server()->Tick() + g_Config.m_SvTickRate * Delay * 60;
 	pSelf->m_pController->DoTeamChange(pSelf->m_apPlayers[ClientId], Team);
 	if(Team == TEAM_SPECTATORS)
 		pSelf->m_apPlayers[ClientId]->Pause(CPlayer::PAUSE_NONE, true);
@@ -3612,6 +3619,20 @@ void CGameContext::ConchainSettingUpdate(IConsole::IResult *pResult, void *pUser
 	}
 }
 
+void CGameContext::ConchainTickRate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	pfnCallback(pResult, pCallbackUserData);
+	static int TickRate = SERVER_DEFAULT_TICK_RATE;
+	if(g_Config.m_SvTickRate == TickRate) return;
+	TickRate = g_Config.m_SvTickRate;
+	for (int i = 0; i < MAX_CLIENTS; ++i)
+	{
+		if (!pSelf->IsClientPlayer(i)) continue;
+		pSelf->SendTickRate(i);
+	}
+}
+
 void CGameContext::OnConsoleInit()
 {
 	m_pServer = Kernel()->RequestInterface<IServer>();
@@ -3661,6 +3682,8 @@ void CGameContext::OnConsoleInit()
 	Console()->Chain("sv_vote_kick_min", ConchainSettingUpdate, this);
 	Console()->Chain("sv_vote_spectate", ConchainSettingUpdate, this);
 	Console()->Chain("sv_spectator_slots", ConchainSettingUpdate, this);
+
+	Console()->Chain("sv_tick_rate", ConchainTickRate, this);
 
 	RegisterDDRaceCommands();
 	RegisterChatCommands();
@@ -4490,7 +4513,7 @@ bool CGameContext::ProcessSpamProtection(int ClientId, bool RespectChatInitialDe
 {
 	if(!m_apPlayers[ClientId])
 		return false;
-	if(g_Config.m_SvSpamprotection && m_apPlayers[ClientId]->m_LastChat && m_apPlayers[ClientId]->m_LastChat + Server()->TickSpeed() * g_Config.m_SvChatDelay > Server()->Tick())
+	if(g_Config.m_SvSpamprotection && m_apPlayers[ClientId]->m_LastChat && m_apPlayers[ClientId]->m_LastChat + g_Config.m_SvTickRate * g_Config.m_SvChatDelay > Server()->Tick())
 		return true;
 	else if(g_Config.m_SvDnsblChat && Server()->DnsblBlack(ClientId))
 	{
@@ -4512,7 +4535,7 @@ bool CGameContext::ProcessSpamProtection(int ClientId, bool RespectChatInitialDe
 			if(RespectChatInitialDelay || m_aMutes[i].m_InitialChatDelay)
 			{
 				Muted = m_aMutes[i];
-				Expires = (m_aMutes[i].m_Expire - Server()->Tick()) / Server()->TickSpeed();
+				Expires = (m_aMutes[i].m_Expire - Server()->Tick()) / g_Config.m_SvTickRate;
 			}
 		}
 	}
@@ -4849,7 +4872,6 @@ void CGameContext::ForceVote(int EnforcerId, bool Success)
 bool CGameContext::RateLimitPlayerVote(int ClientId)
 {
 	int64_t Now = Server()->Tick();
-	int64_t TickSpeed = Server()->TickSpeed();
 	CPlayer *pPlayer = m_apPlayers[ClientId];
 
 	if(g_Config.m_SvRconVote && !Server()->GetAuthedState(ClientId))
@@ -4872,7 +4894,7 @@ bool CGameContext::RateLimitPlayerVote(int ClientId)
 		}
 	}
 
-	if(g_Config.m_SvSpamprotection && pPlayer->m_LastVoteTry && pPlayer->m_LastVoteTry + TickSpeed * 3 > Now)
+	if(g_Config.m_SvSpamprotection && pPlayer->m_LastVoteTry && pPlayer->m_LastVoteTry + g_Config.m_SvTickRate * 3 > Now)
 		return true;
 
 	pPlayer->m_LastVoteTry = Now;
@@ -4885,16 +4907,16 @@ bool CGameContext::RateLimitPlayerVote(int ClientId)
 	if(Now < pPlayer->m_FirstVoteTick)
 	{
 		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "You must wait %d seconds before making your first vote.", (int)((pPlayer->m_FirstVoteTick - Now) / TickSpeed) + 1);
+		str_format(aBuf, sizeof(aBuf), "You must wait %d seconds before making your first vote.", (int)((pPlayer->m_FirstVoteTick - Now) / g_Config.m_SvTickRate) + 1);
 		SendChatTarget(ClientId, aBuf);
 		return true;
 	}
 
-	int TimeLeft = pPlayer->m_LastVoteCall + TickSpeed * g_Config.m_SvVoteDelay - Now;
+	int TimeLeft = pPlayer->m_LastVoteCall + g_Config.m_SvTickRate * g_Config.m_SvVoteDelay - Now;
 	if(pPlayer->m_LastVoteCall && TimeLeft > 0)
 	{
 		char aChatmsg[64];
-		str_format(aChatmsg, sizeof(aChatmsg), "You must wait %d seconds before making another vote.", (int)(TimeLeft / TickSpeed) + 1);
+		str_format(aChatmsg, sizeof(aChatmsg), "You must wait %d seconds before making another vote.", (int)(TimeLeft / g_Config.m_SvTickRate) + 1);
 		SendChatTarget(ClientId, aChatmsg);
 		return true;
 	}
@@ -4904,11 +4926,11 @@ bool CGameContext::RateLimitPlayerVote(int ClientId)
 	int VoteMuted = 0;
 	for(int i = 0; i < m_NumVoteMutes && !VoteMuted; i++)
 		if(!net_addr_comp_noport(&Addr, &m_aVoteMutes[i].m_Addr))
-			VoteMuted = (m_aVoteMutes[i].m_Expire - Server()->Tick()) / Server()->TickSpeed();
+			VoteMuted = (m_aVoteMutes[i].m_Expire - Server()->Tick()) / g_Config.m_SvTickRate;
 	for(int i = 0; i < m_NumMutes && VoteMuted == 0; i++)
 	{
 		if(!net_addr_comp_noport(&Addr, &m_aMutes[i].m_Addr))
-			VoteMuted = (m_aMutes[i].m_Expire - Server()->Tick()) / Server()->TickSpeed();
+			VoteMuted = (m_aMutes[i].m_Expire - Server()->Tick()) / g_Config.m_SvTickRate;
 	}
 	if(VoteMuted > 0)
 	{

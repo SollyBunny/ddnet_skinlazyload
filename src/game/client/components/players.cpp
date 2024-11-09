@@ -442,15 +442,15 @@ void CPlayers::RenderPlayer(
 	}
 
 	bool PredictLocalWeapons = false;
-	float AttackTime = (Client()->PrevGameTick(g_Config.m_ClDummy) - Player.m_AttackTick) / (float)Client()->GameTickSpeed() + Client()->GameTickTime(g_Config.m_ClDummy);
-	float LastAttackTime = (Client()->PrevGameTick(g_Config.m_ClDummy) - Player.m_AttackTick) / (float)Client()->GameTickSpeed() + s_LastGameTickTime;
+	float AttackTime = (Client()->PrevGameTick(g_Config.m_ClDummy) - Player.m_AttackTick) / (float)g_Config.m_SvTickRate + Client()->GameTickTime(g_Config.m_ClDummy);
+	float LastAttackTime = (Client()->PrevGameTick(g_Config.m_ClDummy) - Player.m_AttackTick) / (float)g_Config.m_SvTickRate + s_LastGameTickTime;
 	if(ClientId >= 0 && m_pClient->m_aClients[ClientId].m_IsPredictedLocal && m_pClient->AntiPingGunfire())
 	{
 		PredictLocalWeapons = true;
-		AttackTime = (Client()->PredIntraGameTick(g_Config.m_ClDummy) + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)Client()->GameTickSpeed();
-		LastAttackTime = (s_LastPredIntraTick + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)Client()->GameTickSpeed();
+		AttackTime = (Client()->PredIntraGameTick(g_Config.m_ClDummy) + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)g_Config.m_SvTickRate;
+		LastAttackTime = (s_LastPredIntraTick + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)g_Config.m_SvTickRate;
 	}
-	float AttackTicksPassed = AttackTime * (float)Client()->GameTickSpeed();
+	float AttackTicksPassed = AttackTime * (float)g_Config.m_SvTickRate;
 
 	float Angle;
 	if(Local && (!m_pClient->m_Snap.m_SpecInfo.m_Active || m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW) && Client()->State() != IClient::STATE_DEMOPLAYBACK)
@@ -779,22 +779,22 @@ void CPlayers::RenderPlayer(
 	if(g_Config.m_ClShowEmotes && !m_pClient->m_aClients[ClientId].m_EmoticonIgnore && m_pClient->m_aClients[ClientId].m_EmoticonStartTick != -1)
 	{
 		float SinceStart = (Client()->GameTick(g_Config.m_ClDummy) - m_pClient->m_aClients[ClientId].m_EmoticonStartTick) + (Client()->IntraGameTickSincePrev(g_Config.m_ClDummy) - m_pClient->m_aClients[ClientId].m_EmoticonStartFraction);
-		float FromEnd = (2 * Client()->GameTickSpeed()) - SinceStart;
+		float FromEnd = (2 * g_Config.m_SvTickRate) - SinceStart;
 
 		if(0 <= SinceStart && FromEnd > 0)
 		{
 			float a = 1;
 
-			if(FromEnd < Client()->GameTickSpeed() / 5)
-				a = FromEnd / (Client()->GameTickSpeed() / 5.0f);
+			if(FromEnd < g_Config.m_SvTickRate / 5)
+				a = FromEnd / (g_Config.m_SvTickRate / 5.0f);
 
 			float h = 1;
-			if(SinceStart < Client()->GameTickSpeed() / 10)
-				h = SinceStart / (Client()->GameTickSpeed() / 10.0f);
+			if(SinceStart < g_Config.m_SvTickRate / 10)
+				h = SinceStart / (g_Config.m_SvTickRate / 10.0f);
 
 			float Wiggle = 0;
-			if(SinceStart < Client()->GameTickSpeed() / 5)
-				Wiggle = SinceStart / (Client()->GameTickSpeed() / 5.0f);
+			if(SinceStart < g_Config.m_SvTickRate / 5)
+				Wiggle = SinceStart / (g_Config.m_SvTickRate / 5.0f);
 
 			float WiggleAngle = std::sin(5 * Wiggle);
 

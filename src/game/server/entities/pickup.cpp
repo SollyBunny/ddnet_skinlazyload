@@ -3,6 +3,8 @@
 #include "pickup.h"
 #include "character.h"
 
+#include <engine/shared/config.h>
+
 #include <game/generated/protocol.h>
 #include <game/mapitems.h>
 #include <game/teamscore.h>
@@ -178,7 +180,7 @@ void CPickup::Snap(int SnappingClient)
 		if(SnappingClient != SERVER_DEMO_CLIENT && (GameServer()->m_apPlayers[SnappingClient]->GetTeam() == TEAM_SPECTATORS || GameServer()->m_apPlayers[SnappingClient]->IsPaused()) && GameServer()->m_apPlayers[SnappingClient]->m_SpectatorId != SPEC_FREEVIEW)
 			pChar = GameServer()->GetPlayerChar(GameServer()->m_apPlayers[SnappingClient]->m_SpectatorId);
 
-		int Tick = (Server()->Tick() % Server()->TickSpeed()) % 11;
+		int Tick = (Server()->Tick() % g_Config.m_SvTickRate) % 11;
 		if(pChar && pChar->IsAlive() && m_Layer == LAYER_SWITCH && m_Number > 0 && !Switchers()[m_Number].m_aStatus[pChar->Team()] && !Tick)
 			return;
 	}
@@ -188,7 +190,7 @@ void CPickup::Snap(int SnappingClient)
 
 void CPickup::Move()
 {
-	if(Server()->Tick() % (int)(Server()->TickSpeed() * 0.15f) == 0)
+	if(Server()->Tick() % (int)(g_Config.m_SvTickRate * 0.15f) == 0)
 	{
 		int Flags;
 		int index = GameServer()->Collision()->IsMover(m_Pos.x, m_Pos.y, &Flags);

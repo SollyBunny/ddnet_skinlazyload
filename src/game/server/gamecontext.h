@@ -138,6 +138,7 @@ class CGameContext : public IGameServer
 	static void ConAntibot(IConsole::IResult *pResult, void *pUserData);
 	static void ConchainSpecialMotdupdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainSettingUpdate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
+	static void ConchainTickRate(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConDumpLog(IConsole::IResult *pResult, void *pUserData);
 
 	void Construct(int Resetting);
@@ -270,6 +271,8 @@ public:
 	void SendMotd(int ClientId) const;
 	void SendSettings(int ClientId) const;
 	void SendBroadcast(const char *pText, int ClientId, bool IsImportant = true);
+
+	void SendTickRate(int ClientId);
 
 	void List(int ClientId, const char *pFilter);
 

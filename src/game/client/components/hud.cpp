@@ -116,7 +116,7 @@ void CHud::RenderGameTimer()
 		int Time = 0;
 		if(m_pClient->m_Snap.m_pGameInfoObj->m_TimeLimit && (m_pClient->m_Snap.m_pGameInfoObj->m_WarmupTimer <= 0))
 		{
-			Time = m_pClient->m_Snap.m_pGameInfoObj->m_TimeLimit * 60 - ((Client()->GameTick(g_Config.m_ClDummy) - m_pClient->m_Snap.m_pGameInfoObj->m_RoundStartTick) / Client()->GameTickSpeed());
+			Time = m_pClient->m_Snap.m_pGameInfoObj->m_TimeLimit * 60 - ((Client()->GameTick(g_Config.m_ClDummy) - m_pClient->m_Snap.m_pGameInfoObj->m_RoundStartTick) / g_Config.m_SvTickRate);
 
 			if(m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER)
 				Time = 0;
@@ -124,10 +124,10 @@ void CHud::RenderGameTimer()
 		else if(m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME)
 		{
 			// The Warmup timer is negative in this case to make sure that incompatible clients will not see a warmup timer
-			Time = (Client()->GameTick(g_Config.m_ClDummy) + m_pClient->m_Snap.m_pGameInfoObj->m_WarmupTimer) / Client()->GameTickSpeed();
+			Time = (Client()->GameTick(g_Config.m_ClDummy) + m_pClient->m_Snap.m_pGameInfoObj->m_WarmupTimer) / g_Config.m_SvTickRate;
 		}
 		else
-			Time = (Client()->GameTick(g_Config.m_ClDummy) - m_pClient->m_Snap.m_pGameInfoObj->m_RoundStartTick) / Client()->GameTickSpeed();
+			Time = (Client()->GameTick(g_Config.m_ClDummy) - m_pClient->m_Snap.m_pGameInfoObj->m_RoundStartTick) / g_Config.m_SvTickRate;
 
 		str_time((int64_t)Time * 100, TIME_DAYS, aBuf, sizeof(aBuf));
 		float FontSize = 10.0f;
@@ -248,7 +248,7 @@ void CHud::RenderScoreHud()
 				if(GameFlags & GAMEFLAG_FLAGS)
 				{
 					int BlinkTimer = (m_pClient->m_aFlagDropTick[t] != 0 &&
-								 (Client()->GameTick(g_Config.m_ClDummy) - m_pClient->m_aFlagDropTick[t]) / Client()->GameTickSpeed() >= 25) ?
+								 (Client()->GameTick(g_Config.m_ClDummy) - m_pClient->m_aFlagDropTick[t]) / g_Config.m_SvTickRate >= 25) ?
 								 10 :
 								 20;
 					if(aFlagCarrier[t] == FLAG_ATSTAND || (aFlagCarrier[t] == FLAG_TAKEN && ((Client()->GameTick(g_Config.m_ClDummy) / BlinkTimer) & 1)))
@@ -498,9 +498,9 @@ void CHud::RenderWarmupTimer()
 		float w = TextRender()->TextWidth(FontSize, Localize("Warmup"), -1, -1.0f);
 		TextRender()->Text(150 * Graphics()->ScreenAspect() + -w / 2, 50, FontSize, Localize("Warmup"), -1.0f);
 
-		int Seconds = m_pClient->m_Snap.m_pGameInfoObj->m_WarmupTimer / Client()->GameTickSpeed();
+		int Seconds = m_pClient->m_Snap.m_pGameInfoObj->m_WarmupTimer / g_Config.m_SvTickRate;
 		if(Seconds < 5)
-			str_format(aBuf, sizeof(aBuf), "%d.%d", Seconds, (m_pClient->m_Snap.m_pGameInfoObj->m_WarmupTimer * 10 / Client()->GameTickSpeed()) % 10);
+			str_format(aBuf, sizeof(aBuf), "%d.%d", Seconds, (m_pClient->m_Snap.m_pGameInfoObj->m_WarmupTimer * 10 / g_Config.m_SvTickRate) % 10);
 		else
 			str_format(aBuf, sizeof(aBuf), "%d", Seconds);
 		w = TextRender()->TextWidth(FontSize, aBuf, -1, -1.0f);
@@ -881,8 +881,8 @@ void CHud::RenderPlayerState(const int ClientId)
 		}
 		if(pCharacter->m_aWeapons[WEAPON_NINJA].m_Got)
 		{
-			const int Max = g_pData->m_Weapons.m_Ninja.m_Duration * Client()->GameTickSpeed() / 1000;
-			float NinjaProgress = clamp(pCharacter->m_Ninja.m_ActivationTick + g_pData->m_Weapons.m_Ninja.m_Duration * Client()->GameTickSpeed() / 1000 - Client()->GameTick(g_Config.m_ClDummy), 0, Max) / (float)Max;
+			const int Max = g_pData->m_Weapons.m_Ninja.m_Duration * g_Config.m_SvTickRate / 1000;
+			float NinjaProgress = clamp(pCharacter->m_Ninja.m_ActivationTick + g_pData->m_Weapons.m_Ninja.m_Duration * g_Config.m_SvTickRate / 1000 - Client()->GameTick(g_Config.m_ClDummy), 0, Max) / (float)Max;
 			if(NinjaProgress > 0.0f && m_pClient->m_Snap.m_aCharacters[ClientId].m_HasExtendedDisplayInfo)
 			{
 				RenderNinjaBarPos(x, y - 12, 6.f, 24.f, NinjaProgress);
@@ -1317,19 +1317,19 @@ void CHud::RenderMovementInformation(const int ClientId)
 
 	const vec2 Vel = mix(vec2(pPrevChar->m_VelX, pPrevChar->m_VelY), vec2(pCurChar->m_VelX, pCurChar->m_VelY), IntraTick);
 
-	float VelspeedX = Vel.x / 256.0f * Client()->GameTickSpeed();
+	float VelspeedX = Vel.x / 256.0f * g_Config.m_SvTickRate;
 	if(Vel.x >= -1 && Vel.x <= 1)
 	{
 		VelspeedX = 0;
 	}
-	float VelspeedY = Vel.y / 256.0f * Client()->GameTickSpeed();
+	float VelspeedY = Vel.y / 256.0f * g_Config.m_SvTickRate;
 	if(Vel.y >= -128 && Vel.y <= 128)
 	{
 		VelspeedY = 0;
 	}
 	// We show the speed in Blocks per Second (Bps) and therefore have to divide by the block size
 	float DisplaySpeedX = VelspeedX / 32;
-	float VelspeedLength = length(vec2(Vel.x, Vel.y) / 256.0f) * Client()->GameTickSpeed();
+	float VelspeedLength = length(vec2(Vel.x, Vel.y) / 256.0f) * g_Config.m_SvTickRate;
 	// Todo: Use Velramp tuning of each individual player
 	// Since these tuning parameters are almost never changed, the default values are sufficient in most cases
 	float Ramp = VelocityRamp(VelspeedLength, m_pClient->m_aTuning[g_Config.m_ClDummy].m_VelrampStart, m_pClient->m_aTuning[g_Config.m_ClDummy].m_VelrampRange, m_pClient->m_aTuning[g_Config.m_ClDummy].m_VelrampCurvature);
@@ -1602,17 +1602,17 @@ void CHud::RenderDDRaceEffects()
 	{
 		char aBuf[64];
 		char aTime[32];
-		if(m_ShowFinishTime && m_FinishTimeLastReceivedTick + Client()->GameTickSpeed() * 6 > Client()->GameTick(g_Config.m_ClDummy))
+		if(m_ShowFinishTime && m_FinishTimeLastReceivedTick + g_Config.m_SvTickRate * 6 > Client()->GameTick(g_Config.m_ClDummy))
 		{
 			str_time(m_DDRaceTime, TIME_HOURS_CENTISECS, aTime, sizeof(aTime));
 			str_format(aBuf, sizeof(aBuf), "Finish time: %s", aTime);
 
 			// calculate alpha (4 sec 1 than get lower the next 2 sec)
 			float Alpha = 1.0f;
-			if(m_FinishTimeLastReceivedTick + Client()->GameTickSpeed() * 4 < Client()->GameTick(g_Config.m_ClDummy) && m_FinishTimeLastReceivedTick + Client()->GameTickSpeed() * 6 > Client()->GameTick(g_Config.m_ClDummy))
+			if(m_FinishTimeLastReceivedTick + g_Config.m_SvTickRate * 4 < Client()->GameTick(g_Config.m_ClDummy) && m_FinishTimeLastReceivedTick + g_Config.m_SvTickRate * 6 > Client()->GameTick(g_Config.m_ClDummy))
 			{
 				// lower the alpha slowly to blend text out
-				Alpha = ((float)(m_FinishTimeLastReceivedTick + Client()->GameTickSpeed() * 6) - (float)Client()->GameTick(g_Config.m_ClDummy)) / (float)(Client()->GameTickSpeed() * 2);
+				Alpha = ((float)(m_FinishTimeLastReceivedTick + g_Config.m_SvTickRate * 6) - (float)Client()->GameTick(g_Config.m_ClDummy)) / (float)(g_Config.m_SvTickRate * 2);
 			}
 
 			TextRender()->TextColor(1, 1, 1, Alpha);
@@ -1646,7 +1646,7 @@ void CHud::RenderDDRaceEffects()
 			}
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 		}
-		else if(g_Config.m_ClShowhudTimeCpDiff && !m_ShowFinishTime && m_TimeCpLastReceivedTick + Client()->GameTickSpeed() * 6 > Client()->GameTick(g_Config.m_ClDummy))
+		else if(g_Config.m_ClShowhudTimeCpDiff && !m_ShowFinishTime && m_TimeCpLastReceivedTick + g_Config.m_SvTickRate * 6 > Client()->GameTick(g_Config.m_ClDummy))
 		{
 			if(m_TimeCpDiff < 0)
 			{
@@ -1661,10 +1661,10 @@ void CHud::RenderDDRaceEffects()
 
 			// calculate alpha (4 sec 1 than get lower the next 2 sec)
 			float Alpha = 1.0f;
-			if(m_TimeCpLastReceivedTick + Client()->GameTickSpeed() * 4 < Client()->GameTick(g_Config.m_ClDummy) && m_TimeCpLastReceivedTick + Client()->GameTickSpeed() * 6 > Client()->GameTick(g_Config.m_ClDummy))
+			if(m_TimeCpLastReceivedTick + g_Config.m_SvTickRate * 4 < Client()->GameTick(g_Config.m_ClDummy) && m_TimeCpLastReceivedTick + g_Config.m_SvTickRate * 6 > Client()->GameTick(g_Config.m_ClDummy))
 			{
 				// lower the alpha slowly to blend text out
-				Alpha = ((float)(m_TimeCpLastReceivedTick + Client()->GameTickSpeed() * 6) - (float)Client()->GameTick(g_Config.m_ClDummy)) / (float)(Client()->GameTickSpeed() * 2);
+				Alpha = ((float)(m_TimeCpLastReceivedTick + g_Config.m_SvTickRate * 6) - (float)Client()->GameTick(g_Config.m_ClDummy)) / (float)(g_Config.m_SvTickRate * 2);
 			}
 
 			if(m_TimeCpDiff > 0)

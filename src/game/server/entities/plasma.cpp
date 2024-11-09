@@ -2,6 +2,7 @@
 #include "plasma.h"
 #include "character.h"
 
+#include <engine/shared/config.h>
 #include <engine/server.h>
 
 #include <game/generated/protocol.h>
@@ -21,7 +22,7 @@ CPlasma::CPlasma(CGameWorld *pGameWorld, vec2 Pos, vec2 Dir, bool Freeze,
 	m_Explosive = Explosive;
 	m_ForClientId = ForClientId;
 	m_EvalTick = Server()->Tick();
-	m_LifeTime = Server()->TickSpeed() * 1.5f;
+	m_LifeTime = g_Config.m_SvTickRate * 1.5f;
 
 	GameWorld()->InsertEntity(this);
 }

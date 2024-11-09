@@ -2,6 +2,7 @@
 #include "light.h"
 #include "character.h"
 
+#include <engine/shared/config.h>
 #include <engine/server.h>
 
 #include <game/generated/protocol.h>
@@ -19,7 +20,7 @@ CLight::CLight(CGameWorld *pGameWorld, vec2 Pos, float Rotation, int Length,
 	m_Core = vec2(0.0f, 0.0f);
 	m_Layer = Layer;
 	m_Number = Number;
-	m_Tick = (Server()->TickSpeed() * 0.15f);
+	m_Tick = (g_Config.m_SvTickRate * 0.15f);
 	m_Pos = Pos;
 	m_Rotation = Rotation;
 	m_Length = Length;
@@ -84,7 +85,7 @@ void CLight::Reset()
 
 void CLight::Tick()
 {
-	if(Server()->Tick() % (int)(Server()->TickSpeed() * 0.15f) == 0)
+	if(Server()->Tick() % (int)(g_Config.m_SvTickRate * 0.15f) == 0)
 	{
 		int Flags;
 		m_EvalTick = Server()->Tick();
@@ -131,7 +132,7 @@ void CLight::Snap(int SnappingClient)
 
 	if(SnappingClientVersion < VERSION_DDNET_ENTITY_NETOBJS)
 	{
-		int Tick = (Server()->Tick() % Server()->TickSpeed()) % 6;
+		int Tick = (Server()->Tick() % g_Config.m_SvTickRate) % 6;
 		if(pChr && pChr->IsAlive() && m_Layer == LAYER_SWITCH && m_Number > 0 && !Switchers()[m_Number].m_aStatus[pChr->Team()] && Tick)
 			return;
 

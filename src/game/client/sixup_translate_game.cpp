@@ -667,7 +667,7 @@ void *CGameClient::TranslateGameMsg(int *pMsgId, CUnpacker *pUnpacker, int Conn)
 				int ClientId = clamp(aParaI[1], 0, MAX_CLIENTS - 1);
 				m_aStats[ClientId].m_FlagCaptures++;
 
-				float Time = aParaI[2] / (float)Client()->GameTickSpeed();
+				float Time = aParaI[2] / (float)g_Config.m_SvTickRate;
 				if(Time <= 60)
 				{
 					if(aParaI[0])

@@ -34,7 +34,7 @@ CDragger::CDragger(CGameWorld *pGameWorld, vec2 Pos, float Strength, bool Ignore
 
 void CDragger::Tick()
 {
-	if(Server()->Tick() % (int)(Server()->TickSpeed() * 0.15f) == 0)
+	if(Server()->Tick() % (int)(g_Config.m_SvTickRate * 0.15f) == 0)
 	{
 		int Flags;
 		m_EvalTick = Server()->Tick();
@@ -225,7 +225,7 @@ void CDragger::Snap(int SnappingClient)
 			GameServer()->m_apPlayers[SnappingClient]->m_SpectatorId != SPEC_FREEVIEW)
 			pChar = GameServer()->GetPlayerChar(GameServer()->m_apPlayers[SnappingClient]->m_SpectatorId);
 
-		int Tick = (Server()->Tick() % Server()->TickSpeed()) % 11;
+		int Tick = (Server()->Tick() % g_Config.m_SvTickRate) % 11;
 		if(pChar && m_Layer == LAYER_SWITCH && m_Number > 0 &&
 			!Switchers()[m_Number].m_aStatus[pChar->Team()] && !Tick)
 			return;

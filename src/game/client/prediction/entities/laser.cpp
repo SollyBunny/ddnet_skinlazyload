@@ -168,12 +168,12 @@ void CLaser::Tick()
 
 	if(GameWorld()->m_WorldConfig.m_IsVanilla) // predict old physics on vanilla 0.6 servers
 	{
-		if(GameWorld()->GameTick() > m_EvalTick + (GameWorld()->GameTickSpeed() * Delay / 1000.0f))
+		if(GameWorld()->GameTick() > m_EvalTick + (g_Config.m_SvTickRate * Delay / 1000.0f))
 			DoBounce();
 	}
 	else
 	{
-		if((GameWorld()->GameTick() - m_EvalTick) > (GameWorld()->GameTickSpeed() * Delay / 1000.0f))
+		if((GameWorld()->GameTick() - m_EvalTick) > (g_Config.m_SvTickRate * Delay / 1000.0f))
 			DoBounce();
 	}
 }

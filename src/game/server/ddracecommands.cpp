@@ -458,7 +458,7 @@ void CGameContext::ConKill(IConsole::IResult *pResult, void *pUserData)
 		return;
 	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];
 
-	if(!pPlayer || (pPlayer->m_LastKill && pPlayer->m_LastKill + pSelf->Server()->TickSpeed() * g_Config.m_SvKillDelay > pSelf->Server()->Tick()))
+	if(!pPlayer || (pPlayer->m_LastKill && pPlayer->m_LastKill + g_Config.m_SvTickRate * g_Config.m_SvKillDelay > pSelf->Server()->Tick()))
 		return;
 
 	pPlayer->m_LastKill = pSelf->Server()->Tick();
@@ -487,7 +487,7 @@ bool CGameContext::TryVoteMute(const NETADDR *pAddr, int Secs, const char *pReas
 	{
 		if(net_addr_comp_noport(&m_aVoteMutes[i].m_Addr, pAddr) == 0)
 		{
-			m_aVoteMutes[i].m_Expire = Server()->Tick() + Secs * Server()->TickSpeed();
+			m_aVoteMutes[i].m_Expire = Server()->Tick() + Secs * g_Config.m_SvTickRate;
 			str_copy(m_aVoteMutes[i].m_aReason, pReason, sizeof(m_aVoteMutes[i].m_aReason));
 			return true;
 		}
@@ -497,7 +497,7 @@ bool CGameContext::TryVoteMute(const NETADDR *pAddr, int Secs, const char *pReas
 	if(m_NumVoteMutes < MAX_VOTE_MUTES)
 	{
 		m_aVoteMutes[m_NumVoteMutes].m_Addr = *pAddr;
-		m_aVoteMutes[m_NumVoteMutes].m_Expire = Server()->Tick() + Secs * Server()->TickSpeed();
+		m_aVoteMutes[m_NumVoteMutes].m_Expire = Server()->Tick() + Secs * g_Config.m_SvTickRate;
 		str_copy(m_aVoteMutes[m_NumVoteMutes].m_aReason, pReason, sizeof(m_aVoteMutes[m_NumVoteMutes].m_aReason));
 		m_NumVoteMutes++;
 		return true;
@@ -552,7 +552,7 @@ bool CGameContext::TryMute(const NETADDR *pAddr, int Secs, const char *pReason, 
 	{
 		if(net_addr_comp_noport(&m_aMutes[i].m_Addr, pAddr) == 0)
 		{
-			const int NewExpire = Server()->Tick() + Secs * Server()->TickSpeed();
+			const int NewExpire = Server()->Tick() + Secs * g_Config.m_SvTickRate;
 			if(NewExpire > m_aMutes[i].m_Expire)
 			{
 				m_aMutes[i].m_Expire = NewExpire;
@@ -567,7 +567,7 @@ bool CGameContext::TryMute(const NETADDR *pAddr, int Secs, const char *pReason, 
 	if(m_NumMutes < MAX_MUTES)
 	{
 		m_aMutes[m_NumMutes].m_Addr = *pAddr;
-		m_aMutes[m_NumMutes].m_Expire = Server()->Tick() + Secs * Server()->TickSpeed();
+		m_aMutes[m_NumMutes].m_Expire = Server()->Tick() + Secs * g_Config.m_SvTickRate;
 		str_copy(m_aMutes[m_NumMutes].m_aReason, pReason, sizeof(m_aMutes[m_NumMutes].m_aReason));
 		m_aMutes[m_NumMutes].m_InitialChatDelay = InitialChatDelay;
 		m_NumMutes++;
@@ -661,7 +661,7 @@ void CGameContext::ConVoteMutes(IConsole::IResult *pResult, void *pUserData)
 	{
 		net_addr_str(&pSelf->m_aVoteMutes[i].m_Addr, aIpBuf, sizeof(aIpBuf), false);
 		str_format(aBuf, sizeof(aBuf), "%d: \"%s\", %d seconds left (%s)", i,
-			aIpBuf, (pSelf->m_aVoteMutes[i].m_Expire - pSelf->Server()->Tick()) / pSelf->Server()->TickSpeed(), pSelf->m_aVoteMutes[i].m_aReason);
+			aIpBuf, (pSelf->m_aVoteMutes[i].m_Expire - pSelf->Server()->Tick()) / g_Config.m_SvTickRate, pSelf->m_aVoteMutes[i].m_aReason);
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "votemutes", aBuf);
 	}
 }
@@ -779,7 +779,7 @@ void CGameContext::ConMutes(IConsole::IResult *pResult, void *pUserData)
 	{
 		net_addr_str(&pSelf->m_aMutes[i].m_Addr, aIpBuf, sizeof(aIpBuf), false);
 		str_format(aBuf, sizeof(aBuf), "%d: \"%s\", %d seconds left (%s)", i, aIpBuf,
-			(pSelf->m_aMutes[i].m_Expire - pSelf->Server()->Tick()) / pSelf->Server()->TickSpeed(), pSelf->m_aMutes[i].m_aReason);
+			(pSelf->m_aMutes[i].m_Expire - pSelf->Server()->Tick()) / g_Config.m_SvTickRate, pSelf->m_aMutes[i].m_aReason);
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "mutes", aBuf);
 	}
 }

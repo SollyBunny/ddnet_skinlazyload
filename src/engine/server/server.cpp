@@ -514,7 +514,7 @@ void CServer::RedirectClient(int ClientId, int Port, bool Verbose)
 
 int64_t CServer::TickStartTime(int Tick)
 {
-	return m_GameStartTime + (time_freq() * Tick) / TickSpeed();
+	return m_GameStartTime + (time_freq() * Tick) / g_Config.m_SvTickRate;
 }
 
 int CServer::Init()
@@ -908,7 +908,7 @@ void CServer::DoSnapshot()
 			continue;
 
 		// this client is trying to recover, don't spam snapshots
-		if(m_aClients[i].m_SnapRate == CClient::SNAPRATE_RECOVER && (Tick() % TickSpeed()) != 0)
+		if(m_aClients[i].m_SnapRate == CClient::SNAPRATE_RECOVER && (Tick() % g_Config.m_SvTickRate) != 0)
 			continue;
 
 		// this client is trying to recover, don't spam snapshots
@@ -935,7 +935,7 @@ void CServer::DoSnapshot()
 
 			// remove old snapshots
 			// keep 3 seconds worth of snapshots
-			m_aClients[i].m_Snapshots.PurgeUntil(m_CurrentGameTick - TickSpeed() * 3);
+			m_aClients[i].m_Snapshots.PurgeUntil(m_CurrentGameTick - g_Config.m_SvTickRate * 3);
 
 			// save the snapshot
 			m_aClients[i].m_Snapshots.Add(m_CurrentGameTick, time_get(), SnapshotSize, pData, 0, nullptr);
@@ -1889,7 +1889,7 @@ bool CServer::RateLimitServerInfoConnless()
 		SendClients = m_ServerInfoNumRequests <= Config()->m_SvServerInfoPerSecond;
 		const int64_t Now = Tick();
 
-		if(Now <= m_ServerInfoFirstRequest + TickSpeed())
+		if(Now <= m_ServerInfoFirstRequest + g_Config.m_SvTickRate)
 		{
 			m_ServerInfoNumRequests++;
 		}

@@ -38,7 +38,7 @@ void CBroadcast::RenderServerBroadcast()
 {
 	if(m_pClient->m_Scoreboard.Active() || m_pClient->m_Motd.IsActive() || !g_Config.m_ClShowBroadcasts)
 		return;
-	const float SecondsRemaining = (m_BroadcastTick - Client()->GameTick(g_Config.m_ClDummy)) / (float)Client()->GameTickSpeed();
+	const float SecondsRemaining = (m_BroadcastTick - Client()->GameTick(g_Config.m_ClDummy)) / (float)g_Config.m_SvTickRate;
 	if(SecondsRemaining <= 0.0f)
 	{
 		TextRender()->DeleteTextContainer(m_TextContainerIndex);
@@ -82,7 +82,7 @@ void CBroadcast::OnMessage(int MsgType, void *pRawMsg)
 void CBroadcast::DoBroadcast(const char *pText)
 {
 	str_copy(m_aBroadcastText, pText);
-	m_BroadcastTick = Client()->GameTick(g_Config.m_ClDummy) + Client()->GameTickSpeed() * 10;
+	m_BroadcastTick = Client()->GameTick(g_Config.m_ClDummy) + g_Config.m_SvTickRate * 10;
 	m_BroadcastRenderOffset = -1.0f;
 	TextRender()->DeleteTextContainer(m_TextContainerIndex);
 

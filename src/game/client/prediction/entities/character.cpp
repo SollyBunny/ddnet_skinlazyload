@@ -107,7 +107,7 @@ void CCharacter::HandleNinja()
 	if(m_Core.m_ActiveWeapon != WEAPON_NINJA)
 		return;
 
-	if((GameWorld()->GameTick() - m_Core.m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * GameWorld()->GameTickSpeed() / 1000))
+	if((GameWorld()->GameTick() - m_Core.m_Ninja.m_ActivationTick) > (g_pData->m_Weapons.m_Ninja.m_Duration * g_Config.m_SvTickRate / 1000))
 	{
 		// time's up, return
 		RemoveNinja();
@@ -358,7 +358,7 @@ void CCharacter::FireWeapon()
 		if(Hits)
 		{
 			float FireDelay = GetTuning(m_TuneZone)->m_HammerHitFireDelay;
-			m_ReloadTimer = FireDelay * GameWorld()->GameTickSpeed() / 1000;
+			m_ReloadTimer = FireDelay * g_Config.m_SvTickRate / 1000;
 		}
 	}
 	break;
@@ -367,7 +367,7 @@ void CCharacter::FireWeapon()
 	{
 		if(!m_Core.m_Jetpack)
 		{
-			int Lifetime = (int)(GameWorld()->GameTickSpeed() * GetTuning(m_TuneZone)->m_GunLifetime);
+			int Lifetime = (int)(g_Config.m_SvTickRate * GetTuning(m_TuneZone)->m_GunLifetime);
 
 			new CProjectile(
 				GameWorld(),
@@ -403,7 +403,7 @@ void CCharacter::FireWeapon()
 					GetCid(), //Owner
 					ProjStartPos, //Pos
 					direction(a) * Speed, //Dir
-					(int)(GameWorld()->GameTickSpeed() * Tuning()->m_ShotgunLifetime), //Span
+					(int)(g_Config.m_SvTickRate * Tuning()->m_ShotgunLifetime), //Span
 					false, //Freeze
 					false, //Explosive
 					-1 //SoundImpact
@@ -421,7 +421,7 @@ void CCharacter::FireWeapon()
 
 	case WEAPON_GRENADE:
 	{
-		int Lifetime = (int)(GameWorld()->GameTickSpeed() * GetTuning(m_TuneZone)->m_GrenadeLifetime);
+		int Lifetime = (int)(g_Config.m_SvTickRate * GetTuning(m_TuneZone)->m_GrenadeLifetime);
 
 		new CProjectile(
 			GameWorld(),
@@ -451,7 +451,7 @@ void CCharacter::FireWeapon()
 		m_NumObjectsHit = 0;
 
 		m_Core.m_Ninja.m_ActivationDir = Direction;
-		m_Core.m_Ninja.m_CurrentMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime * GameWorld()->GameTickSpeed() / 1000;
+		m_Core.m_Ninja.m_CurrentMoveTime = g_pData->m_Weapons.m_Ninja.m_Movetime * g_Config.m_SvTickRate / 1000;
 		m_Core.m_Ninja.m_OldVelAmount = length(m_Core.m_Vel);
 	}
 	break;
@@ -464,7 +464,7 @@ void CCharacter::FireWeapon()
 		float FireDelay;
 		GetTuning(m_TuneZone)->Get(38 + m_Core.m_ActiveWeapon, &FireDelay);
 
-		m_ReloadTimer = FireDelay * GameWorld()->GameTickSpeed() / 1000;
+		m_ReloadTimer = FireDelay * g_Config.m_SvTickRate / 1000;
 	}
 }
 
@@ -739,14 +739,14 @@ void CCharacter::HandleTiles(int Index)
 	else if(Collision()->GetSwitchType(MapIndex) == TILE_SWITCHTIMEDOPEN && Team() != TEAM_SUPER && Collision()->GetSwitchNumber(MapIndex) > 0)
 	{
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aStatus[Team()] = true;
-		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aEndTick[Team()] = GameWorld()->GameTick() + 1 + Collision()->GetSwitchDelay(MapIndex) * GameWorld()->GameTickSpeed();
+		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aEndTick[Team()] = GameWorld()->GameTick() + 1 + Collision()->GetSwitchDelay(MapIndex) * g_Config.m_SvTickRate;
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aType[Team()] = TILE_SWITCHTIMEDOPEN;
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
 	}
 	else if(Collision()->GetSwitchType(MapIndex) == TILE_SWITCHTIMEDCLOSE && Team() != TEAM_SUPER && Collision()->GetSwitchNumber(MapIndex) > 0)
 	{
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aStatus[Team()] = false;
-		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aEndTick[Team()] = GameWorld()->GameTick() + 1 + Collision()->GetSwitchDelay(MapIndex) * GameWorld()->GameTickSpeed();
+		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aEndTick[Team()] = GameWorld()->GameTick() + 1 + Collision()->GetSwitchDelay(MapIndex) * g_Config.m_SvTickRate;
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aType[Team()] = TILE_SWITCHTIMEDCLOSE;
 		Switchers()[Collision()->GetSwitchNumber(MapIndex)].m_aLastUpdateTick[Team()] = GameWorld()->GameTick();
 	}
@@ -1056,11 +1056,11 @@ bool CCharacter::Freeze(int Seconds)
 {
 	if(!GameWorld()->m_WorldConfig.m_PredictFreeze)
 		return false;
-	if(Seconds <= 0 || m_Core.m_Super || m_Core.m_Invincible || m_FreezeTime > Seconds * GameWorld()->GameTickSpeed())
+	if(Seconds <= 0 || m_Core.m_Super || m_Core.m_Invincible || m_FreezeTime > Seconds * g_Config.m_SvTickRate)
 		return false;
-	if(m_Core.m_FreezeStart < GameWorld()->GameTick() - GameWorld()->GameTickSpeed())
+	if(m_Core.m_FreezeStart < GameWorld()->GameTick() - g_Config.m_SvTickRate)
 	{
-		m_FreezeTime = Seconds * GameWorld()->GameTickSpeed();
+		m_FreezeTime = Seconds * g_Config.m_SvTickRate;
 		m_Core.m_FreezeStart = GameWorld()->GameTick();
 		return true;
 	}
@@ -1383,11 +1383,11 @@ void CCharacter::Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtende
 	// (this is only needed for autofire weapons to prevent the predicted reload timer from desyncing)
 	if(IsLocal && m_Core.m_ActiveWeapon != WEAPON_HAMMER && !m_Core.m_aWeapons[WEAPON_NINJA].m_Got)
 	{
-		if(maximum(m_LastTuneZoneTick, m_LastWeaponSwitchTick) + GameWorld()->GameTickSpeed() < GameWorld()->GameTick())
+		if(maximum(m_LastTuneZoneTick, m_LastWeaponSwitchTick) + g_Config.m_SvTickRate < GameWorld()->GameTick())
 		{
 			float FireDelay;
 			GetTuning(m_TuneZone)->Get(38 + m_Core.m_ActiveWeapon, &FireDelay);
-			const int FireDelayTicks = FireDelay * GameWorld()->GameTickSpeed() / 1000;
+			const int FireDelayTicks = FireDelay * g_Config.m_SvTickRate / 1000;
 			m_ReloadTimer = maximum(0, m_AttackTick + FireDelayTicks - GameWorld()->GameTick());
 		}
 	}

@@ -185,7 +185,10 @@ void CChat::ConShowChat(IConsole::IResult *pResult, void *pUserData)
 
 void CChat::ConEcho(IConsole::IResult *pResult, void *pUserData)
 {
-	((CChat *)pUserData)->Echo(pResult->GetString(0));
+	char *b = (char*)malloc(200);
+	snprintf(b, sizeof(200), "%d", g_Config.m_SvTickRate);
+	((CChat *)pUserData)->Echo(b);
+	// ((CChat *)pUserData)->Echo(pResult->GetString(0));
 }
 
 void CChat::ConClearChat(IConsole::IResult *pResult, void *pUserData)

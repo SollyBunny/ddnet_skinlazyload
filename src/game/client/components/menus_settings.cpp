@@ -280,7 +280,7 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 	if(Client()->State() == IClient::STATE_ONLINE && m_pClient->m_NextChangeInfo && m_pClient->m_NextChangeInfo > Client()->GameTick(g_Config.m_ClDummy))
 	{
 		char aChangeInfo[128], aTimeLeft[32];
-		str_format(aTimeLeft, sizeof(aTimeLeft), Localize("%ds left"), (m_pClient->m_NextChangeInfo - Client()->GameTick(g_Config.m_ClDummy) + Client()->GameTickSpeed() - 1) / Client()->GameTickSpeed());
+		str_format(aTimeLeft, sizeof(aTimeLeft), Localize("%ds left"), (m_pClient->m_NextChangeInfo - Client()->GameTick(g_Config.m_ClDummy) + g_Config.m_SvTickRate - 1) / g_Config.m_SvTickRate);
 		str_format(aChangeInfo, sizeof(aChangeInfo), "%s: %s", Localize("Player info change cooldown"), aTimeLeft);
 		Ui()->DoLabel(&ChangeInfo, aChangeInfo, 10.f, TEXTALIGN_ML);
 	}
@@ -472,7 +472,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	if(Client()->State() == IClient::STATE_ONLINE && m_pClient->m_NextChangeInfo && m_pClient->m_NextChangeInfo > Client()->GameTick(g_Config.m_ClDummy))
 	{
 		char aChangeInfo[128], aTimeLeft[32];
-		str_format(aTimeLeft, sizeof(aTimeLeft), Localize("%ds left"), (m_pClient->m_NextChangeInfo - Client()->GameTick(g_Config.m_ClDummy) + Client()->GameTickSpeed() - 1) / Client()->GameTickSpeed());
+		str_format(aTimeLeft, sizeof(aTimeLeft), Localize("%ds left"), (m_pClient->m_NextChangeInfo - Client()->GameTick(g_Config.m_ClDummy) + g_Config.m_SvTickRate - 1) / g_Config.m_SvTickRate);
 		str_format(aChangeInfo, sizeof(aChangeInfo), "%s: %s", Localize("Player info change cooldown"), aTimeLeft);
 		Ui()->DoLabel(&ChangeInfo, aChangeInfo, 10.f, TEXTALIGN_ML);
 	}

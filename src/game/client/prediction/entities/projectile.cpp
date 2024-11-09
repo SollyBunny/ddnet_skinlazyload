@@ -71,8 +71,8 @@ vec2 CProjectile::GetPos(float Time)
 
 void CProjectile::Tick()
 {
-	float Pt = (GameWorld()->GameTick() - m_StartTick - 1) / (float)GameWorld()->GameTickSpeed();
-	float Ct = (GameWorld()->GameTick() - m_StartTick) / (float)GameWorld()->GameTickSpeed();
+	float Pt = (GameWorld()->GameTick() - m_StartTick - 1) / (float)g_Config.m_SvTickRate;
+	float Ct = (GameWorld()->GameTick() - m_StartTick) / (float)g_Config.m_SvTickRate;
 	vec2 PrevPos = GetPos(Pt);
 	vec2 CurPos = GetPos(Ct);
 	vec2 ColPos;
@@ -178,17 +178,17 @@ CProjectile::CProjectile(CGameWorld *pGameWorld, int Id, const CProjectileData *
 	m_StartTick = pProj->m_StartTick;
 	m_TuneZone = pProj->m_TuneZone;
 
-	int Lifetime = 20 * GameWorld()->GameTickSpeed();
+	int Lifetime = 20 * g_Config.m_SvTickRate;
 	m_SoundImpact = -1;
 	if(m_Type == WEAPON_GRENADE)
 	{
-		Lifetime = GetTuning(m_TuneZone)->m_GrenadeLifetime * GameWorld()->GameTickSpeed();
+		Lifetime = GetTuning(m_TuneZone)->m_GrenadeLifetime * g_Config.m_SvTickRate;
 		m_SoundImpact = SOUND_GRENADE_EXPLODE;
 	}
 	else if(m_Type == WEAPON_GUN)
-		Lifetime = GetTuning(m_TuneZone)->m_GunLifetime * GameWorld()->GameTickSpeed();
+		Lifetime = GetTuning(m_TuneZone)->m_GunLifetime * g_Config.m_SvTickRate;
 	else if(m_Type == WEAPON_SHOTGUN && !GameWorld()->m_WorldConfig.m_IsDDRace)
-		Lifetime = GetTuning(m_TuneZone)->m_ShotgunLifetime * GameWorld()->GameTickSpeed();
+		Lifetime = GetTuning(m_TuneZone)->m_ShotgunLifetime * g_Config.m_SvTickRate;
 	m_LifeSpan = Lifetime - (pGameWorld->GameTick() - m_StartTick);
 	m_Id = Id;
 	m_Number = pProj->m_SwitchNumber;

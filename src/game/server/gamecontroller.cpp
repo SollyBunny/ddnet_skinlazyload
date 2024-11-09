@@ -54,7 +54,7 @@ void IGameController::DoActivityCheck()
 	{
 		if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS && Server()->GetAuthedState(i) == AUTHED_NO)
 		{
-			if(Server()->Tick() > GameServer()->m_apPlayers[i]->m_LastActionTick + g_Config.m_SvInactiveKickTime * Server()->TickSpeed() * 60)
+			if(Server()->Tick() > GameServer()->m_apPlayers[i]->m_LastActionTick + g_Config.m_SvInactiveKickTime * g_Config.m_SvTickRate * 60)
 			{
 				switch(g_Config.m_SvInactiveKick)
 				{
@@ -515,7 +515,7 @@ void IGameController::DoWarmup(int Seconds)
 	if(Seconds < 0)
 		m_Warmup = 0;
 	else
-		m_Warmup = Seconds * Server()->TickSpeed();
+		m_Warmup = Seconds * g_Config.m_SvTickRate;
 }
 
 bool IGameController::IsForceBalanced()
@@ -541,7 +541,7 @@ void IGameController::Tick()
 	if(m_GameOverTick != -1)
 	{
 		// game over.. wait for restart
-		if(Server()->Tick() > m_GameOverTick + Server()->TickSpeed() * 10)
+		if(Server()->Tick() > m_GameOverTick + g_Config.m_SvTickRate * 10)
 		{
 			StartRound();
 			m_RoundCount++;

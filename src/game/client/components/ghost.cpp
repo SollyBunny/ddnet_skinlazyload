@@ -187,7 +187,7 @@ void CGhost::CheckStart()
 	int RaceTick = -m_pClient->m_Snap.m_pGameInfoObj->m_WarmupTimer;
 	int RenderTick = m_NewRenderTick;
 
-	if(GameClient()->LastRaceTick() != RaceTick && Client()->GameTick(g_Config.m_ClDummy) - RaceTick < Client()->GameTickSpeed())
+	if(GameClient()->LastRaceTick() != RaceTick && Client()->GameTick(g_Config.m_ClDummy) - RaceTick < g_Config.m_SvTickRate)
 	{
 		if(m_Rendering && m_RenderingStartedByServer) // race restarted: stop rendering
 			StopRender();

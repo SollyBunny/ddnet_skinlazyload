@@ -67,7 +67,7 @@ void CMapLayers::EnvelopeEval(int TimeOffsetMillis, int Env, ColorRGBA &Result, 
 		if(pThis->m_pClient->m_Snap.m_pGameInfoObj)
 		{
 			// get the lerp of the current tick and prev
-			const auto TickToNanoSeconds = std::chrono::nanoseconds(1s) / (int64_t)pThis->Client()->GameTickSpeed();
+			const auto TickToNanoSeconds = std::chrono::nanoseconds(1s) / (int64_t)g_Config.m_SvTickRate;
 			const int MinTick = pThis->Client()->PrevGameTick(g_Config.m_ClDummy) - pThis->m_pClient->m_Snap.m_pGameInfoObj->m_RoundStartTick;
 			const int CurTick = pThis->Client()->GameTick(g_Config.m_ClDummy) - pThis->m_pClient->m_Snap.m_pGameInfoObj->m_RoundStartTick;
 			s_Time = std::chrono::nanoseconds((int64_t)(mix<double>(

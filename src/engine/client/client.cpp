@@ -306,7 +306,7 @@ float CClient::GotRconCommandsPercentage() const
 
 bool CClient::ConnectionProblems() const
 {
-	return m_aNetClient[g_Config.m_ClDummy].GotProblems(MaxLatencyTicks() * time_freq() / GameTickSpeed()) != 0;
+	return m_aNetClient[g_Config.m_ClDummy].GotProblems(MaxLatencyTicks() * time_freq() / g_Config.m_SvTickRate) != 0;
 }
 
 void CClient::SendInput()
@@ -539,6 +539,8 @@ void CClient::Connect(const char *pAddress, const char *pPassword)
 		return;
 	Disconnect();
 	dbg_assert(m_State == IClient::STATE_OFFLINE, "Disconnect must ensure that client is offline");
+
+	g_Config.m_SvTickRate = SERVER_DEFAULT_TICK_RATE; // reset tickrate
 
 	char aLastAddr[NETADDR_MAXSTRSIZE];
 	net_addr_str(&ServerAddress(), aLastAddr, sizeof(aLastAddr), true);
@@ -2032,11 +2034,11 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 						// start at 200ms and work from there
 						if(!Dummy)
 						{
-							m_PredictedTime.Init(GameTick * time_freq() / GameTickSpeed());
+							m_PredictedTime.Init(GameTick * time_freq() / g_Config.m_SvTickRate);
 							m_PredictedTime.SetAdjustSpeed(CSmoothTime::ADJUSTDIRECTION_UP, 1000.0f);
 							m_PredictedTime.UpdateMargin(PredictionMargin() * time_freq() / 1000);
 						}
-						m_aGameTime[Conn].Init((GameTick - 1) * time_freq() / GameTickSpeed());
+						m_aGameTime[Conn].Init((GameTick - 1) * time_freq() / g_Config.m_SvTickRate);
 						m_aapSnapshots[Conn][SNAP_PREV] = m_aSnapshotStorage[Conn].m_pFirst;
 						m_aapSnapshots[Conn][SNAP_CURRENT] = m_aSnapshotStorage[Conn].m_pLast;
 						m_aPrevGameTick[Conn] = m_aapSnapshots[Conn][SNAP_PREV]->m_Tick;
@@ -2060,12 +2062,12 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 					if(m_aReceivedSnapshots[Conn] > 2)
 					{
 						int64_t Now = m_aGameTime[Conn].Get(time_get());
-						int64_t TickStart = GameTick * time_freq() / GameTickSpeed();
+						int64_t TickStart = GameTick * time_freq() / g_Config.m_SvTickRate;
 						int64_t TimeLeft = (TickStart - Now) * 1000 / time_freq();
-						m_aGameTime[Conn].Update(&m_GametimeMarginGraph, (GameTick - 1) * time_freq() / GameTickSpeed(), TimeLeft, CSmoothTime::ADJUSTDIRECTION_DOWN);
+						m_aGameTime[Conn].Update(&m_GametimeMarginGraph, (GameTick - 1) * time_freq() / g_Config.m_SvTickRate, TimeLeft, CSmoothTime::ADJUSTDIRECTION_DOWN);
 					}
 
-					if(m_aReceivedSnapshots[Conn] > GameTickSpeed() && !m_aCodeRunAfterJoin[Conn])
+					if(m_aReceivedSnapshots[Conn] > g_Config.m_SvTickRate && !m_aCodeRunAfterJoin[Conn])
 					{
 						if(m_ServerCapabilities.m_ChatTimeoutCode)
 						{
@@ -2647,7 +2649,7 @@ void CClient::Update()
 			{
 				if(!m_aapSnapshots[!g_Config.m_ClDummy][SNAP_CURRENT]->m_pNext)
 					break;
-				int64_t TickStart = m_aapSnapshots[!g_Config.m_ClDummy][SNAP_CURRENT]->m_Tick * time_freq() / GameTickSpeed();
+				int64_t TickStart = m_aapSnapshots[!g_Config.m_ClDummy][SNAP_CURRENT]->m_Tick * time_freq() / g_Config.m_SvTickRate;
 				if(TickStart >= Now)
 					break;
 
@@ -2678,7 +2680,7 @@ void CClient::Update()
 			{
 				if(!m_aapSnapshots[g_Config.m_ClDummy][SNAP_CURRENT]->m_pNext)
 					break;
-				int64_t TickStart = m_aapSnapshots[g_Config.m_ClDummy][SNAP_CURRENT]->m_Tick * time_freq() / GameTickSpeed();
+				int64_t TickStart = m_aapSnapshots[g_Config.m_ClDummy][SNAP_CURRENT]->m_Tick * time_freq() / g_Config.m_SvTickRate;
 				if(TickStart >= Now)
 					break;
 
@@ -2695,23 +2697,23 @@ void CClient::Update()
 
 			if(m_aapSnapshots[g_Config.m_ClDummy][SNAP_PREV])
 			{
-				int64_t CurTickStart = m_aapSnapshots[g_Config.m_ClDummy][SNAP_CURRENT]->m_Tick * time_freq() / GameTickSpeed();
-				int64_t PrevTickStart = m_aapSnapshots[g_Config.m_ClDummy][SNAP_PREV]->m_Tick * time_freq() / GameTickSpeed();
-				int PrevPredTick = (int)(PredNow * GameTickSpeed() / time_freq());
+				int64_t CurTickStart = m_aapSnapshots[g_Config.m_ClDummy][SNAP_CURRENT]->m_Tick * time_freq() / g_Config.m_SvTickRate;
+				int64_t PrevTickStart = m_aapSnapshots[g_Config.m_ClDummy][SNAP_PREV]->m_Tick * time_freq() / g_Config.m_SvTickRate;
+				int PrevPredTick = (int)(PredNow * g_Config.m_SvTickRate / time_freq());
 				int NewPredTick = PrevPredTick + 1;
 
 				m_aGameIntraTick[g_Config.m_ClDummy] = (Now - PrevTickStart) / (float)(CurTickStart - PrevTickStart);
 				m_aGameTickTime[g_Config.m_ClDummy] = (Now - PrevTickStart) / (float)time_freq();
-				m_aGameIntraTickSincePrev[g_Config.m_ClDummy] = (Now - PrevTickStart) / (float)(time_freq() / GameTickSpeed());
+				m_aGameIntraTickSincePrev[g_Config.m_ClDummy] = (Now - PrevTickStart) / (float)(time_freq() / g_Config.m_SvTickRate);
 
-				int64_t CurPredTickStart = NewPredTick * time_freq() / GameTickSpeed();
-				int64_t PrevPredTickStart = PrevPredTick * time_freq() / GameTickSpeed();
+				int64_t CurPredTickStart = NewPredTick * time_freq() / g_Config.m_SvTickRate;
+				int64_t PrevPredTickStart = PrevPredTick * time_freq() / g_Config.m_SvTickRate;
 				m_aPredIntraTick[g_Config.m_ClDummy] = (PredNow - PrevPredTickStart) / (float)(CurPredTickStart - PrevPredTickStart);
 
 				if(absolute(NewPredTick - m_aapSnapshots[g_Config.m_ClDummy][SNAP_PREV]->m_Tick) > MaxLatencyTicks())
 				{
 					m_pConsole->Print(IConsole::OUTPUT_LEVEL_ADDINFO, "client", "prediction time reset!");
-					m_PredictedTime.Init(CurTickStart + 2 * time_freq() / GameTickSpeed());
+					m_PredictedTime.Init(CurTickStart + 2 * time_freq() / g_Config.m_SvTickRate);
 				}
 
 				if(NewPredTick > m_aPredTick[g_Config.m_ClDummy])
@@ -3761,7 +3763,7 @@ void CClient::SaveReplay(const int Length, const char *pFilename)
 		// Slice the demo to get only the last cl_replay_length seconds
 		const char *pSrc = m_aDemoRecorder[RECORDER_REPLAYS].CurrentFilename();
 		const int EndTick = GameTick(g_Config.m_ClDummy);
-		const int StartTick = EndTick - Length * GameTickSpeed();
+		const int StartTick = EndTick - Length * g_Config.m_SvTickRate;
 
 		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "Saving replay...");
 
@@ -4980,8 +4982,8 @@ void CClient::GetSmoothTick(int *pSmoothTick, float *pSmoothIntraTick, float Mix
 	int64_t PredTime = m_PredictedTime.Get(time_get());
 	int64_t SmoothTime = clamp(GameTime + (int64_t)(MixAmount * (PredTime - GameTime)), GameTime, PredTime);
 
-	*pSmoothTick = (int)(SmoothTime * GameTickSpeed() / time_freq()) + 1;
-	*pSmoothIntraTick = (SmoothTime - (*pSmoothTick - 1) * time_freq() / GameTickSpeed()) / (float)(time_freq() / GameTickSpeed());
+	*pSmoothTick = (int)(SmoothTime * g_Config.m_SvTickRate / time_freq()) + 1;
+	*pSmoothIntraTick = (SmoothTime - (*pSmoothTick - 1) * time_freq() / g_Config.m_SvTickRate) / (float)(time_freq() / g_Config.m_SvTickRate);
 }
 
 void CClient::AddWarning(const SWarning &Warning)
@@ -5008,7 +5010,7 @@ SWarning *CClient::GetCurWarning()
 
 int CClient::MaxLatencyTicks() const
 {
-	return GameTickSpeed() + (PredictionMargin() * GameTickSpeed()) / 1000;
+	return g_Config.m_SvTickRate + (PredictionMargin() * g_Config.m_SvTickRate) / 1000;
 }
 
 int CClient::PredictionMargin() const

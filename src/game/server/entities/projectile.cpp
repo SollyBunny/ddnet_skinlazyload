@@ -108,8 +108,8 @@ vec2 CProjectile::GetPos(float Time)
 
 void CProjectile::Tick()
 {
-	float Pt = (Server()->Tick() - m_StartTick - 1) / (float)Server()->TickSpeed();
-	float Ct = (Server()->Tick() - m_StartTick) / (float)Server()->TickSpeed();
+	float Pt = (Server()->Tick() - m_StartTick - 1) / (float)g_Config.m_SvTickRate;
+	float Ct = (Server()->Tick() - m_StartTick) / (float)g_Config.m_SvTickRate;
 	vec2 PrevPos = GetPos(Pt);
 	vec2 CurPos = GetPos(Ct);
 	vec2 ColPos;
@@ -303,7 +303,7 @@ void CProjectile::FillInfo(CNetObj_Projectile *pProj)
 
 void CProjectile::Snap(int SnappingClient)
 {
-	float Ct = (Server()->Tick() - m_StartTick) / (float)Server()->TickSpeed();
+	float Ct = (Server()->Tick() - m_StartTick) / (float)g_Config.m_SvTickRate;
 
 	if(NetworkClipped(SnappingClient, GetPos(Ct)))
 		return;
@@ -312,7 +312,7 @@ void CProjectile::Snap(int SnappingClient)
 	if(SnappingClientVersion < VERSION_DDNET_ENTITY_NETOBJS)
 	{
 		CCharacter *pSnapChar = GameServer()->GetPlayerChar(SnappingClient);
-		int Tick = (Server()->Tick() % Server()->TickSpeed()) % ((m_Explosive) ? 6 : 20);
+		int Tick = (Server()->Tick() % g_Config.m_SvTickRate) % ((m_Explosive) ? 6 : 20);
 		if(pSnapChar && pSnapChar->IsAlive() && (m_Layer == LAYER_SWITCH && m_Number > 0 && !Switchers()[m_Number].m_aStatus[pSnapChar->Team()] && (!Tick)))
 			return;
 	}

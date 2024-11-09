@@ -11,7 +11,7 @@
 
 void CDragger::Tick()
 {
-	if(GameWorld()->GameTick() % (int)(GameWorld()->GameTickSpeed() * 0.15f) == 0)
+	if(GameWorld()->GameTick() % (int)(g_Config.m_SvTickRate * 0.15f) == 0)
 	{
 		int Flags;
 		int index = Collision()->IsMover(m_Pos.x, m_Pos.y, &Flags);
@@ -101,7 +101,7 @@ void CDragger::DraggerBeamTick()
 		return;
 	}
 
-	if(GameWorld()->GameTick() % (int)(GameWorld()->GameTickSpeed() * 0.15f) == 0)
+	if(GameWorld()->GameTick() % (int)(g_Config.m_SvTickRate* 0.15f) == 0)
 	{
 		if(m_Layer == LAYER_SWITCH && m_Number > 0 &&
 			!Switchers()[m_Number].m_aStatus[pTarget->Team()])

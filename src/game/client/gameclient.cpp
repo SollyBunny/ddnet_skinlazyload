@@ -865,7 +865,7 @@ int CGameClient::CurrentRaceTime() const
 	{
 		return 0;
 	}
-	return (Client()->GameTick(g_Config.m_ClDummy) - m_LastRaceTick) / Client()->GameTickSpeed();
+	return (Client()->GameTick(g_Config.m_ClDummy) - m_LastRaceTick) / g_Config.m_SvTickRate;
 }
 
 bool CGameClient::Predict() const
@@ -959,6 +959,25 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		m_aReceivedTuning[Conn] = true;
 		// apply new tuning
 		m_aTuning[Conn] = NewTuning;
+		return;
+	}
+	if (MsgId == NETMSG_TICK_RATE) {
+		int TickRate = pUnpacker->GetInt();
+		m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "YIPEE", "got tickrate");
+		if(pUnpacker->Error())
+		{
+			return;
+		}
+		for (int i = 0; i < MAX_CLIENTS; ++i) {
+			m_aClients[i].m_Predicted.Reset();
+			m_aClients[i].m_PrevPredicted.Reset();
+			m_aClients[i].m_IsPredicted = false;
+			m_aClients[i].m_IsPredictedLocal = false;
+			// m_aClients[i].m_aPredTick = Client()->GameTick(Conn);
+		}
+		m_PredictedChar.Reset();
+		m_PredictedPrevChar.Reset();
+		g_Config.m_SvTickRate = TickRate;
 		return;
 	}
 
@@ -1643,8 +1662,8 @@ void CGameClient::OnNewSnapshot()
 						m_Snap.m_aCharacters[Item.m_Id].m_Prev = *((const CNetObj_Character *)pOld);
 
 						// limit evolving to 3 seconds
-						bool EvolvePrev = Client()->PrevGameTick(g_Config.m_ClDummy) - m_Snap.m_aCharacters[Item.m_Id].m_Prev.m_Tick <= 3 * Client()->GameTickSpeed();
-						bool EvolveCur = Client()->GameTick(g_Config.m_ClDummy) - m_Snap.m_aCharacters[Item.m_Id].m_Cur.m_Tick <= 3 * Client()->GameTickSpeed();
+						bool EvolvePrev = Client()->PrevGameTick(g_Config.m_ClDummy) - m_Snap.m_aCharacters[Item.m_Id].m_Prev.m_Tick <= 3 * g_Config.m_SvTickRate;
+						bool EvolveCur = Client()->GameTick(g_Config.m_ClDummy) - m_Snap.m_aCharacters[Item.m_Id].m_Cur.m_Tick <= 3 * g_Config.m_SvTickRate;
 
 						// reuse the result from the previous evolve if the snapped character didn't change since the previous snapshot
 						if(EvolveCur && m_aClients[Item.m_Id].m_Evolved.m_Tick == Client()->PrevGameTick(g_Config.m_ClDummy))
@@ -2090,8 +2109,8 @@ void CGameClient::OnNewSnapshot()
 				int FreezeTimeNow = Character.m_ExtendedData.m_FreezeEnd - Client()->GameTick(g_Config.m_ClDummy);
 				int FreezeTimePrev = Character.m_PrevExtendedData->m_FreezeEnd - Client()->PrevGameTick(g_Config.m_ClDummy);
 				vec2 Pos = vec2(Character.m_Cur.m_X, Character.m_Cur.m_Y);
-				int StarsNow = (FreezeTimeNow + 1) / Client()->GameTickSpeed();
-				int StarsPrev = (FreezeTimePrev + 1) / Client()->GameTickSpeed();
+				int StarsNow = (FreezeTimeNow + 1) / g_Config.m_SvTickRate;
+				int StarsPrev = (FreezeTimePrev + 1) / g_Config.m_SvTickRate;
 				if(StarsNow < StarsPrev || (StarsPrev == 0 && StarsNow > 0))
 				{
 					int Amount = StarsNow + 1;
@@ -2578,7 +2597,7 @@ void CGameClient::SendSkinChange7(bool Dummy)
 	if(Msg.Pack(&Packer))
 		return;
 	Client()->SendMsg((int)Dummy, &Packer, MSGFLAG_VITAL | MSGFLAG_FLUSH);
-	m_aCheckInfo[(int)Dummy] = Client()->GameTickSpeed();
+	m_aCheckInfo[(int)Dummy] = g_Config.m_SvTickRate;
 }
 
 bool CGameClient::GotWantedSkin7(bool Dummy)
@@ -2659,7 +2678,7 @@ void CGameClient::SendInfo(bool Start)
 		CMsgPacker Packer(&Msg);
 		Msg.Pack(&Packer);
 		Client()->SendMsg(IClient::CONN_MAIN, &Packer, MSGFLAG_VITAL);
-		m_aCheckInfo[0] = Client()->GameTickSpeed();
+		m_aCheckInfo[0] = g_Config.m_SvTickRate;
 	}
 }
 
@@ -2701,7 +2720,7 @@ void CGameClient::SendDummyInfo(bool Start)
 		CMsgPacker Packer(&Msg);
 		Msg.Pack(&Packer);
 		Client()->SendMsg(IClient::CONN_DUMMY, &Packer, MSGFLAG_VITAL);
-		m_aCheckInfo[1] = Client()->GameTickSpeed();
+		m_aCheckInfo[1] = g_Config.m_SvTickRate;
 	}
 }
 
@@ -2971,7 +2990,7 @@ void CGameClient::UpdatePrediction()
 	}
 
 	// advance the gameworld to the current gametick
-	if(pLocalChar && absolute(m_GameWorld.GameTick() - Client()->GameTick(g_Config.m_ClDummy)) < Client()->GameTickSpeed())
+	if(pLocalChar && absolute(m_GameWorld.GameTick() - Client()->GameTick(g_Config.m_ClDummy)) < g_Config.m_SvTickRate)
 	{
 		for(int Tick = m_GameWorld.GameTick() + 1; Tick <= Client()->GameTick(g_Config.m_ClDummy); Tick++)
 		{
@@ -3102,7 +3121,7 @@ void CGameClient::DetectStrongHook()
 		int ToPlayer = m_Snap.m_aCharacters[FromPlayer].m_Prev.m_HookedPlayer;
 		if(ToPlayer < 0 || ToPlayer >= MAX_CLIENTS || !m_Snap.m_aCharacters[ToPlayer].m_Active || ToPlayer != m_Snap.m_aCharacters[FromPlayer].m_Cur.m_HookedPlayer)
 			continue;
-		if(absolute(minimum(m_aLastUpdateTick[ToPlayer], m_aLastUpdateTick[FromPlayer]) - Client()->GameTick(g_Config.m_ClDummy)) < Client()->GameTickSpeed() / 4)
+		if(absolute(minimum(m_aLastUpdateTick[ToPlayer], m_aLastUpdateTick[FromPlayer]) - Client()->GameTick(g_Config.m_ClDummy)) < g_Config.m_SvTickRate / 4)
 			continue;
 		if(m_Snap.m_aCharacters[FromPlayer].m_Prev.m_Direction != m_Snap.m_aCharacters[FromPlayer].m_Cur.m_Direction || m_Snap.m_aCharacters[ToPlayer].m_Prev.m_Direction != m_Snap.m_aCharacters[ToPlayer].m_Cur.m_Direction)
 			continue;

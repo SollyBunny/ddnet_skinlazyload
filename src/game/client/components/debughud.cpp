@@ -29,9 +29,9 @@ void CDebugHud::RenderNetCorrections()
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 
-	const float Velspeed = length(vec2(m_pClient->m_Snap.m_pLocalCharacter->m_VelX / 256.0f, m_pClient->m_Snap.m_pLocalCharacter->m_VelY / 256.0f)) * Client()->GameTickSpeed();
-	const float VelspeedX = m_pClient->m_Snap.m_pLocalCharacter->m_VelX / 256.0f * Client()->GameTickSpeed();
-	const float VelspeedY = m_pClient->m_Snap.m_pLocalCharacter->m_VelY / 256.0f * Client()->GameTickSpeed();
+	const float Velspeed = length(vec2(m_pClient->m_Snap.m_pLocalCharacter->m_VelX / 256.0f, m_pClient->m_Snap.m_pLocalCharacter->m_VelY / 256.0f)) * SERVER_DEFAULT_TICK_RATE;
+	const float VelspeedX = m_pClient->m_Snap.m_pLocalCharacter->m_VelX / 256.0f * SERVER_DEFAULT_TICK_RATE;
+	const float VelspeedY = m_pClient->m_Snap.m_pLocalCharacter->m_VelY / 256.0f * SERVER_DEFAULT_TICK_RATE;
 	const float Ramp = VelocityRamp(Velspeed, m_pClient->m_aTuning[g_Config.m_ClDummy].m_VelrampStart, m_pClient->m_aTuning[g_Config.m_ClDummy].m_VelrampRange, m_pClient->m_aTuning[g_Config.m_ClDummy].m_VelrampCurvature);
 	const CCharacter *pCharacter = m_pClient->m_GameWorld.GetCharacterById(m_pClient->m_Snap.m_LocalClientId);
 

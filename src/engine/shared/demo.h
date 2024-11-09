@@ -57,7 +57,7 @@ public:
 	bool IsRecording() const override { return m_File != nullptr; }
 	const char *CurrentFilename() const override { return m_aCurrentFilename; }
 
-	int Length() const override { return (m_LastTickMarker - m_FirstTick) / SERVER_TICK_SPEED; }
+	int Length() const override { return (m_LastTickMarker - m_FirstTick) / SERVER_DEFAULT_TICK_RATE; }
 };
 
 class CDemoPlayer : public IDemoPlayer

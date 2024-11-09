@@ -298,7 +298,7 @@ void CDemoRecorder::Write(int Type, const void *pData, int Size)
 
 void CDemoRecorder::RecordSnapshot(int Tick, const void *pData, int Size)
 {
-	if(m_LastKeyFrame == -1 || (Tick - m_LastKeyFrame) > SERVER_TICK_SPEED * 5)
+	if(m_LastKeyFrame == -1 || (Tick - m_LastKeyFrame) > SERVER_DEFAULT_TICK_RATE * 5)
 	{
 		// write full tickmarker
 		WriteTickMarker(Tick, true);
@@ -429,7 +429,7 @@ void CDemoRecorder::AddDemoMarker(int Tick)
 	if(m_NumTimelineMarkers > 0)
 	{
 		const int Diff = Tick - m_aTimelineMarkers[m_NumTimelineMarkers - 1];
-		if(Diff < (float)SERVER_TICK_SPEED)
+		if(Diff < (float)SERVER_DEFAULT_TICK_RATE)
 		{
 			if(m_pConsole)
 			{
@@ -614,10 +614,10 @@ void CDemoPlayer::DoTick()
 	int ChunkTick = m_Info.m_Info.m_CurrentTick;
 
 	int64_t Freq = time_freq();
-	int64_t CurtickStart = m_Info.m_Info.m_CurrentTick * Freq / SERVER_TICK_SPEED;
-	int64_t PrevtickStart = m_Info.m_PreviousTick * Freq / SERVER_TICK_SPEED;
+	int64_t CurtickStart = m_Info.m_Info.m_CurrentTick * Freq / SERVER_DEFAULT_TICK_RATE;
+	int64_t PrevtickStart = m_Info.m_PreviousTick * Freq / SERVER_DEFAULT_TICK_RATE;
 	m_Info.m_IntraTick = (m_Info.m_CurrentTime - PrevtickStart) / (float)(CurtickStart - PrevtickStart);
-	m_Info.m_IntraTickSincePrev = (m_Info.m_CurrentTime - PrevtickStart) / (float)(Freq / SERVER_TICK_SPEED);
+	m_Info.m_IntraTickSincePrev = (m_Info.m_CurrentTime - PrevtickStart) / (float)(Freq / SERVER_DEFAULT_TICK_RATE);
 	m_Info.m_TickTime = (m_Info.m_CurrentTime - PrevtickStart) / (float)Freq;
 	if(m_UpdateIntraTimesFunc)
 		m_UpdateIntraTimesFunc();
@@ -930,7 +930,7 @@ int CDemoPlayer::Play()
 		DoTick();
 
 	// set start info
-	m_Info.m_CurrentTime = m_Info.m_PreviousTick * time_freq() / SERVER_TICK_SPEED;
+	m_Info.m_CurrentTime = m_Info.m_PreviousTick * time_freq() / SERVER_DEFAULT_TICK_RATE;
 	m_Info.m_LastUpdate = Time();
 	return 0;
 }
@@ -943,7 +943,7 @@ int CDemoPlayer::SeekPercent(float Percent)
 
 int CDemoPlayer::SeekTime(float Seconds)
 {
-	int WantedTick = m_Info.m_Info.m_CurrentTick + round_truncate(Seconds * (float)SERVER_TICK_SPEED);
+	int WantedTick = m_Info.m_Info.m_CurrentTick + round_truncate(Seconds * (float)SERVER_DEFAULT_TICK_RATE);
 	return SetPos(WantedTick);
 }
 
@@ -1041,7 +1041,7 @@ int CDemoPlayer::Update(bool RealTime)
 
 		while(!m_Info.m_Info.m_Paused && IsPlaying())
 		{
-			int64_t CurtickStart = m_Info.m_Info.m_CurrentTick * Freq / SERVER_TICK_SPEED;
+			int64_t CurtickStart = m_Info.m_Info.m_CurrentTick * Freq / SERVER_DEFAULT_TICK_RATE;
 
 			// break if we are ready
 			if(RealTime && CurtickStart > m_Info.m_CurrentTime)
@@ -1054,10 +1054,10 @@ int CDemoPlayer::Update(bool RealTime)
 
 	// update intratick
 	{
-		int64_t CurtickStart = m_Info.m_Info.m_CurrentTick * Freq / SERVER_TICK_SPEED;
-		int64_t PrevtickStart = m_Info.m_PreviousTick * Freq / SERVER_TICK_SPEED;
+		int64_t CurtickStart = m_Info.m_Info.m_CurrentTick * Freq / SERVER_DEFAULT_TICK_RATE;
+		int64_t PrevtickStart = m_Info.m_PreviousTick * Freq / SERVER_DEFAULT_TICK_RATE;
 		m_Info.m_IntraTick = (m_Info.m_CurrentTime - PrevtickStart) / (float)(CurtickStart - PrevtickStart);
-		m_Info.m_IntraTickSincePrev = (m_Info.m_CurrentTime - PrevtickStart) / (float)(Freq / SERVER_TICK_SPEED);
+		m_Info.m_IntraTickSincePrev = (m_Info.m_CurrentTime - PrevtickStart) / (float)(Freq / SERVER_DEFAULT_TICK_RATE);
 		m_Info.m_TickTime = (m_Info.m_CurrentTime - PrevtickStart) / (float)Freq;
 		if(m_UpdateIntraTimesFunc)
 			m_UpdateIntraTimesFunc();

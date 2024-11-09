@@ -129,14 +129,14 @@ void CPlayer::Reset()
 	m_ScoreFinishResult = nullptr;
 
 	int64_t Now = Server()->Tick();
-	int64_t TickSpeed = Server()->TickSpeed();
+
 	// If the player joins within ten seconds of the server becoming
 	// non-empty, allow them to vote immediately. This allows players to
 	// vote after map changes or when they join an empty server.
 	//
 	// Otherwise, block voting in the beginning after joining.
-	if(Now > GameServer()->m_NonEmptySince + 10 * TickSpeed)
-		m_FirstVoteTick = Now + g_Config.m_SvJoinVoteDelay * TickSpeed;
+	if(Now > GameServer()->m_NonEmptySince + 10 * g_Config.m_SvTickRate)
+		m_FirstVoteTick = Now + g_Config.m_SvJoinVoteDelay * g_Config.m_SvTickRate;
 	else
 		m_FirstVoteTick = Now;
 
@@ -199,9 +199,9 @@ void CPlayer::Tick()
 			m_Latency.m_AccumMin = minimum(m_Latency.m_AccumMin, Info.m_Latency);
 		}
 		// each second
-		if(Server()->Tick() % Server()->TickSpeed() == 0)
+		if(Server()->Tick() % g_Config.m_SvTickRate == 0)
 		{
-			m_Latency.m_Avg = m_Latency.m_Accum / Server()->TickSpeed();
+			m_Latency.m_Avg = m_Latency.m_Accum / g_Config.m_SvTickRate;
 			m_Latency.m_Max = m_Latency.m_AccumMax;
 			m_Latency.m_Min = m_Latency.m_AccumMin;
 			m_Latency.m_Accum = 0;
@@ -222,7 +222,7 @@ void CPlayer::Tick()
 
 	if(!GameServer()->m_World.m_Paused)
 	{
-		int EarliestRespawnTick = m_PreviousDieTick + Server()->TickSpeed() * 3;
+		int EarliestRespawnTick = m_PreviousDieTick + g_Config.m_SvTickRate * 3;
 		int RespawnTick = maximum(m_DieTick, EarliestRespawnTick) + 2;
 		if(!m_pCharacter && RespawnTick <= Server()->Tick())
 			m_Spawning = true;
@@ -618,7 +618,7 @@ void CPlayer::SetTeam(int Team, bool DoChatMsg)
 	Msg.m_ClientId = m_ClientId;
 	Msg.m_Team = m_Team;
 	Msg.m_Silent = !DoChatMsg;
-	Msg.m_CooldownTick = m_LastSetTeam + Server()->TickSpeed() * g_Config.m_SvTeamChangeDelay;
+	Msg.m_CooldownTick = m_LastSetTeam + g_Config.m_SvTickRate * g_Config.m_SvTeamChangeDelay;
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, -1);
 
 	if(Team == TEAM_SPECTATORS)
@@ -751,7 +751,7 @@ void CPlayer::OverrideDefaultEmote(int Emote, int Tick)
 
 bool CPlayer::CanOverrideDefaultEmote() const
 {
-	return m_LastEyeEmote == 0 || m_LastEyeEmote + (int64_t)g_Config.m_SvEyeEmoteChangeDelay * Server()->TickSpeed() < Server()->Tick();
+	return m_LastEyeEmote == 0 || m_LastEyeEmote + (int64_t)g_Config.m_SvEyeEmoteChangeDelay * g_Config.m_SvTickRate < Server()->Tick();
 }
 
 bool CPlayer::CanSpec() const
@@ -793,7 +793,7 @@ int CPlayer::Pause(int State, bool Force)
 		case PAUSE_NONE:
 			if(m_pCharacter->IsPaused()) // First condition might be unnecessary
 			{
-				if(!Force && m_LastPause && m_LastPause + (int64_t)g_Config.m_SvSpecFrequency * Server()->TickSpeed() > Server()->Tick())
+				if(!Force && m_LastPause && m_LastPause + (int64_t)g_Config.m_SvSpecFrequency * g_Config.m_SvTickRate > Server()->Tick())
 				{
 					GameServer()->SendChatTarget(m_ClientId, "Can't /spec that quickly.");
 					return m_Paused; // Do not update state. Do not collect $200
@@ -831,7 +831,7 @@ int CPlayer::Pause(int State, bool Force)
 
 int CPlayer::ForcePause(int Time)
 {
-	m_ForcePauseTime = Server()->Tick() + Server()->TickSpeed() * Time;
+	m_ForcePauseTime = Server()->Tick() + g_Config.m_SvTickRate * Time;
 
 	if(g_Config.m_SvPauseMessages)
 	{

@@ -313,7 +313,7 @@ void ToggleSpecPause(IConsole::IResult *pResult, void *pUserData, int PauseType)
 	if(PauseState > 0)
 	{
 		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "You are force-paused for %d seconds.", (PauseState - pServ->Tick()) / pServ->TickSpeed());
+		str_format(aBuf, sizeof(aBuf), "You are force-paused for %d seconds.", (PauseState - pServ->Tick()) / g_Config.m_SvTickRate);
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
 	}
 	else if(pResult->NumArguments() > 0)
@@ -353,7 +353,7 @@ void ToggleSpecPauseVoted(IConsole::IResult *pResult, void *pUserData, int Pause
 	{
 		IServer *pServ = pSelf->Server();
 		char aBuf[128];
-		str_format(aBuf, sizeof(aBuf), "You are force-paused for %d seconds.", (PauseState - pServ->Tick()) / pServ->TickSpeed());
+		str_format(aBuf, sizeof(aBuf), "You are force-paused for %d seconds.", (PauseState - pServ->Tick()) / g_Config.m_SvTickRate);
 		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
 		return;
 	}
@@ -1037,7 +1037,7 @@ void CGameContext::AttemptJoinTeam(int ClientId, int Team)
 			"Teams are disabled");
 		return;
 	}
-	else if(g_Config.m_SvTeam == SV_TEAM_MANDATORY && Team == 0 && pPlayer->GetCharacter() && pPlayer->GetCharacter()->m_LastStartWarning < Server()->Tick() - 3 * Server()->TickSpeed())
+	else if(g_Config.m_SvTeam == SV_TEAM_MANDATORY && Team == 0 && pPlayer->GetCharacter() && pPlayer->GetCharacter()->m_LastStartWarning < Server()->Tick() - 3 * g_Config.m_SvTickRate)
 	{
 		Console()->Print(
 			IConsole::OUTPUT_LEVEL_STANDARD,
@@ -1056,7 +1056,7 @@ void CGameContext::AttemptJoinTeam(int ClientId, int Team)
 		if(Team < 0 || Team >= MAX_CLIENTS)
 			Team = m_pController->Teams().GetFirstEmptyTeam();
 
-		if(pPlayer->m_Last_Team + (int64_t)Server()->TickSpeed() * g_Config.m_SvTeamChangeDelay > Server()->Tick())
+		if(pPlayer->m_Last_Team + (int64_t)g_Config.m_SvTickRate * g_Config.m_SvTeamChangeDelay > Server()->Tick())
 		{
 			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
 				"You can\'t change teams that fast!");
@@ -1140,7 +1140,7 @@ void CGameContext::ConInvite(IConsole::IResult *pResult, void *pUserData)
 			return;
 		}
 
-		if(pSelf->m_apPlayers[pResult->m_ClientId] && pSelf->m_apPlayers[pResult->m_ClientId]->m_LastInvited + g_Config.m_SvInviteFrequency * pSelf->Server()->TickSpeed() > pSelf->Server()->Tick())
+		if(pSelf->m_apPlayers[pResult->m_ClientId] && pSelf->m_apPlayers[pResult->m_ClientId]->m_LastInvited + g_Config.m_SvInviteFrequency * g_Config.m_SvTickRate > pSelf->Server()->Tick())
 		{
 			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", "Can't invite this quickly");
 			return;
@@ -1436,7 +1436,7 @@ void CGameContext::ConEyeEmote(IConsole::IResult *pResult, void *pUserData)
 		if(pResult->NumArguments() > 1)
 			Duration = clamp(pResult->GetInteger(1), 1, 86400);
 
-		pPlayer->OverrideDefaultEmote(EmoteType, pSelf->Server()->Tick() + Duration * pSelf->Server()->TickSpeed());
+		pPlayer->OverrideDefaultEmote(EmoteType, pSelf->Server()->Tick() + Duration * g_Config.m_SvTickRate);
 	}
 }
 
@@ -1564,7 +1564,7 @@ void CGameContext::ConSayTime(IConsole::IResult *pResult, void *pUserData)
 
 	char aBufTime[32];
 	char aBuf[64];
-	int64_t Time = (int64_t)100 * (float)(pSelf->Server()->Tick() - pChr->m_StartTime) / ((float)pSelf->Server()->TickSpeed());
+	int64_t Time = (int64_t)100 * (float)(pSelf->Server()->Tick() - pChr->m_StartTime) / ((float)g_Config.m_SvTickRate);
 	str_time(Time, TIME_HOURS, aBufTime, sizeof(aBufTime));
 	str_format(aBuf, sizeof(aBuf), "%s current race time is %s", aBufName, aBufTime);
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
@@ -1587,7 +1587,7 @@ void CGameContext::ConSayTimeAll(IConsole::IResult *pResult, void *pUserData)
 
 	char aBufTime[32];
 	char aBuf[64];
-	int64_t Time = (int64_t)100 * (float)(pSelf->Server()->Tick() - pChr->m_StartTime) / ((float)pSelf->Server()->TickSpeed());
+	int64_t Time = (int64_t)100 * (float)(pSelf->Server()->Tick() - pChr->m_StartTime) / ((float)g_Config.m_SvTickRate);
 	const char *pName = pSelf->Server()->ClientName(pResult->m_ClientId);
 	str_time(Time, TIME_HOURS, aBufTime, sizeof(aBufTime));
 	str_format(aBuf, sizeof(aBuf), "%s\'s current race time is %s", pName, aBufTime);
@@ -1609,7 +1609,7 @@ void CGameContext::ConTime(IConsole::IResult *pResult, void *pUserData)
 
 	char aBufTime[32];
 	char aBuf[64];
-	int64_t Time = (int64_t)100 * (float)(pSelf->Server()->Tick() - pChr->m_StartTime) / ((float)pSelf->Server()->TickSpeed());
+	int64_t Time = (int64_t)100 * (float)(pSelf->Server()->Tick() - pChr->m_StartTime) / ((float)g_Config.m_SvTickRate);
 	str_time(Time, TIME_HOURS, aBufTime, sizeof(aBufTime));
 	str_format(aBuf, sizeof(aBuf), "Your time is %s", aBufTime);
 	pSelf->SendBroadcast(aBuf, pResult->m_ClientId);
@@ -2291,7 +2291,7 @@ void CGameContext::ConProtectedKill(IConsole::IResult *pResult, void *pUserData)
 	if(!pChr)
 		return;
 
-	int CurrTime = (pSelf->Server()->Tick() - pChr->m_StartTime) / pSelf->Server()->TickSpeed();
+	int CurrTime = (pSelf->Server()->Tick() - pChr->m_StartTime) / g_Config.m_SvTickRate;
 	if(g_Config.m_SvKillProtection != 0 && CurrTime >= (60 * g_Config.m_SvKillProtection) && pChr->m_DDRaceState == DDRACE_STARTED)
 	{
 		pPlayer->KillCharacter(WEAPON_SELF);

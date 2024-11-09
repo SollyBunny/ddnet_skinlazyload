@@ -50,7 +50,7 @@ bool CScore::RateLimitPlayer(int ClientId)
 	CPlayer *pPlayer = GameServer()->m_apPlayers[ClientId];
 	if(pPlayer == 0)
 		return true;
-	if(pPlayer->m_LastSqlQuery + (int64_t)g_Config.m_SvSqlQueriesDelay * Server()->TickSpeed() >= Server()->Tick())
+	if(pPlayer->m_LastSqlQuery + (int64_t)g_Config.m_SvSqlQueriesDelay * g_Config.m_SvTickRate >= Server()->Tick())
 		return true;
 	pPlayer->m_LastSqlQuery = Server()->Tick();
 	return false;
@@ -158,7 +158,7 @@ void CScore::SaveScore(int ClientId, int TimeTicks, const char *pTimestamp, cons
 	FormatUuid(GameServer()->GameUuid(), Tmp->m_aGameUuid, sizeof(Tmp->m_aGameUuid));
 	Tmp->m_ClientId = ClientId;
 	str_copy(Tmp->m_aName, Server()->ClientName(ClientId), sizeof(Tmp->m_aName));
-	Tmp->m_Time = (float)(TimeTicks) / (float)Server()->TickSpeed();
+	Tmp->m_Time = (float)(TimeTicks) / (float)g_Config.m_SvTickRate;
 	str_copy(Tmp->m_aTimestamp, pTimestamp, sizeof(Tmp->m_aTimestamp));
 	for(int i = 0; i < NUM_CHECKPOINTS; i++)
 		Tmp->m_aCurrentTimeCp[i] = aTimeCp[i];
@@ -183,7 +183,7 @@ void CScore::SaveTeamScore(int Team, int *pClientIds, unsigned int Size, int Tim
 	for(unsigned int i = 0; i < Size; i++)
 		str_copy(Tmp->m_aaNames[i], Server()->ClientName(pClientIds[i]), sizeof(Tmp->m_aaNames[i]));
 	Tmp->m_Size = Size;
-	Tmp->m_Time = (float)TimeTicks / (float)Server()->TickSpeed();
+	Tmp->m_Time = (float)TimeTicks / (float)g_Config.m_SvTickRate;
 	str_copy(Tmp->m_aTimestamp, pTimestamp, sizeof(Tmp->m_aTimestamp));
 	FormatUuid(GameServer()->GameUuid(), Tmp->m_aGameUuid, sizeof(Tmp->m_aGameUuid));
 	str_copy(Tmp->m_aMap, Server()->GetMapName(), sizeof(Tmp->m_aMap));

@@ -442,7 +442,7 @@ void CInfoMessages::OnRender()
 	for(int i = 1; i <= MAX_INFOMSGS; i++)
 	{
 		CInfoMsg &InfoMsg = m_aInfoMsgs[(m_InfoMsgCurrent + i) % MAX_INFOMSGS];
-		if(Client()->GameTick(g_Config.m_ClDummy) > InfoMsg.m_Tick + Client()->GameTickSpeed() * 10)
+		if(Client()->GameTick(g_Config.m_ClDummy) > InfoMsg.m_Tick + g_Config.m_SvTickRate * 10)
 			continue;
 
 		CreateTextContainersIfNotCreated(InfoMsg);
