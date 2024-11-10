@@ -31,12 +31,8 @@ class CMapLayers : public CComponent
 	CLayers *m_pLayers;
 	CMapImages *m_pImages;
 
-	int m_Type;
-	int m_CurrentLocalTick;
-	int m_LastLocalTick;
-	bool m_EnvelopeUpdate;
-
 	void MapScreenToGroup(float CenterX, float CenterY, CMapItemGroup *pGroup, float Zoom = 1.0f);
+	int m_Type;
 
 	struct STileLayerVisuals
 	{
