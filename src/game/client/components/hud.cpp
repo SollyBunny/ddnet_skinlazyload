@@ -794,7 +794,6 @@ void CHud::RenderCursor()
 	if((!m_pClient->m_Snap.m_pLocalCharacter && !(g_Config.m_ClRenderCursorSpec && m_pClient->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)) || Client()->State() == IClient::STATE_DEMOPLAYBACK)
 		return;
 
-	int CurWeapon = 1;
 	RenderTools()->MapScreenToInterface(m_pClient->m_Camera.m_Center.x, m_pClient->m_Camera.m_Center.y);
 
 	// render cursor
