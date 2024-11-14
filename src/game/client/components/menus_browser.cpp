@@ -1208,10 +1208,20 @@ void CMenus::RenderServerbrowserInfo(CUIRect View)
 		LeftColumn.HSplitTop(15.0f, &Row, &LeftColumn);
 		Ui()->DoLabel(&Row, Localize("Ping"), FontSize, TEXTALIGN_ML);
 
+		ColorRGBA ColorOld;
+		if(g_Config.m_UiColorizePing)
+		{
+			ColorOld = TextRender()->GetTextColor();
+			TextRender()->TextColor(GetPingTextColor(pSelectedServer->m_Latency));
+		}
 		char aTemp[16];
 		FormatServerbrowserPing(aTemp, pSelectedServer);
 		RightColumn.HSplitTop(15.0f, &Row, &RightColumn);
 		Ui()->DoLabel(&Row, aTemp, FontSize, TEXTALIGN_ML);
+		if(g_Config.m_UiColorizePing)
+		{
+			TextRender()->TextColor(ColorOld);
+		}
 
 		RenderServerbrowserInfoScoreboard(Scoreboard, pSelectedServer);
 	}
@@ -1226,13 +1236,15 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 	const float FontSize = 10.0f;
 
 	static CListBox s_ListBox;
+	View.HSplitTop(5.0f, nullptr, &View);
+	View.HSplitBottom(5.0f, &View, nullptr);
 	View.VSplitLeft(5.0f, nullptr, &View);
 	if(!s_ListBox.ScrollbarShown())
 		View.VSplitRight(5.0f, &View, nullptr);
-	s_ListBox.DoAutoSpacing(1.0f);
+	s_ListBox.DoAutoSpacing(2.0f);
 	s_ListBox.SetScrollbarWidth(16.0f);
 	s_ListBox.SetScrollbarMargin(5.0f);
-	s_ListBox.DoStart(25.0f, pSelectedServer->m_NumReceivedClients, 1, 3, -1, &View);
+	s_ListBox.DoStart(25.0f, pSelectedServer->m_NumReceivedClients, 1, 3, -1, &View, false);
 
 	for(int i = 0; i < pSelectedServer->m_NumReceivedClients; i++)
 	{
@@ -1268,7 +1280,6 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 			dbg_break();
 			break;
 		}
-
 		Name.Draw(Color, IGraphics::CORNER_ALL, 4.0f);
 		Name.VSplitLeft(1.0f, nullptr, &Name);
 		Name.VSplitLeft(34.0f, &Score, &Name);
@@ -1389,7 +1400,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	const float SpacingH = 2.0f;
 
 	CUIRect List, ServerFriends;
-	View.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_NONE, 0.0f);
+	View.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_B, 4.0f);
 	View.HSplitBottom(70.0f, &List, &ServerFriends);
 	List.HSplitTop(5.0f, nullptr, &List);
 	List.VSplitLeft(5.0f, nullptr, &List);
@@ -1444,21 +1455,24 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	for(size_t FriendType = 0; FriendType < NUM_FRIEND_TYPES; ++FriendType)
 	{
 		// header
-		CUIRect Header, GroupIcon, GroupLabel;
+		CUIRect Header, DeleteIcon, QuestionIcon, Label;
 		List.HSplitTop(ms_ListheaderHeight, &Header, &List);
 		s_ScrollRegion.AddRect(Header);
 		Header.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, Ui()->HotItem() == &s_aListExtended[FriendType] ? 0.4f : 0.25f), IGraphics::CORNER_ALL, 5.0f);
-		Header.VSplitLeft(Header.h, &GroupIcon, &GroupLabel);
-		GroupIcon.Margin(2.0f, &GroupIcon);
+		Header.VSplitLeft(Header.h, &DeleteIcon, &Header);
+		Header.VSplitRight(Header.h, &Label, &QuestionIcon);
+		DeleteIcon.Margin(2.0f, &DeleteIcon);
+		QuestionIcon.Margin(2.0f, &QuestionIcon);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->TextColor(Ui()->HotItem() == &s_aListExtended[FriendType] ? TextRender()->DefaultTextColor() : ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f));
-		Ui()->DoLabel(&GroupIcon, s_aListExtended[FriendType] ? FONT_ICON_SQUARE_MINUS : FONT_ICON_SQUARE_PLUS, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+		Ui()->DoLabel(&DeleteIcon, s_aListExtended[FriendType] ? FONT_ICON_SQUARE_MINUS : FONT_ICON_SQUARE_PLUS, DeleteIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+		Ui()->DoLabel(&QuestionIcon, FONT_ICON_QUESTION, DeleteIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		switch(FriendType)
 		{
 		case FRIEND_PLAYER_ON:
-			str_format(aBuf, sizeof(aBuf), Localize("Online players (%d)"), (int)m_avFriends[FriendType].size());
+			str_format(aBuf, sizeof(aBuf), Localize("Online friends (%d)"), (int)m_avFriends[FriendType].size());
 			break;
 		case FRIEND_CLAN_ON:
 			str_format(aBuf, sizeof(aBuf), Localize("Online clanmates (%d)"), (int)m_avFriends[FriendType].size());
@@ -1470,11 +1484,28 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			dbg_assert(false, "FriendType invalid");
 			break;
 		}
-		Ui()->DoLabel(&GroupLabel, aBuf, FontSize, TEXTALIGN_ML);
+		Ui()->DoLabel(&Label, aBuf, FontSize, TEXTALIGN_ML);
 		if(Ui()->DoButtonLogic(&s_aListExtended[FriendType], 0, &Header))
 		{
 			s_aListExtended[FriendType] = !s_aListExtended[FriendType];
 		}
+
+		// tooltip
+		const char *pText = nullptr;
+		switch(FriendType)
+		{
+		case FRIEND_PLAYER_ON:
+			pText = Localize("Add friends by clicking on their name in the player list or at the bottom");
+			break;
+		case FRIEND_CLAN_ON:
+			pText = Localize("To show your clanmates here, add a friend with only the clan name set");
+			break;
+		case FRIEND_OFF:
+			pText = Localize("Offline friends and clanmates will appear here");
+			break;
+		}
+		if (pText)
+			GameClient()->m_Tooltips.DoToolTip(&s_aListExtended[FriendType], &Header, pText, Header.w);
 
 		// entries
 		if(s_aListExtended[FriendType])
@@ -1488,6 +1519,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					s_ScrollRegion.AddRect(Space);
 				}
 
+				const float Alpha = (FriendIndex % 2 + 1) * 0.05f;
 				CUIRect Rect;
 				const auto &Friend = m_avFriends[FriendType][FriendIndex];
 				List.HSplitTop(11.0f + 10.0f + 2 * 2.0f + 1.0f + (Friend.ServerInfo() == nullptr ? 0.0f : 10.0f), &Rect, &List);
@@ -1503,7 +1535,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					GameClient()->m_Tooltips.DoToolTip(Friend.ListItemId(), &Rect, Localize("Click to select server. Double click to join your friend."));
 				}
 				const bool AlternateColor = (FriendType != FRIEND_OFF && Friend.IsAfk()) || (Friend.FriendState() == IFriends::FRIEND_CLAN && FriendType == FRIEND_OFF);
-				Rect.Draw((AlternateColor ? s_aListColorAlternates[FriendType] : s_aListColors[FriendType]).WithAlpha(Inside ? 0.5f : 0.3f), IGraphics::CORNER_ALL, 5.0f);
+				Rect.Draw((AlternateColor ? s_aListColorAlternates[FriendType] : s_aListColors[FriendType]).WithAlpha((Inside ? 0.5f : 0.3f) + Alpha), IGraphics::CORNER_ALL, 5.0f);
 				Rect.Margin(2.0f, &Rect);
 
 				CUIRect RemoveButton, NameLabel, ClanLabel, InfoLabel;
@@ -1600,7 +1632,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 			if(m_avFriends[FriendType].empty())
 			{
-				CUIRect Label;
 				List.HSplitTop(12.0f, &Label, &List);
 				s_ScrollRegion.AddRect(Label);
 				Ui()->DoLabel(&Label, Localize("None"), Label.h * CUi::ms_FontmodHeight, TEXTALIGN_ML);
