@@ -1530,7 +1530,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			pText = Localize("Offline friends and clanmates will appear here");
 			break;
 		}
-		if (pText)
+		if(pText)
 			GameClient()->m_Tooltips.DoToolTip(&s_aListExtended[FriendType], &Header, pText, Header.w);
 
 		// entries
