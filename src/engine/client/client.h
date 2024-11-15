@@ -254,7 +254,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	NETADDR m_aFavoritesGroupAddresses[MAX_SERVER_ADDRESSES];
 
 	void UpdateDemoIntraTimers();
-	int MaxLatencyTicks() const;
+	int MaxLatencyTicks();
 	int PredictionMargin() const;
 
 	std::shared_ptr<ILogger> m_pFileLogger = nullptr;
@@ -298,7 +298,7 @@ public:
 	bool ReceivingRconCommands() const override { return m_ExpectedRconCommands > 0; }
 	float GotRconCommandsPercentage() const override;
 
-	bool ConnectionProblems() const override;
+	bool ConnectionProblems() override;
 
 	IGraphics::CTextureHandle GetDebugFont() const override { return m_DebugFont; }
 

@@ -304,7 +304,7 @@ float CClient::GotRconCommandsPercentage() const
 	return (float)m_GotRconCommands / (float)m_ExpectedRconCommands;
 }
 
-bool CClient::ConnectionProblems() const
+bool CClient::ConnectionProblems()
 {
 	return m_aNetClient[g_Config.m_ClDummy].GotProblems(MaxLatencyTicks() * time_freq() / GameTickSpeed()) != 0;
 }
@@ -5006,7 +5006,7 @@ SWarning *CClient::GetCurWarning()
 	}
 }
 
-int CClient::MaxLatencyTicks() const
+int CClient::MaxLatencyTicks()
 {
 	return GameTickSpeed() + (PredictionMargin() * GameTickSpeed()) / 1000;
 }

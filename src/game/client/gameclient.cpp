@@ -961,6 +961,17 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		m_aTuning[Conn] = NewTuning;
 		return;
 	}
+	if (MsgId == NETMSG_TICK_SPEED_MULTIPLIER) {
+		int TickSpeedMultiplier = pUnpacker->GetInt();
+		if(pUnpacker->Error())
+			return;
+		g_Config.m_SvTickSpeedMultiplier = TickSpeedMultiplier;
+		// TODO REMOVE
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), "got tick multiplier '%d'", TickSpeedMultiplier);
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "tms", aBuf);
+		return;
+	}
 
 	void *pRawMsg = TranslateGameMsg(&MsgId, pUnpacker, Conn);
 

@@ -743,6 +743,14 @@ void CGameContext::SendSettings(int ClientId) const
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, ClientId);
 }
 
+void CGameContext::SendTickSpeedMultiplier(int ClientId) const
+{
+	printf("%d %d %d\n", g_Config.m_SvTickSpeedMultiplier, NETMSG_TICK_SPEED_MULTIPLIER, ClientId);
+	CMsgPacker Msg(NETMSG_TICK_SPEED_MULTIPLIER);
+	Msg.AddInt(g_Config.m_SvTickSpeedMultiplier);
+	Server()->SendMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH | MSGFLAG_NORECORD, ClientId);
+}
+
 void CGameContext::SendBroadcast(const char *pText, int ClientId, bool IsImportant)
 {
 	CNetMsg_Sv_Broadcast Msg;
@@ -3612,6 +3620,18 @@ void CGameContext::ConchainSettingUpdate(IConsole::IResult *pResult, void *pUser
 	}
 }
 
+void CGameContext::ConChainTickSpeedMultiplier(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	pfnCallback(pResult, pCallbackUserData);
+	if(pResult->NumArguments())
+	{
+		
+		CGameContext *pSelf = (CGameContext *)pUserData;
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "CGameContext", "SENT TICK SPEED");
+		pSelf->SendTickSpeedMultiplier(-1);
+	}
+}
+
 void CGameContext::OnConsoleInit()
 {
 	m_pServer = Kernel()->RequestInterface<IServer>();
@@ -3661,6 +3681,8 @@ void CGameContext::OnConsoleInit()
 	Console()->Chain("sv_vote_kick_min", ConchainSettingUpdate, this);
 	Console()->Chain("sv_vote_spectate", ConchainSettingUpdate, this);
 	Console()->Chain("sv_spectator_slots", ConchainSettingUpdate, this);
+
+	Console()->Chain("sv_tick_speed_multiplier", ConChainTickSpeedMultiplier, this);
 
 	RegisterDDRaceCommands();
 	RegisterChatCommands();

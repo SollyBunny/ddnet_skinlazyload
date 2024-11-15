@@ -12,6 +12,7 @@
 
 #include "kernel.h"
 #include "message.h"
+#include <engine/shared/config.h>
 #include <engine/shared/jsonwriter.h>
 #include <engine/shared/protocol.h>
 #include <game/generated/protocol.h>
@@ -47,7 +48,7 @@ public:
 	};
 
 	int Tick() const { return m_CurrentGameTick; }
-	int TickSpeed() const { return SERVER_TICK_SPEED; }
+	int TickSpeed() { return SERVER_TICK_SPEED * g_Config.m_SvTickSpeedMultiplier / 100; }
 
 	virtual int Port() const = 0;
 	virtual int MaxClients() const = 0;

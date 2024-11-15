@@ -8,6 +8,7 @@
 #include "message.h"
 #include <base/hash.h>
 
+#include <engine/shared/config.h>
 #include <engine/shared/translation_context.h>
 
 #include <game/generated/protocol.h>
@@ -149,7 +150,7 @@ public:
 	inline float PredIntraGameTick(int Conn) const { return m_aPredIntraTick[Conn]; }
 	inline float IntraGameTickSincePrev(int Conn) const { return m_aGameIntraTickSincePrev[Conn]; }
 	inline float GameTickTime(int Conn) const { return m_aGameTickTime[Conn]; }
-	inline int GameTickSpeed() const { return SERVER_TICK_SPEED; }
+	inline int GameTickSpeed() { return SERVER_TICK_SPEED * g_Config.m_SvTickSpeedMultiplier / 100; }
 
 	// other time access
 	inline float RenderFrameTime() const { return m_RenderFrameTime; }
@@ -264,7 +265,7 @@ public:
 	virtual const char *DummyName() = 0;
 	virtual const char *ErrorString() const = 0;
 	virtual const char *LatestVersion() const = 0;
-	virtual bool ConnectionProblems() const = 0;
+	virtual bool ConnectionProblems() = 0;
 
 	virtual IGraphics::CTextureHandle GetDebugFont() const = 0; // TODO: remove this function
 
