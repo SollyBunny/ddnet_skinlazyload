@@ -16,6 +16,7 @@ CBindWheel::CBindWheel()
 {
 	OnReset();
 }
+
 void CBindWheel::ConExecuteHover(IConsole::IResult *pResult, void *pUserData)
 {
 	CBindWheel *pThis = (CBindWheel *)pUserData;
@@ -36,7 +37,7 @@ void CBindWheel::ConAddBindwheel_Legacy(IConsole::IResult *pResult, void *pUserD
 	const char *aCommand = pResult->GetString(2);
 
 	CBindWheel *pThis = static_cast<CBindWheel *>(pUserData);
-	pThis->AddBind(aName, aCommand);
+	pThis->BindwheelAdd(aName, aCommand);
 }
 
 void CBindWheel::ConAddBindwheel(IConsole::IResult *pResult, void *pUserData)
@@ -45,7 +46,7 @@ void CBindWheel::ConAddBindwheel(IConsole::IResult *pResult, void *pUserData)
 	const char *aCommand = pResult->GetString(1);
 
 	CBindWheel *pThis = static_cast<CBindWheel *>(pUserData);
-	pThis->AddBind(aName, aCommand);
+	pThis->BindwheelAdd(aName, aCommand);
 }
 
 void CBindWheel::ConRemoveBindwheel(IConsole::IResult *pResult, void *pUserData)
@@ -63,9 +64,9 @@ void CBindWheel::ConRemoveAllBinds(IConsole::IResult *pResult, void *pUserData)
 	pThis->RemoveAllBinds();
 }
 
-void CBindWheel::AddBind(const char *pName, const char *pCommand)
+void CBindWheel::BindwheelAdd(const char *pName, const char *pCommand)
 {
-	if((pName[0] == 0 && pCommand[0] == 0) || m_vBinds.size() > MAX_BINDS)
+	if((pName[0] == '\0' && pCommand[0] == '\0') || m_vBinds.size() > MAX_BINDS)
 		return;
 
 	// Don't allow duplicates
@@ -74,18 +75,18 @@ void CBindWheel::AddBind(const char *pName, const char *pCommand)
 	//	if(!str_comp(Bind.m_aName, pName) && !str_comp(Bind.m_aCommand, pCommand))
 	//		return;
 	//}
-	SBind TempBind;
-	str_copy(TempBind.m_aName, pName);
-	str_copy(TempBind.m_aCommand, pCommand);
-	m_vBinds.push_back(TempBind);
+	SBind Bind;
+	str_copy(Bind.m_aName, pName);
+	str_copy(Bind.m_aCommand, pCommand);
+	m_vBinds.push_back(Bind);
 }
 
 void CBindWheel::RemoveBind(const char *pName, const char *pCommand)
 {
-	SBind TempBind;
-	str_copy(TempBind.m_aName, pName);
-	str_copy(TempBind.m_aCommand, pCommand);
-	auto it = std::find(m_vBinds.begin(), m_vBinds.end(), TempBind);
+	SBind Bind;
+	str_copy(Bind.m_aName, pName);
+	str_copy(Bind.m_aCommand, pCommand);
+	auto it = std::find(m_vBinds.begin(), m_vBinds.end(), Bind);
 	if(it != m_vBinds.end())
 		m_vBinds.erase(it);
 }
@@ -150,7 +151,7 @@ void CBindWheel::OnRender()
 	if(!m_Active)
 	{
 		if(g_Config.m_ClResetBindWheelMouse)
-			m_SelectorMouse = vec2(0, 0);
+			m_SelectorMouse = vec2(0.0f, 0.0f);
 		if(m_WasActive && m_SelectedBind != -1)
 			ExecuteBindwheel(m_SelectedBind);
 		m_WasActive = false;
@@ -163,15 +164,15 @@ void CBindWheel::OnRender()
 		m_SelectorMouse = normalize(m_SelectorMouse) * 170.0f;
 
 	int SegmentCount = m_vBinds.size();
-	float SegmentAngle = 2 * pi / SegmentCount;
+	float SegmentAngle = 2.0f * pi / SegmentCount;
 
-	float SelectedAngle = angle(m_SelectorMouse) + SegmentAngle / 2;
-	if(SelectedAngle < 0)
-		SelectedAngle += 2 * pi;
-
-	m_SelectedBind = -1;
+	float SelectedAngle = angle(m_SelectorMouse) + SegmentAngle / 2.0f;
+	if(SelectedAngle < 0.0f)
+		SelectedAngle += 2.0f * pi;
 	if(length(m_SelectorMouse) > 110.0f)
-		m_SelectedBind = (int)(SelectedAngle / (2 * pi) * SegmentCount);
+		m_SelectedBind = (int)(SelectedAngle / (2.0f * pi) * SegmentCount);
+	else
+		m_SelectedBind = -1;
 
 	CUIRect Screen = *Ui()->Screen();
 
@@ -180,12 +181,12 @@ void CBindWheel::OnRender()
 	Graphics()->BlendNormal();
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor(0, 0, 0, 0.3f);
-	DrawCircle(Screen.w / 2, Screen.h / 2, 190.0f, 64);
+	Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.3f);
+	DrawCircle(Screen.w / 2.0f, Screen.h / 2.0f, 190.0f, 64);
 	Graphics()->QuadsEnd();
 	Graphics()->WrapClamp();
 
-	const float Theta = pi * 2 / m_vBinds.size();
+	const float Theta = pi * 2.0f / m_vBinds.size();
 	for(int i = 0; i < static_cast<int>(m_vBinds.size()); i++)
 	{
 		const SBind &Bind = m_vBinds[i];
@@ -201,11 +202,11 @@ void CBindWheel::OnRender()
 
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor(1.0, 1.0, 1.0, 0.3f);
-	DrawCircle(Screen.w / 2, Screen.h / 2, 100.0f, 64);
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.3f);
+	DrawCircle(Screen.w / 2.0f, Screen.h / 2.0f, 100.0f, 64);
 	Graphics()->QuadsEnd();
 
-	RenderTools()->RenderCursor(m_SelectorMouse + vec2(Screen.w, Screen.h) / 2, 24.0f);
+	RenderTools()->RenderCursor(m_SelectorMouse + vec2(Screen.w, Screen.h) / 2.0f, 24.0f);
 }
 
 void CBindWheel::ExecuteBindwheel(int Bind)

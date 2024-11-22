@@ -1,6 +1,6 @@
 
-#ifndef GAME_CLIENT_COMPONENTS_BIND_WHEEL_H
-#define GAME_CLIENT_COMPONENTS_BIND_WHEEL_H
+#ifndef GAME_CLIENT_COMPONENTS_BINDWHEEL_H
+#define GAME_CLIENT_COMPONENTS_BINDWHEEL_H
 #include <game/client/component.h>
 class IConfigManager;
 
@@ -38,8 +38,7 @@ public:
 
 		bool operator==(const SBind &Other) const
 		{
-			return str_comp(m_aName, Other.m_aName) == 0 &&
-			       str_comp(m_aCommand, Other.m_aCommand) == 0;
+			return str_comp(m_aName, Other.m_aName) == 0 && str_comp(m_aCommand, Other.m_aCommand) == 0;
 		}
 	};
 
@@ -54,7 +53,7 @@ public:
 	virtual void OnRelease() override;
 	virtual bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
 
-	void AddBind(const char *Name, const char *Command);
+	void BindwheelAdd(const char *Name, const char *Command);
 	void RemoveBind(const char *Name, const char *Command);
 	void RemoveBind(int Index);
 	void RemoveAllBinds();

@@ -10,56 +10,48 @@
 
 #include "rainbow.h"
 
-void CRainbow::TransformColor(unsigned char mode, int tick, CTeeRenderInfo *pinfo)
+void CRainbow::TransformColor(unsigned char Mode, int Tick, CTeeRenderInfo *pinfo)
 {
-	if(!mode)
+	if(!Mode)
 		return;
 
-	int deftick = tick % 255;
+	int DefTick = Tick % 255;
 
-	const ColorHSLA playercolbody = ColorHSLA(g_Config.m_ClPlayerColorBody);
-	const ColorHSLA playercolfeet = ColorHSLA(g_Config.m_ClPlayerColorFeet);
+	const ColorHSLA PlayerColBody = ColorHSLA(g_Config.m_ClPlayerColorBody);
+	const ColorHSLA PlayerColFeet = ColorHSLA(g_Config.m_ClPlayerColorFeet);
 
-	const ColorRGBA col = color_cast<ColorRGBA>(ColorHSLA((float)deftick / 255.0f, 1.0f, 0.5f));
-	if(mode == COLORMODE_RAINBOW)
+	pinfo->m_CustomColoredSkin = true;
+	if(Mode == COLORMODE_RAINBOW)
 	{
-		pinfo->m_CustomColoredSkin = true;
-		pinfo->m_ColorBody = col;
-		pinfo->m_ColorFeet = col;
-		pinfo->m_BloodColor = col;
-		return;
+		const ColorRGBA Col = color_cast<ColorRGBA>(ColorHSLA((float)DefTick / 255.0f, 1.0f, 0.5f));
+		pinfo->m_ColorBody = Col;
+		pinfo->m_ColorFeet = Col;
+		pinfo->m_BloodColor = Col;
 	}
-	else if(mode == COLORMODE_PULSE)
+	else if(Mode == COLORMODE_PULSE)
 	{
-		pinfo->m_CustomColoredSkin = true;
 		pinfo->m_ColorBody.s = 1.0f;
 		pinfo->m_ColorFeet.s = 1.0f;
 		pinfo->m_BloodColor.s = 1.0f;
-		pinfo->m_ColorBody.l = 0.5f + fabs(((float)deftick / 255.0f) - 0.5f);
-		pinfo->m_ColorFeet.l = 0.5f + fabs(((float)deftick / 255.0f) - 0.5f);
-		pinfo->m_BloodColor.l = 0.5f + fabs(((float)deftick / 255.0f) - 0.5f);
-
-		pinfo->m_ColorBody.h = (float)deftick / 255.0f;
-		pinfo->m_ColorFeet.h = (float)deftick / 255.0f;
-		pinfo->m_BloodColor.h = (float)deftick / 255.0f;
-
-		return;
+		pinfo->m_ColorBody.l = 0.5f + std::fabs(((float)DefTick / 255.0f) - 0.5f);
+		pinfo->m_ColorFeet.l = 0.5f + std::fabs(((float)DefTick / 255.0f) - 0.5f);
+		pinfo->m_BloodColor.l = 0.5f + std::fabs(((float)DefTick / 255.0f) - 0.5f);
+		pinfo->m_ColorBody.h = (float)DefTick / 255.0f;
+		pinfo->m_ColorFeet.h = (float)DefTick / 255.0f;
+		pinfo->m_BloodColor.h = (float)DefTick / 255.0f;
 	}
-	else if(mode == COLORMODE_DARKNESS)
+	else if(Mode == COLORMODE_DARKNESS)
 	{
-		pinfo->m_CustomColoredSkin = true;
 		pinfo->m_ColorBody = ColorRGBA(0.0f, 0.0f, 0.0f);
 		pinfo->m_ColorFeet = ColorRGBA(0.0f, 0.0f, 0.0f);
 		pinfo->m_BloodColor = ColorRGBA(0.0f, 0.0f, 0.0f);
-		return;
 	}
 	else
 	{
 		pinfo->m_CustomColoredSkin = true;
-		pinfo->m_ColorBody = color_cast<ColorRGBA>(playercolbody);
-		pinfo->m_ColorFeet = color_cast<ColorRGBA>(playercolfeet);
-		pinfo->m_BloodColor = pinfo->m_BloodColor;
-		return;
+		pinfo->m_ColorBody = color_cast<ColorRGBA>(PlayerColBody);
+		pinfo->m_ColorFeet = color_cast<ColorRGBA>(PlayerColFeet);
+		// pinfo->m_BloodColor = pinfo->m_BloodColor; // TODO reset blood color
 	}
 }
 
