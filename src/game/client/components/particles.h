@@ -78,7 +78,8 @@ public:
 	CParticles();
 	virtual int Sizeof() const override { return sizeof(*this); }
 
-	void Add(int Group, CParticle *pPart, float TimePassed = 0.f);
+	int Add(int Group, CParticle *pPart, float TimePassed = 0.f);
+	CParticle *Get(int Id);
 
 	virtual void OnReset() override;
 	virtual void OnRender() override;

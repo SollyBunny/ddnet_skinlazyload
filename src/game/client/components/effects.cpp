@@ -207,6 +207,9 @@ void CEffects::PlayerSpawn(vec2 Pos, float Alpha)
 
 void CEffects::PlayerDeath(vec2 Pos, int ClientId, float Alpha)
 {
+	if(GameClient()->m_Rainbow.PlayerDeath(Pos, ClientId, Alpha))
+		return;
+
 	ColorRGBA BloodColor(1.0f, 1.0f, 1.0f);
 
 	if(ClientId >= 0)

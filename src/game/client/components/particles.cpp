@@ -37,22 +37,22 @@ void CParticles::OnReset()
 		FirstPart = -1;
 }
 
-void CParticles::Add(int Group, CParticle *pPart, float TimePassed)
+int CParticles::Add(int Group, CParticle *pPart, float TimePassed)
 {
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
 	{
 		const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
 		if(pInfo->m_Paused)
-			return;
+			return -1;
 	}
 	else
 	{
 		if(m_pClient->m_Snap.m_pGameInfoObj && m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED)
-			return;
+			return -1;
 	}
 
 	if(m_FirstFree == -1)
-		return;
+		return -1;
 
 	// remove from the free list
 	int Id = m_FirstFree;
@@ -72,6 +72,16 @@ void CParticles::Add(int Group, CParticle *pPart, float TimePassed)
 
 	// set some parameters
 	m_aParticles[Id].m_Life = TimePassed;
+	return Id;
+}
+
+CParticle *CParticles::Get(int Id)
+{
+	if(Id < 0 || Id >= MAX_PARTICLES)
+		return nullptr;
+	if(m_aParticles[Id].m_Life > m_aParticles[Id].m_LifeSpan)
+		return nullptr;
+	return &m_aParticles[Id];
 }
 
 void CParticles::Update(float TimePassed)
