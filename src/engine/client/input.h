@@ -142,7 +142,7 @@ public:
 	bool MouseRelative(float *pX, float *pY) override;
 	void MouseModeAbsolute() override;
 	void MouseModeRelative() override;
-	bool MouseGrabbed() const override { return m_InputGrabbed; }
+	bool MouseGrabbed() const override { return m_InputGrabbed && m_MouseFocus; }
 	vec2 NativeMousePos() const override;
 	bool NativeMousePressed(int Index) const override;
 	bool NativeMouseSetPosition(int X, int Y) override;

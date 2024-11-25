@@ -59,7 +59,7 @@ CMenus *CMenusCursor::m_Menus;
 
 void CMenusCursor::OnRender()
 {
-	if(m_Menus && m_Menus->IsActive())
+	if(m_Menus && m_Menus->IsActive() && Input()->MouseGrabbed())
 		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 }
 

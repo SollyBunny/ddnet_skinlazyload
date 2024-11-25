@@ -275,18 +275,20 @@ void CUi::DebugRender(float X, float Y)
 
 void CUi::MouseGrab()
 {
+	printf("%d\n", Input()->MouseGrabbed());
+	Input()->MouseModeRelative();
 	if(Input()->MouseGrabbed())
 		return;
-	m_UpdatedMousePos = m_MousePos = Input()->NativeMousePos();
-	Input()->MouseModeRelative();
+	vec2 Pos = Input()->NativeMousePos();
+	m_UpdatedMousePos = m_MousePos = Pos;
 }
 
 void CUi::MouseRelease()
 {
+	Input()->MouseModeAbsolute();
 	if(!Input()->MouseGrabbed())
 		return;
 	Input()->NativeMouseSetPosition(round_to_int(m_MousePos.x), round_to_int(m_MousePos.y));
-	Input()->MouseModeAbsolute();
 }
 
 bool CUi::MouseInside(const CUIRect *pRect) const

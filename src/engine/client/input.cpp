@@ -82,7 +82,7 @@ void CInput::Init()
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
 	m_pConfigManager = Kernel()->RequestInterface<IConfigManager>();
 
-	MouseModeRelative();
+	// MouseModeRelative();
 
 	InitJoysticks();
 }
@@ -290,9 +290,11 @@ void CInput::MouseModeRelative()
 
 vec2 CInput::NativeMousePos() const
 {
-	ivec2 Position;
-	SDL_GetMouseState(&Position.x, &Position.y);
-	return vec2(Position.x, Position.y);
+	ivec2 Pos;
+	SDL_GetGlobalMouseState(&Pos.x, &Pos.y);
+	ivec2 WindowPos;
+	Graphics()->WindowGetPos(WindowPos.x, WindowPos.y);
+	return vec2(Pos.x - WindowPos.x, Pos.y - WindowPos.y);
 }
 
 bool CInput::NativeMousePressed(int Index) const
@@ -309,6 +311,7 @@ bool CInput::NativeMouseSetPosition(int X, int Y)
 	printf("%d %d %d %d\n", Pos.x, Pos.y, X, Y);
 	SDL_Event Event;
 	while(SDL_PollEvent(&Event)); // Clear events
+	SDL_GetRelativeMouseState(nullptr, nullptr);
 	return Warped;
 }
 
@@ -821,20 +824,13 @@ int CInput::Update()
 				Graphics()->GotResized(Event.window.data1, Event.window.data2, -1);
 				break;
 			case SDL_WINDOWEVENT_FOCUS_GAINED:
-				if(m_InputGrabbed)
-					MouseModeRelative();
 				m_MouseFocus = true;
 				IgnoreKeys = true;
 				break;
 			case SDL_WINDOWEVENT_FOCUS_LOST:
 				m_MouseFocus = false;
 				IgnoreKeys = true;
-				if(m_InputGrabbed)
-				{
-					MouseModeAbsolute();
-					// Remember that we had relative mouse
-					m_InputGrabbed = true;
-				}
+				// MouseModeAbsolute();
 				break;
 			case SDL_WINDOWEVENT_MINIMIZED:
 #if defined(CONF_PLATFORM_ANDROID) // Save the config when minimized on Android.
