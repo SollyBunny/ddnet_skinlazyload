@@ -472,6 +472,9 @@ public:
 	void Update(vec2 MouseWorldPos = vec2(-1.0f, -1.0f));
 	void DebugRender(float X, float Y);
 
+	void MouseGrab();
+	void MouseRelease();
+
 	vec2 MousePos() const { return m_MousePos; }
 	float MouseX() const { return m_MousePos.x; }
 	float MouseY() const { return m_MousePos.y; }

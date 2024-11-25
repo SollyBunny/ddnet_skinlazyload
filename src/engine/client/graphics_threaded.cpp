@@ -2484,6 +2484,11 @@ void CGraphics_Threaded::Maximize()
 		PropChangedListener();
 }
 
+void CGraphics_Threaded::WindowGetPos(int &x, int &y)
+{
+	m_pBackend->WindowGetPos(x, y);
+}
+
 void CGraphics_Threaded::WarnPngliteIncompatibleImages(bool Warn)
 {
 	m_WarnPngliteIncompatibleImages = Warn;

@@ -153,6 +153,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Tooltips,
 					      &CMenus::m_Binder,
 					      &m_GameConsole,
+					      &CMenus::m_Cursor,
 					      &m_MenuBackground});
 
 	// build the input stack

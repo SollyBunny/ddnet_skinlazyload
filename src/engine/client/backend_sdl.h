@@ -253,6 +253,7 @@ public:
 	void SetWindowParams(int FullscreenMode, bool IsBorderless) override;
 	bool SetWindowScreen(int Index) override;
 	bool UpdateDisplayMode(int Index) override;
+	void WindowGetPos(int &x, int &y) override;
 	int GetWindowScreen() override;
 	int WindowActive() override;
 	int WindowOpen() override;

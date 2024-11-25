@@ -1555,6 +1555,11 @@ bool CGraphicsBackend_SDL_GL::UpdateDisplayMode(int Index)
 	return true;
 }
 
+void CGraphicsBackend_SDL_GL::WindowGetPos(int &x, int &y)
+{
+	SDL_GetWindowPosition(m_pWindow, &x, &y);
+}
+
 int CGraphicsBackend_SDL_GL::GetWindowScreen()
 {
 	return SDL_GetWindowDisplayIndex(m_pWindow);

@@ -1016,8 +1016,8 @@ void CGameConsole::OnRender()
 	if(m_ConsoleState == CONSOLE_CLOSED)
 		return;
 
-	if(m_ConsoleState == CONSOLE_OPEN)
-		Input()->MouseModeAbsolute();
+	// if(m_ConsoleState == CONSOLE_OPEN)
+	// 	Ui()->MouseRelease();
 
 	float ConsoleHeightScale;
 	if(m_ConsoleState == CONSOLE_OPENING)
@@ -1493,7 +1493,7 @@ void CGameConsole::Toggle(int Type)
 		else
 		{
 			ConsoleForType(Type)->m_Input.Deactivate();
-			Input()->MouseModeRelative();
+			// Ui()->MouseGrab();
 			Ui()->SetEnabled(true);
 			m_pClient->OnRelease();
 			m_ConsoleState = CONSOLE_CLOSING;

@@ -165,13 +165,19 @@ void CUi::OnWindowResize()
 
 void CUi::OnCursorMove(float X, float Y)
 {
+	m_UpdatedMouseDelta += vec2(X, Y);
 	if(!CheckMouseLock())
 	{
-		m_UpdatedMousePos.x = clamp(m_UpdatedMousePos.x + X, 0.0f, Graphics()->WindowWidth() - 1.0f);
-		m_UpdatedMousePos.y = clamp(m_UpdatedMousePos.y + Y, 0.0f, Graphics()->WindowHeight() - 1.0f);
+		m_UpdatedMousePos += vec2(X, Y);
+		if(m_UpdatedMousePos.x < 0.0f || m_UpdatedMousePos.y < 0.0f || m_UpdatedMousePos.x >= Graphics()->WindowWidth() || m_UpdatedMousePos.y >= Graphics()->WindowHeight())
+		{
+			MouseRelease();
+			m_UpdatedMousePos.x = clamp(m_UpdatedMousePos.x, 0.0f, Graphics()->WindowWidth() - 1.0f);
+			m_UpdatedMousePos.y = clamp(m_UpdatedMousePos.y, 0.0f, Graphics()->WindowHeight() - 1.0f);
+		}
+		else
+			MouseGrab();
 	}
-
-	m_UpdatedMouseDelta += vec2(X, Y);
 }
 
 void CUi::Update(vec2 MouseWorldPos)
@@ -265,6 +271,22 @@ void CUi::DebugRender(float X, float Y)
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "hot=%p nexthot=%p active=%p lastactive=%p", HotItem(), NextHotItem(), ActiveItem(), m_pLastActiveItem);
 	TextRender()->Text(X, Y, 10.0f, aBuf);
+}
+
+void CUi::MouseGrab()
+{
+	if(Input()->MouseGrabbed())
+		return;
+	m_UpdatedMousePos = m_MousePos = Input()->NativeMousePos();
+	Input()->MouseModeRelative();
+}
+
+void CUi::MouseRelease()
+{
+	if(!Input()->MouseGrabbed())
+		return;
+	Input()->NativeMouseSetPosition(round_to_int(m_MousePos.x), round_to_int(m_MousePos.y));
+	Input()->MouseModeAbsolute();
 }
 
 bool CUi::MouseInside(const CUIRect *pRect) const

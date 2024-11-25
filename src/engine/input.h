@@ -84,8 +84,10 @@ public:
 	// mouse
 	virtual vec2 NativeMousePos() const = 0;
 	virtual bool NativeMousePressed(int Index) const = 0;
+	virtual bool NativeMouseSetPosition(int X, int Y) = 0;
 	virtual void MouseModeRelative() = 0;
 	virtual void MouseModeAbsolute() = 0;
+	virtual bool MouseGrabbed() const = 0;
 	virtual bool MouseRelative(float *pX, float *pY) = 0;
 
 	// touch

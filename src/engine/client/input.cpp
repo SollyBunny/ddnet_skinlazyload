@@ -256,8 +256,13 @@ bool CInput::CJoystick::Absolute(float *pX, float *pY)
 
 bool CInput::MouseRelative(float *pX, float *pY)
 {
-	if(!m_MouseFocus || !m_InputGrabbed)
-		return false;
+	// if(!m_MouseFocus || !m_InputGrabbed) <- idk the difference betwen these 2 vairables
+	// 	return false; uhhhhh
+	// its free chinese ai
+	// if(!m_MouseFocus)
+	// 	return false;
+	// if(!m_InputGrabbed)
+	// TODO
 
 	ivec2 Relative;
 	SDL_GetRelativeMouseState(&Relative.x, &Relative.y);
@@ -294,6 +299,17 @@ bool CInput::NativeMousePressed(int Index) const
 {
 	int i = SDL_GetMouseState(nullptr, nullptr);
 	return (i & SDL_BUTTON(Index)) != 0;
+}
+
+bool CInput::NativeMouseSetPosition(int X, int Y)
+{
+	ivec2 Pos;
+	Graphics()->WindowGetPos(Pos.x, Pos.y);
+	bool Warped = SDL_WarpMouseGlobal(X + Pos.x, Y + Pos.y) == 0;
+	printf("%d %d %d %d\n", Pos.x, Pos.y, X, Y);
+	SDL_Event Event;
+	while(SDL_PollEvent(&Event)); // Clear events
+	return Warped;
 }
 
 const std::vector<IInput::CTouchFingerState> &CInput::TouchFingerStates() const
@@ -806,11 +822,7 @@ int CInput::Update()
 				break;
 			case SDL_WINDOWEVENT_FOCUS_GAINED:
 				if(m_InputGrabbed)
-				{
 					MouseModeRelative();
-					// Clear pending relative mouse motion
-					SDL_GetRelativeMouseState(nullptr, nullptr);
-				}
 				m_MouseFocus = true;
 				IgnoreKeys = true;
 				break;

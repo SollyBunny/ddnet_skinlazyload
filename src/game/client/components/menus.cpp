@@ -54,6 +54,15 @@ ColorRGBA CMenus::ms_ColorTabbarHoverIngame;
 float CMenus::ms_ButtonHeight = 25.0f;
 float CMenus::ms_ListheaderHeight = 17.0f;
 
+CMenusCursor CMenus::m_Cursor;
+CMenus *CMenusCursor::m_Menus;
+
+void CMenusCursor::OnRender()
+{
+	if(m_Menus && m_Menus->IsActive())
+		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+}
+
 CMenus::CMenus()
 {
 	m_Popup = POPUP_NONE;
@@ -97,6 +106,8 @@ CMenus::CMenus()
 
 	m_PasswordInput.SetBuffer(g_Config.m_Password, sizeof(g_Config.m_Password));
 	m_PasswordInput.SetHidden(true);
+
+	m_Cursor.m_Menus = this;
 }
 
 int CMenus::DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active)
@@ -2273,10 +2284,6 @@ void CMenus::OnRender()
 
 	Render();
 
-	if(IsActive())
-	{
-		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
-	}
 
 	// render debug information
 	if(g_Config.m_Debug)

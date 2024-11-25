@@ -49,6 +49,16 @@ public:
 	virtual bool OnInput(const IInput::CEvent &Event) override;
 };
 
+// component to render menu cursor
+class CMenus;
+class CMenusCursor : public CComponent
+{
+public:
+	static CMenus *m_Menus;
+	virtual int Sizeof() const override { return sizeof(*this); }
+	virtual void OnRender() override;
+};
+
 struct SCommunityIcon
 {
 	char m_aCommunityId[CServerInfo::MAX_COMMUNITY_ID_LENGTH];
@@ -652,6 +662,7 @@ public:
 	void RenderBackground();
 
 	static CMenusKeyBinder m_Binder;
+	static CMenusCursor m_Cursor;
 
 	CMenus();
 	virtual int Sizeof() const override { return sizeof(*this); }
