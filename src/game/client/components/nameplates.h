@@ -45,9 +45,23 @@ class CNamePlates : public CComponent
 
 	void ResetNamePlates();
 
-	int m_DirectionQuadContainerIndex;
-
+	const char *FriendMark = "♥";
+	float FriendMarkFontSize = -INFINITY;
+	ColorRGBA FriendMarkColor = ColorRGBA(1.0f, 0.0f, 0.0f);
+	STextContainerIndex FriendMarkTextContainerIndex;
+	float FriendMarkTextContainerWidth;
 public:
+	void RenderNameplate(
+		vec2 Position,
+		ColorRGBA Color, ColorRGBA OutlineColor, float Alpha,
+		STextContainerIndex *Name, float FontSize,
+		STextContainerIndex *Clan, float FontSizeClan,
+		bool ShowFriendMark,
+		bool ShowId, int Id,
+		bool ShowDirection, bool DirLeft, bool Jump, bool DirRight,
+		bool ShowHookWeakStrong, TRISTATE WeakStrong,
+		bool ShowHookWeakStrongId, int WeakStrongId
+	);
 	virtual int Sizeof() const override { return sizeof(*this); }
 	virtual void OnWindowResize() override;
 	virtual void OnInit() override;

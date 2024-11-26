@@ -149,6 +149,9 @@ void dbg_assert_imp(const char *filename, int line, bool test, const char *msg)
 
 void dbg_break()
 {
+	char *UseAfterFree = (char *)malloc(1);
+	free(UseAfterFree);
+	*UseAfterFree = 1;
 #ifdef __GNUC__
 	__builtin_trap();
 #else
