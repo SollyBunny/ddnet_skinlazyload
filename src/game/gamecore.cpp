@@ -173,7 +173,7 @@ void CCharacterCore::Reset()
 	m_ShotgunHitDisabled = false;
 	m_HookHitDisabled = false;
 	m_Super = false;
-	m_Invincible = false;
+	m_FreezeAction = DDNET_ACTION;
 	m_HasTelegunGun = false;
 	m_HasTelegunGrenade = false;
 	m_HasTelegunLaser = false;

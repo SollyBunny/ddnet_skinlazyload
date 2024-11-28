@@ -3692,6 +3692,8 @@ void CGameContext::RegisterDDRaceCommands()
 	Console()->Register("super", "", CFGFLAG_SERVER | CMDFLAG_TEST, ConSuper, this, "Makes you super");
 	Console()->Register("unsuper", "", CFGFLAG_SERVER, ConUnSuper, this, "Removes super from you");
 	Console()->Register("invincible", "?i['0'|'1']", CFGFLAG_SERVER | CMDFLAG_TEST, ConToggleInvincible, this, "Toggles invincible mode");
+	Console()->Register("freezeaction", "?s['none'|'freeze'|'die'|'spectate'|'rescue'|'lasttp']", CFGFLAG_SERVER | CMDFLAG_TEST, ConFreezeAction, this, "Sets the action when you get frozen (default: freeze)");
+	Console()->Register("spikeaction", "?s['none'|'freeze'|'die'|'spectate'|'rescue'|'lasttp']", CFGFLAG_SERVER | CMDFLAG_TEST, ConSpikeAction, this, "Sets the action when you touch a spike (default: die)");
 	Console()->Register("infinite_jump", "", CFGFLAG_SERVER | CMDFLAG_TEST, ConEndlessJump, this, "Gives you infinite jump");
 	Console()->Register("uninfinite_jump", "", CFGFLAG_SERVER | CMDFLAG_TEST, ConUnEndlessJump, this, "Removes infinite jump from you");
 	Console()->Register("endless_hook", "", CFGFLAG_SERVER | CMDFLAG_TEST, ConEndlessHook, this, "Gives you endless hook");

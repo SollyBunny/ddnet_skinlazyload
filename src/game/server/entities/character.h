@@ -53,6 +53,8 @@ public:
 	void SetSolo(bool Solo);
 	void SetSuper(bool Super);
 	void SetInvincible(bool Invincible);
+	void SetFreezeAction(int Action);
+	void SetSpikeAction(int Action);
 	void SetLiveFrozen(bool Active);
 	void SetDeepFrozen(bool Active);
 	void HandleWeaponSwitch();

@@ -392,6 +392,8 @@ private:
 	static void ConUnSuper(IConsole::IResult *pResult, void *pUserData);
 	static void ConSuper(IConsole::IResult *pResult, void *pUserData);
 	static void ConToggleInvincible(IConsole::IResult *pResult, void *pUserData);
+	static void ConFreezeAction(IConsole::IResult *pResult, void *pUserData);
+	static void ConSpikeAction(IConsole::IResult *pResult, void *pUserData);
 	static void ConShotgun(IConsole::IResult *pResult, void *pUserData);
 	static void ConGrenade(IConsole::IResult *pResult, void *pUserData);
 	static void ConLaser(IConsole::IResult *pResult, void *pUserData);

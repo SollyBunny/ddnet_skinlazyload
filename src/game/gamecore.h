@@ -172,6 +172,16 @@ public:
 	std::vector<SSwitchers> m_vSwitchers;
 };
 
+enum
+{
+	ACTION_NONE = 0,
+	ACTION_FREEZE,
+	ACTION_DIE,
+	ACTION_SPECTATE,
+	ACTION_RESCUE,
+	ACTION_LASTTP,
+}
+
 class CCharacterCore
 {
 	CWorldCore *m_pWorld = nullptr;

@@ -164,8 +164,31 @@ void CGameContext::ConToggleInvincible(IConsole::IResult *pResult, void *pUserDa
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientId);
-	if(pChr)
-		pChr->SetInvincible(pResult->NumArguments() == 0 ? !pChr->Core()->m_Invincible : pResult->GetInteger(0));
+	if(!pChr)
+		return;
+	bool Invincible;
+	if(pResult->NumArguments() == 1)
+		Invincible = pResult->GetInteger(0);
+	else
+		// TODO use freeze and spike action
+	pChr->SetInvincible(Invincible);
+}
+
+void CGameContext::ConFreezeAction(IConsole::IResult *pResult, void *pUserData)
+{
+	
+	// CGameContext *pSelf = (CGameContext *)pUserData;
+	// CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientId);
+	// if(pChr)
+	// 	pChr->SetInvincible(pResult->NumArguments() == 0 ? !pChr->Core()->m_Invincible : pResult->GetInteger(0));
+}
+
+void CGameContext::ConKillAction(IConsole::IResult *pResult, void *pUserData)
+{
+	// CGameContext *pSelf = (CGameContext *)pUserData;
+	// CCharacter *pChr = pSelf->GetPlayerChar(pResult->m_ClientId);
+	// if(pChr)
+	// 	pChr->SetInvincible(pResult->NumArguments() == 0 ? !pChr->Core()->m_Invincible : pResult->GetInteger(0));
 }
 
 void CGameContext::ConSolo(IConsole::IResult *pResult, void *pUserData)
