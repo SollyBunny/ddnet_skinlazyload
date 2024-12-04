@@ -14,7 +14,7 @@
 #include "controls.h"
 #include "nameplates.h"
 
-void CNameplate::CNameplateName::Update(CNameplates &This, int Id, const char *pName, bool FriendMark, float FontSize)
+void CNameplate::CNameplateName::Update(CNameplates &This, int Id, const char *pName, bool FriendMark, float FontSize, bool InGame)
 {
 	if(Id == m_Id &&
 		str_comp(m_aName, pName) == 0 &&
@@ -25,10 +25,13 @@ void CNameplate::CNameplateName::Update(CNameplates &This, int Id, const char *p
 	m_FriendMark = FriendMark;
 	m_FontSize = FontSize;
 
-	// create nameplates at standard zoom
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
+	if(InGame)
+	{
+		// create nameplates at standard zoom
+		This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
+	}
 
 	CTextCursor Cursor;
 	This.TextRender()->SetCursor(&Cursor, 0.0f, 0.0f, FontSize, TEXTFLAG_RENDER);
@@ -53,10 +56,11 @@ void CNameplate::CNameplateName::Update(CNameplates &This, int Id, const char *p
 	if(pName[0] != '\0')
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, pName);
 
-	This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	if(InGame)
+		This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 }
 
-void CNameplate::CNameplateClan::Update(CNameplates &This, const char *pClan, float FontSize)
+void CNameplate::CNameplateClan::Update(CNameplates &This, const char *pClan, float FontSize, bool InGame)
 {
 	if(str_comp(m_aClan, pClan) == 0 &&
 		m_FontSize == FontSize)
@@ -64,29 +68,36 @@ void CNameplate::CNameplateClan::Update(CNameplates &This, const char *pClan, fl
 	str_copy(m_aClan, pClan);
 	m_FontSize = FontSize;
 
-	// create nameplates at standard zoom
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
+	if(InGame)
+	{
+		// create nameplates at standard zoom
+		This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
+	}
 
 	CTextCursor Cursor;
 	This.TextRender()->SetCursor(&Cursor, 0.0f, 0.0f, FontSize, TEXTFLAG_RENDER);
 	This.TextRender()->RecreateTextContainer(m_TextContainerIndex, &Cursor, m_aClan);
 
-	This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	if(InGame)
+		This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 }
 
-void CNameplate::CNameplateHookWeakStrongId::Update(CNameplates &This, int Id, float FontSize)
+void CNameplate::CNameplateHookWeakStrongId::Update(CNameplates &This, int Id, float FontSize, bool InGame)
 {
 	if(Id == m_Id && m_FontSize == FontSize)
 		return;
 	m_Id = Id;
 	m_FontSize = FontSize;
 
-	// create nameplates at standard zoom
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-	This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
+	if(InGame)
+	{
+		// create nameplates at standard zoom
+		This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
+	}
 
 	char aBuf[8];
 	str_format(aBuf, sizeof(aBuf), "%d", m_Id);
@@ -95,7 +106,8 @@ void CNameplate::CNameplateHookWeakStrongId::Update(CNameplates &This, int Id, f
 	This.TextRender()->SetCursor(&Cursor, 0.0f, 0.0f, FontSize, TEXTFLAG_RENDER);
 	This.TextRender()->RecreateTextContainer(m_TextContainerIndex, &Cursor, aBuf);
 
-	This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	if(InGame)
+		This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 }
 
 void CNameplates::RenderNameplate(CNameplate &Nameplate, const CRenderNameplateData &Data)
@@ -139,14 +151,14 @@ void CNameplates::RenderNameplate(CNameplate &Nameplate, const CRenderNameplateD
 	if((Data.m_pName && Data.m_pName[0] != '\0') || Data.m_ClientId >= 0 || Data.m_ShowFriendMark)
 	{
 		YOffset -= Data.m_FontSize;
-		Nameplate.m_Name.Update(*this, Data.m_ClientId, Data.m_pName, Data.m_ShowFriendMark, Data.m_FontSize);
+		Nameplate.m_Name.Update(*this, Data.m_ClientId, Data.m_pName, Data.m_ShowFriendMark, Data.m_FontSize, Data.m_InGame);
 		if(Nameplate.m_Name.m_TextContainerIndex.Valid())
 			TextRender()->RenderTextContainer(Nameplate.m_Name.m_TextContainerIndex, Color, OutlineColor, Data.m_Position.x - TextRender()->GetBoundingBoxTextContainer(Nameplate.m_Name.m_TextContainerIndex).m_W / 2.0f, YOffset);
 	}
 	if(Data.m_pClan && Data.m_pClan[0] != '\0')
 	{
 		YOffset -= Data.m_FontSizeClan;
-		Nameplate.m_Clan.Update(*this, Data.m_pClan, Data.m_FontSizeClan);
+		Nameplate.m_Clan.Update(*this, Data.m_pClan, Data.m_FontSizeClan, Data.m_InGame);
 		if(Nameplate.m_Clan.m_TextContainerIndex.Valid())
 			TextRender()->RenderTextContainer(Nameplate.m_Clan.m_TextContainerIndex, Color, OutlineColor, Data.m_Position.x - TextRender()->GetBoundingBoxTextContainer(Nameplate.m_Clan.m_TextContainerIndex).m_W / 2.0f, YOffset);
 	}
@@ -179,7 +191,7 @@ void CNameplates::RenderNameplate(CNameplate &Nameplate, const CRenderNameplateD
 		float ShowHookWeakStrongIdSize = 0.0f;
 		if(Data.m_ShowHookWeakStrongId)
 		{
-			Nameplate.m_WeakStrongId.Update(*this, Data.m_HookWeakStrongId, Data.m_FontSizeHookWeakStrong);
+			Nameplate.m_WeakStrongId.Update(*this, Data.m_HookWeakStrongId, Data.m_FontSizeHookWeakStrong, Data.m_InGame);
 			if(Nameplate.m_WeakStrongId.m_TextContainerIndex.Valid())
 			{
 				ShowHookWeakStrongIdSize = TextRender()->GetBoundingBoxTextContainer(Nameplate.m_WeakStrongId.m_TextContainerIndex).m_W;
@@ -229,6 +241,7 @@ void CNameplates::RenderNameplateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	bool ShowNameplate = Local ? g_Config.m_ClNameplatesOwn : g_Config.m_ClNameplates;
 
 	Data.m_Position = Position;
+	Data.m_InGame = true;
 	Data.m_ClientId = ShowNameplate && g_Config.m_ClNameplatesIds ? pPlayerInfo->m_ClientId : -1;
 	Data.m_pName = ShowNameplate ? m_pClient->m_aClients[pPlayerInfo->m_ClientId].m_aName : nullptr;
 	Data.m_ShowFriendMark = ShowNameplate && g_Config.m_ClNameplatesFriendMark && m_pClient->m_aClients[pPlayerInfo->m_ClientId].m_Friend;
@@ -250,11 +263,6 @@ void CNameplates::RenderNameplateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	}
 	if(Data.m_Alpha <= 0.05f)
 		return;
-
-	const float MinZoom = (float)CConfig::ms_ClDefaultZoom / 10.0f;
-	Data.m_Zoom = GameClient()->m_Camera.m_ZoomSmoothingTarget;
-	if(Data.m_Zoom < MinZoom)
-		Data.m_Zoom = MinZoom;
 
 	Data.m_Color = ColorRGBA(1.0f, 1.0f, 1.0f);
 	Data.m_OutlineColor = ColorRGBA(0.0f, 0.0f, 0.0f);
@@ -355,7 +363,7 @@ void CNameplates::RenderNameplatePreview(vec2 Position)
 	CRenderNameplateData Data;
 
 	Data.m_Position = Position;
-	Data.m_Zoom = std::pow(CCamera::ZOOM_STEP, (float)(CConfig::ms_ClDefaultZoom - 10));
+	Data.m_InGame = true;
 	Data.m_Color = g_Config.m_ClNameplatesTeamcolors ? m_pClient->GetDDTeamColor(13, 0.75f) : TextRender()->DefaultTextColor();
 	Data.m_OutlineColor = TextRender()->DefaultTextOutlineColor();
 	Data.m_Alpha = 1.0f;
