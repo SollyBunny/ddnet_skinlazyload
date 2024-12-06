@@ -1638,6 +1638,7 @@ set(EXPECTED_DATA
   skins/ghost.png
   skins/ghostjtj.png
   skins/giraffe.png
+  skins/glow_mermyfox.png
   skins/greensward.png
   skins/greyfox.png
   skins/greyfox_2.png
@@ -2128,6 +2129,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   storage.cpp
   stun.cpp
   stun.h
+  tater_variables.h
   teehistorian_ex.cpp
   teehistorian_ex.h
   teehistorian_ex_chunks.h
@@ -2139,6 +2141,9 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   video.h
   websockets.cpp
   websockets.h
+)
+set_src(ENGINE_EXTERNAL GLOB src/engine/external
+  remimu.h
 )
 set_src(ENGINE_GFX GLOB src/engine/gfx
   image.cpp
@@ -2219,7 +2224,7 @@ set(LIBS
 # Targets
 add_library(engine-gfx EXCLUDE_FROM_ALL OBJECT ${ENGINE_GFX})
 target_include_directories(engine-gfx PRIVATE ${PNG_INCLUDE_DIRS})
-add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_UUID_SHARED} ${BASE})
+add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_EXTERNAL} ${ENGINE_INTERFACE} ${ENGINE_SHARED} ${ENGINE_UUID_SHARED} ${BASE})
 add_library(game-shared EXCLUDE_FROM_ALL OBJECT ${GAME_SHARED} ${GAME_GENERATED_SHARED})
 list(APPEND TARGETS_OWN engine-gfx engine-shared game-shared)
 
@@ -2400,6 +2405,23 @@ if(CLIENT)
     components/spectator.h
     components/statboard.cpp
     components/statboard.h
+    components/tclient/bindwheel.cpp
+    components/tclient/bindwheel.h
+    components/tclient/menus_tclient.cpp
+    components/tclient/outlines.cpp
+    components/tclient/outlines.h
+    components/tclient/player_indicator.cpp
+    components/tclient/player_indicator.h
+    components/tclient/rainbow.cpp
+    components/tclient/rainbow.h
+    components/tclient/skinprofiles.cpp
+    components/tclient/skinprofiles.h
+    components/tclient/tater.cpp
+    components/tclient/tater.h
+    components/tclient/verify.cpp
+    components/tclient/verify.h
+    components/tclient/warlist.cpp
+    components/tclient/warlist.h
     components/tooltips.cpp
     components/tooltips.h
     components/voting.cpp

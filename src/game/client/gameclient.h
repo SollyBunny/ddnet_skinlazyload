@@ -58,6 +58,14 @@
 #include "components/spectator.h"
 #include "components/statboard.h"
 #include "components/tooltips.h"
+#include "components/tclient/bindwheel.h"
+#include "components/tclient/outlines.h"
+#include "components/tclient/player_indicator.h"
+#include "components/tclient/rainbow.h"
+#include "components/tclient/skinprofiles.h"
+#include "components/tclient/tater.h"
+#include "components/tclient/verify.h"
+#include "components/tclient/warlist.h"
 #include "components/voting.h"
 
 class CGameInfo
@@ -147,6 +155,7 @@ public:
 	CEmoticon m_Emoticon;
 	CDamageInd m_DamageInd;
 	CVoting m_Voting;
+	CVerify m_Verify;
 	CSpectator m_Spectator;
 
 	CPlayers m_Players;
@@ -166,6 +175,15 @@ public:
 	CGhost m_Ghost;
 
 	CTooltips m_Tooltips;
+
+	// TClient Components
+	CSkinProfiles m_SkinProfiles;
+	CBindWheel m_Bindwheel;
+	CTater m_Tater;
+	CPlayerIndicator m_PlayerIndicator;
+	COutlines m_Outlines;
+	CRainbow m_Rainbow;
+	CWarList m_WarList;
 
 private:
 	std::vector<class CComponent *> m_vpAll;
@@ -217,7 +235,6 @@ private:
 	int m_aCheckInfo[NUM_DUMMIES];
 
 	char m_aDDNetVersionStr[64];
-
 	static void ConTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConKill(IConsole::IResult *pResult, void *pUserData);
 	static void ConReadyChange7(IConsole::IResult *pResult, void *pUserData);
@@ -597,6 +614,7 @@ public:
 	CGameWorld m_GameWorld;
 	CGameWorld m_PredictedWorld;
 	CGameWorld m_PrevPredictedWorld;
+	CGameWorld m_ExtraPredictedWorld;
 
 	std::vector<SSwitchers> &Switchers() { return m_GameWorld.m_Core.m_vSwitchers; }
 	std::vector<SSwitchers> &PredSwitchers() { return m_PredictedWorld.m_Core.m_vSwitchers; }
@@ -609,6 +627,8 @@ public:
 	bool CanDisplayWarning() const override;
 	CNetObjHandler *GetNetObjHandler() override;
 	protocol7::CNetObjHandler *GetNetObjHandler7() override;
+
+	bool CheckNewInput() override;
 
 	void LoadGameSkin(const char *pPath, bool AsDir = false);
 	void LoadEmoticonsSkin(const char *pPath, bool AsDir = false);
@@ -779,6 +799,8 @@ public:
 
 	const std::vector<CSnapEntities> &SnapEntities() { return m_vSnapEntities; }
 
+	vec2 GetSmoothPos(int ClientId);
+	vec2 GetFreezePos(int ClientId);
 	int m_MultiViewTeam;
 	float m_MultiViewPersonalZoom;
 	bool m_MultiViewShowHud;
@@ -801,8 +823,6 @@ private:
 
 	int m_aLastUpdateTick[MAX_CLIENTS] = {0};
 	void DetectStrongHook();
-
-	vec2 GetSmoothPos(int ClientId);
 
 	int m_PredictedDummyId;
 	int m_IsDummySwapping;

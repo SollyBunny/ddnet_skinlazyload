@@ -346,18 +346,18 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 	MainView.HSplitBottom(5.0f, &MainView, nullptr);
 	QuickSearch.VSplitLeft(220.0f, &QuickSearch, nullptr);
 
-	int OldSelected = -1;
+	int RainbowSelectedOld = -1;
 	static CListBox s_ListBox;
-	s_ListBox.DoStart(48.0f, vpFilteredFlags.size(), 10, 3, OldSelected, &MainView);
+	s_ListBox.DoStart(48.0f, vpFilteredFlags.size(), 10, 3, RainbowSelectedOld, &MainView);
 
 	for(size_t i = 0; i < vpFilteredFlags.size(); i++)
 	{
 		const CCountryFlags::CCountryFlag *pEntry = vpFilteredFlags[i];
 
 		if(pEntry->m_CountryCode == *pCountry)
-			OldSelected = i;
+			RainbowSelectedOld = i;
 
-		const CListboxItem Item = s_ListBox.DoNextItem(&pEntry->m_CountryCode, OldSelected >= 0 && (size_t)OldSelected == i);
+		const CListboxItem Item = s_ListBox.DoNextItem(&pEntry->m_CountryCode, RainbowSelectedOld >= 0 && (size_t)RainbowSelectedOld == i);
 		if(!Item.m_Visible)
 			continue;
 
@@ -377,7 +377,7 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 	}
 
 	const int NewSelected = s_ListBox.DoEnd();
-	if(OldSelected != NewSelected)
+	if(RainbowSelectedOld != NewSelected)
 	{
 		*pCountry = vpFilteredFlags[NewSelected]->m_CountryCode;
 		SetNeedSendInfo();
@@ -502,7 +502,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		pEmote = &g_Config.m_ClDummyDefaultEyes;
 	}
 
-	const float EyeButtonSize = 40.0f;
+	const float EyeLineSize = 40.0f;
 	const bool RenderEyesBelow = MainView.w < 750.0f;
 	CUIRect YourSkin, Checkboxes, SkinPrefix, Eyes, Button, Label;
 	MainView.HSplitTop(90.0f, &YourSkin, &MainView);
@@ -511,12 +511,12 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		YourSkin.VSplitLeft(MainView.w * 0.45f, &YourSkin, &Checkboxes);
 		Checkboxes.VSplitLeft(MainView.w * 0.35f, &Checkboxes, &SkinPrefix);
 		MainView.HSplitTop(5.0f, nullptr, &MainView);
-		MainView.HSplitTop(EyeButtonSize, &Eyes, &MainView);
-		Eyes.VSplitRight(EyeButtonSize * NUM_EMOTES + 5.0f * (NUM_EMOTES - 1), nullptr, &Eyes);
+		MainView.HSplitTop(EyeLineSize, &Eyes, &MainView);
+		Eyes.VSplitRight(EyeLineSize * NUM_EMOTES + 5.0f * (NUM_EMOTES - 1), nullptr, &Eyes);
 	}
 	else
 	{
-		YourSkin.VSplitRight(3 * EyeButtonSize + 2 * 5.0f, &YourSkin, &Eyes);
+		YourSkin.VSplitRight(3 * EyeLineSize + 2 * 5.0f, &YourSkin, &Eyes);
 		const float RemainderWidth = YourSkin.w;
 		YourSkin.VSplitLeft(RemainderWidth * 0.4f, &YourSkin, &Checkboxes);
 		Checkboxes.VSplitLeft(RemainderWidth * 0.35f, &Checkboxes, &SkinPrefix);
@@ -576,13 +576,19 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			}
 		}
 	}
+	CUIRect RandomColorsButton;
 
 	// Player skin area
 	CUIRect CustomColorsButton, RandomSkinButton;
 	YourSkin.HSplitTop(20.0f, &Label, &YourSkin);
 	YourSkin.HSplitBottom(20.0f, &YourSkin, &CustomColorsButton);
+
 	CustomColorsButton.VSplitRight(30.0f, &CustomColorsButton, &RandomSkinButton);
-	CustomColorsButton.VSplitRight(20.0f, &CustomColorsButton, nullptr);
+	CustomColorsButton.VSplitRight(3.0f, &CustomColorsButton, 0);
+
+	CustomColorsButton.VSplitRight(110.0f, &CustomColorsButton, &RandomColorsButton);
+
+	CustomColorsButton.VSplitRight(5.0f, &CustomColorsButton, nullptr);
 	YourSkin.VSplitLeft(65.0f, &YourSkin, &Button);
 	Button.VSplitLeft(5.0f, nullptr, &Button);
 	Button.HMargin((Button.h - 20.0f) / 2.0f, &Button);
@@ -632,6 +638,27 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	GameClient()->m_Tooltips.DoToolTip(&s_RandomSkinButton, &RandomSkinButton, Localize("Create a random skin"));
 
+	static CButtonContainer s_RandomizeColors;
+	if(*pUseCustomColor)
+	{
+		// RandomColorsButton.VSplitLeft(120.0f, &RandomColorsButton, 0);
+		if(DoButton_Menu(&s_RandomizeColors, "Random Colors", 0, &RandomColorsButton, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, vec4(0, 0, 0, 0.5f)))
+		{
+			if(m_Dummy)
+			{
+				g_Config.m_ClDummyColorBody = ColorHSLA((std::rand() % 100) / 100.0f, (std::rand() % 100) / 100.0f, (std::rand() % 100) / 100.0f, 1).Pack(false);
+				g_Config.m_ClDummyColorFeet = ColorHSLA((std::rand() % 100) / 100.0f, (std::rand() % 100) / 100.0f, (std::rand() % 100) / 100.0f, 1).Pack(false);
+			}
+			else
+			{
+				g_Config.m_ClPlayerColorBody = ColorHSLA((std::rand() % 100) / 100.0f, (std::rand() % 100) / 100.0f, (std::rand() % 100) / 100.0f, 1).Pack(false);
+				g_Config.m_ClPlayerColorFeet = ColorHSLA((std::rand() % 100) / 100.0f, (std::rand() % 100) / 100.0f, (std::rand() % 100) / 100.0f, 1).Pack(false);
+			}
+			SetNeedSendInfo();
+		}
+	}
+	MainView.HSplitTop(5.0f, 0, &MainView);
+
 	// Custom colors button
 	if(DoButton_CheckBox(pUseCustomColor, Localize("Custom colors"), *pUseCustomColor, &CustomColorsButton))
 	{
@@ -642,21 +669,21 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	// Default eyes
 	{
 		CTeeRenderInfo EyeSkinInfo = OwnSkinInfo;
-		EyeSkinInfo.m_Size = EyeButtonSize;
+		EyeSkinInfo.m_Size = EyeLineSize;
 		vec2 OffsetToMid;
 		CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &EyeSkinInfo, OffsetToMid);
 
 		CUIRect EyesRow;
-		Eyes.HSplitTop(EyeButtonSize, &EyesRow, &Eyes);
+		Eyes.HSplitTop(EyeLineSize, &EyesRow, &Eyes);
 		static CButtonContainer s_aEyeButtons[NUM_EMOTES];
 		for(int CurrentEyeEmote = 0; CurrentEyeEmote < NUM_EMOTES; CurrentEyeEmote++)
 		{
-			EyesRow.VSplitLeft(EyeButtonSize, &Button, &EyesRow);
+			EyesRow.VSplitLeft(EyeLineSize, &Button, &EyesRow);
 			EyesRow.VSplitLeft(5.0f, nullptr, &EyesRow);
 			if(!RenderEyesBelow && (CurrentEyeEmote + 1) % 3 == 0)
 			{
 				Eyes.HSplitTop(5.0f, nullptr, &Eyes);
-				Eyes.HSplitTop(EyeButtonSize, &EyesRow, &Eyes);
+				Eyes.HSplitTop(EyeLineSize, &EyesRow, &Eyes);
 			}
 
 			const ColorRGBA EyeButtonColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f + (*pEmote == CurrentEyeEmote ? 0.25f : 0.0f));
@@ -759,14 +786,14 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		m_SkinListNeedsUpdate = false;
 	}
 
-	int OldSelected = -1;
-	s_ListBox.DoStart(50.0f, s_vSkinList.size(), 4, 1, OldSelected, &MainView);
+	int RainbowSelectedOld = -1;
+	s_ListBox.DoStart(50.0f, s_vSkinList.size(), 4, 1, RainbowSelectedOld, &MainView);
 	for(size_t i = 0; i < s_vSkinList.size(); ++i)
 	{
 		const CSkin *pSkinToBeDraw = s_vSkinList[i].m_pSkin;
 		if(str_comp(pSkinToBeDraw->GetName(), pSkinName) == 0)
 		{
-			OldSelected = i;
+			RainbowSelectedOld = i;
 			if(m_SkinListScrollToSelected)
 			{
 				s_ListBox.ScrollToSelected();
@@ -774,7 +801,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			}
 		}
 
-		const CListboxItem Item = s_ListBox.DoNextItem(pSkinToBeDraw, OldSelected >= 0 && (size_t)OldSelected == i);
+		const CListboxItem Item = s_ListBox.DoNextItem(pSkinToBeDraw, RainbowSelectedOld >= 0 && (size_t)RainbowSelectedOld == i);
 		if(!Item.m_Visible)
 			continue;
 
@@ -826,7 +853,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	}
 
 	const int NewSelected = s_ListBox.DoEnd();
-	if(OldSelected != NewSelected)
+	if(RainbowSelectedOld != NewSelected)
 	{
 		str_copy(pSkinName, s_vSkinList[NewSelected].m_pSkin->GetName(), SkinNameSize);
 		SetNeedSendInfo();
@@ -1429,9 +1456,9 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 		Ui()->DoLabel(&ModeLabel, aBuf, sc_FontSizeResListHeader, TEXTALIGN_MC);
 	}
 
-	int OldSelected = -1;
+	int RainbowSelectedOld = -1;
 	s_ListBox.SetActive(!Ui()->IsPopupOpen());
-	s_ListBox.DoStart(sc_RowHeightResList, s_NumNodes, 1, 3, OldSelected, &ModeList);
+	s_ListBox.DoStart(sc_RowHeightResList, s_NumNodes, 1, 3, RainbowSelectedOld, &ModeList);
 
 	for(int i = 0; i < s_NumNodes; ++i)
 	{
@@ -1441,10 +1468,10 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			g_Config.m_GfxScreenHeight == s_aModes[i].m_WindowHeight &&
 			g_Config.m_GfxScreenRefreshRate == s_aModes[i].m_RefreshRate)
 		{
-			OldSelected = i;
+			RainbowSelectedOld = i;
 		}
 
-		const CListboxItem Item = s_ListBox.DoNextItem(&s_aModes[i], OldSelected == i);
+		const CListboxItem Item = s_ListBox.DoNextItem(&s_aModes[i], RainbowSelectedOld == i);
 		if(!Item.m_Visible)
 			continue;
 
@@ -1454,7 +1481,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	}
 
 	const int NewSelected = s_ListBox.DoEnd();
-	if(OldSelected != NewSelected)
+	if(RainbowSelectedOld != NewSelected)
 	{
 		const int Depth = s_aModes[NewSelected].m_Red + s_aModes[NewSelected].m_Green + s_aModes[NewSelected].m_Blue > 16 ? 24 : 16;
 		g_Config.m_GfxColorDepth = Depth;
@@ -1641,7 +1668,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			return str_comp_nocase(CheckInfo.m_pBackendName, CConfig::ms_pGfxBackend) == 0 && CheckInfo.m_Major == CConfig::ms_GfxGLMajor && CheckInfo.m_Minor == CConfig::ms_GfxGLMinor && CheckInfo.m_Patch == CConfig::ms_GfxGLPatch;
 		};
 
-		int OldSelectedBackend = -1;
+		int RainbowSelectedOldBackend = -1;
 		uint32_t CurCounter = 0;
 		for(uint32_t i = 0; i < BACKEND_TYPE_COUNT; ++i)
 		{
@@ -1656,7 +1683,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 					s_vpBackendIdNamesCStr[CurCounter] = s_vBackendIdNames[CurCounter].c_str();
 					if(str_comp_nocase(Info.m_pBackendName, g_Config.m_GfxBackend) == 0 && g_Config.m_GfxGLMajor == Info.m_Major && g_Config.m_GfxGLMinor == Info.m_Minor && g_Config.m_GfxGLPatch == Info.m_Patch)
 					{
-						OldSelectedBackend = CurCounter;
+						RainbowSelectedOldBackend = CurCounter;
 					}
 
 					s_vBackendInfos[CurCounter] = Info;
@@ -1665,7 +1692,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			}
 		}
 
-		if(OldSelectedBackend != -1)
+		if(RainbowSelectedOldBackend != -1)
 		{
 			// no custom selected
 			BackendCount -= 1;
@@ -1676,7 +1703,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			str_format(aTmpBackendName, sizeof(aTmpBackendName), "%s (%s %d.%d.%d)", Localize("custom"), g_Config.m_GfxBackend, g_Config.m_GfxGLMajor, g_Config.m_GfxGLMinor, g_Config.m_GfxGLPatch);
 			s_vBackendIdNames[CurCounter] = aTmpBackendName;
 			s_vpBackendIdNamesCStr[CurCounter] = s_vBackendIdNames[CurCounter].c_str();
-			OldSelectedBackend = CurCounter;
+			RainbowSelectedOldBackend = CurCounter;
 
 			s_vBackendInfos[CurCounter].m_pBackendName = "custom";
 			s_vBackendInfos[CurCounter].m_Major = g_Config.m_GfxGLMajor;
@@ -1684,15 +1711,15 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			s_vBackendInfos[CurCounter].m_Patch = g_Config.m_GfxGLPatch;
 		}
 
-		static int s_OldSelectedBackend = -1;
-		if(s_OldSelectedBackend == -1)
-			s_OldSelectedBackend = OldSelectedBackend;
+		static int s_RainbowSelectedOldBackend = -1;
+		if(s_RainbowSelectedOldBackend == -1)
+			s_RainbowSelectedOldBackend = RainbowSelectedOldBackend;
 
 		static CUi::SDropDownState s_BackendDropDownState;
 		static CScrollRegion s_BackendDropDownScrollRegion;
 		s_BackendDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_BackendDropDownScrollRegion;
-		const int NewBackend = Ui()->DoDropDown(&BackendDropDown, OldSelectedBackend, s_vpBackendIdNamesCStr.data(), BackendCount, s_BackendDropDownState);
-		if(OldSelectedBackend != NewBackend)
+		const int NewBackend = Ui()->DoDropDown(&BackendDropDown, RainbowSelectedOldBackend, s_vpBackendIdNamesCStr.data(), BackendCount, s_BackendDropDownState);
+		if(RainbowSelectedOldBackend != NewBackend)
 		{
 			str_copy(g_Config.m_GfxBackend, s_vBackendInfos[NewBackend].m_pBackendName);
 			g_Config.m_GfxGLMajor = s_vBackendInfos[NewBackend].m_Major;
@@ -1700,7 +1727,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			g_Config.m_GfxGLPatch = s_vBackendInfos[NewBackend].m_Patch;
 
 			CheckSettings = true;
-			s_GfxBackendChanged = s_OldSelectedBackend != NewBackend;
+			s_GfxBackendChanged = s_RainbowSelectedOldBackend != NewBackend;
 		}
 	}
 
@@ -1883,7 +1910,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView)
 		}
 	}
 
-	const int OldSelected = s_SelectedLanguage;
+	const int RainbowSelectedOld = s_SelectedLanguage;
 
 	s_ListBox.DoStart(24.0f, g_Localization.Languages().size(), 1, 3, s_SelectedLanguage, &MainView);
 
@@ -1904,7 +1931,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView)
 
 	s_SelectedLanguage = s_ListBox.DoEnd();
 
-	if(OldSelected != s_SelectedLanguage)
+	if(RainbowSelectedOld != s_SelectedLanguage)
 	{
 		str_copy(g_Config.m_ClLanguagefile, g_Localization.Languages()[s_SelectedLanguage].m_FileName.c_str());
 		GameClient()->OnLanguageChange();
@@ -1941,7 +1968,10 @@ void CMenus::RenderSettings(CUIRect MainView)
 		Localize("Graphics"),
 		Localize("Sound"),
 		Localize("DDNet"),
-		Localize("Assets")};
+		Localize("Assets"),
+		Localize("TClient"),
+		Localize("Profiles")};
+
 	static CButtonContainer s_aTabButtons[SETTINGS_LENGTH];
 
 	for(int i = 0; i < SETTINGS_LENGTH; i++)
@@ -2004,6 +2034,16 @@ void CMenus::RenderSettings(CUIRect MainView)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_ASSETS);
 		RenderSettingsCustom(MainView);
+	}
+	else if(g_Config.m_UiSettingsPage == SETTINGS_TCLIENT)
+	{
+		GameClient()->m_MenuBackground.ChangePosition(13);
+		RenderSettingsTClient(MainView);
+	}
+	else if(g_Config.m_UiSettingsPage == SETTINGS_PROFILES)
+	{
+		GameClient()->m_MenuBackground.ChangePosition(14);
+		RenderSettingsProfiles(MainView);
 	}
 	else
 	{
@@ -2347,9 +2387,6 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudHealthAmmo, Localize("Show health, shields and ammo"), &g_Config.m_ClShowhudHealthAmmo, &LeftView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowhudScore, Localize("Show score"), &g_Config.m_ClShowhudScore, &LeftView, LineSize);
 		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowLocalTimeAlways, Localize("Show local time always"), &g_Config.m_ClShowLocalTimeAlways, &LeftView, LineSize);
-
-		// Settings of the HUD element for votes
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowVotesAfterVoting, Localize("Show votes window after voting"), &g_Config.m_ClShowVotesAfterVoting, &LeftView, LineSize);
 
 		// ***** DDRace HUD ***** //
 		RightView.HSplitTop(HeadlineHeight, &Label, &RightView);

@@ -533,7 +533,7 @@ void CSpectator::OnRender()
 		CTextCursor NameCursor;
 		TextRender()->SetCursor(&NameCursor, Width / 2.0f + x + 50.0f, Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize, TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END);
 		NameCursor.m_LineWidth = 180.0f;
-		if(g_Config.m_ClShowIds)
+		if(g_Config.m_ClShowIds || g_Config.m_ClSpecmenuID)
 		{
 			char aClientId[16];
 			GameClient()->FormatClientId(m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId, aClientId, EClientIdFormat::INDENT_AUTO);

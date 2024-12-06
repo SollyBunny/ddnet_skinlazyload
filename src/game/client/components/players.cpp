@@ -24,6 +24,7 @@
 
 #include "players.h"
 
+#include <game/client/components/tclient/rainbow.h>
 #include <base/color.h>
 #include <base/math.h>
 
@@ -95,7 +96,10 @@ void CPlayers::RenderHand6(const CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir
 
 	const CSkin::SSkinTextures *pSkinTextures = pInfo->m_CustomColoredSkin ? &pInfo->m_ColorableRenderSkin : &pInfo->m_OriginalRenderSkin;
 
-	Graphics()->SetColor(pInfo->m_ColorBody.r, pInfo->m_ColorBody.g, pInfo->m_ColorBody.b, Alpha);
+	if(!(g_Config.m_ClRainbow == 1 || g_Config.m_ClRainbowOthers == 1))
+	{
+		Graphics()->SetColor(pInfo->m_ColorBody.r, pInfo->m_ColorBody.g, pInfo->m_ColorBody.b, Alpha);
+	}
 
 	// two passes
 	for(int i = 0; i < 2; i++)
@@ -189,14 +193,25 @@ void CPlayers::RenderHookCollLine(
 	if(Local && (!m_pClient->m_Snap.m_SpecInfo.m_Active || m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW) && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		// just use the direct input if it's the local player we are rendering
-		Angle = angle(m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom);
+		vec2 Pos = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy];
+		const int MaxDistance = g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance;
+		if(MaxDistance > 5) // Only multiply mouse coords if not angle bind
+		{
+			if(g_Config.m_ClImproveMousePrecision && MaxDistance < 1000) // Don't scale if it would reduce precision
+				Pos *= length(Pos) * 1000.0f / (float)MaxDistance;
+			if(!m_pClient->m_Snap.m_SpecInfo.m_Active && !g_Config.m_ClOldMouseZoom)
+				Pos *= m_pClient->m_Camera.m_Zoom;
+		}
+		Pos.x = (int)Pos.x;
+		Pos.y = (int)Pos.y;
+		Angle = angle(Pos);
 	}
 	else
 	{
 		Angle = GetPlayerTargetAngle(&Prev, &Player, ClientId, IntraTick);
 	}
 
-	vec2 Direction = direction(Angle);
+	vec2 ExDirection = direction(Angle);
 	vec2 Position;
 	if(in_range(ClientId, MAX_CLIENTS - 1))
 		Position = m_pClient->m_aClients[ClientId].m_RenderPos;
@@ -228,18 +243,6 @@ void CPlayers::RenderHookCollLine(
 #endif
 		if((AlwaysRenderHookColl || RenderHookCollPlayer) && RenderHookCollVideo)
 		{
-			vec2 ExDirection = Direction;
-
-			if(Local && (!m_pClient->m_Snap.m_SpecInfo.m_Active || m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW) && Client()->State() != IClient::STATE_DEMOPLAYBACK)
-			{
-				ExDirection = normalize(
-					vec2((int)((int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].x * m_pClient->m_Camera.m_Zoom),
-						(int)((int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].y * m_pClient->m_Camera.m_Zoom)));
-
-				// fix direction if mouse is exactly in the center
-				if(!(int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].x && !(int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].y)
-					ExDirection = vec2(1, 0);
-			}
 			Graphics()->TextureClear();
 			vec2 InitPos = Position;
 			vec2 FinishPos = InitPos + ExDirection * (m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength - 42.0f);
@@ -370,7 +373,13 @@ void CPlayers::RenderHook(
 		vec2 HookPos;
 
 		if(in_range(pPlayerChar->m_HookedPlayer, MAX_CLIENTS - 1))
+		{
 			HookPos = m_pClient->m_aClients[pPlayerChar->m_HookedPlayer].m_RenderPos;
+			if(g_Config.m_ClSwapGhosts && Client()->State() != IClient::STATE_DEMOPLAYBACK && m_pClient->m_Snap.m_LocalClientId == ClientId)
+			{
+				HookPos = GameClient()->GetSmoothPos(pPlayerChar->m_HookedPlayer);
+			}
+		}
 		else
 			HookPos = mix(vec2(Prev.m_HookX, Prev.m_HookY), vec2(Player.m_HookX, Player.m_HookY), IntraTick);
 
@@ -422,7 +431,18 @@ void CPlayers::RenderPlayer(
 
 	bool Local = m_pClient->m_Snap.m_LocalClientId == ClientId;
 	bool OtherTeam = m_pClient->IsOtherTeam(ClientId);
-	float Alpha = (OtherTeam || ClientId < 0) ? g_Config.m_ClShowOthersAlpha / 100.0f : 1.0f;
+	// float Alpha = (OtherTeam || ClientId < 0) ? g_Config.m_ClShowOthersAlpha / 100.0f : 1.0f;
+	bool Spec = m_pClient->m_Snap.m_SpecInfo.m_Active;
+
+	float Alpha = 1.0f;
+	if(OtherTeam || ClientId < 0)
+		Alpha = g_Config.m_ClShowOthersAlpha / 100.0f;
+	else if(g_Config.m_ClShowOthersGhosts && !Local && !Spec)
+		Alpha = g_Config.m_ClPredGhostsAlpha / 100.0f;
+
+	if(!OtherTeam && g_Config.m_ClShowOthersGhosts && !Local && g_Config.m_ClUnpredOthersInFreeze && g_Config.m_ClAmIFrozen && !Spec)
+		Alpha = 1.0f;
+
 	if(ClientId == -2) // ghost
 		Alpha = g_Config.m_ClRaceGhostAlpha / 100.0f;
 
@@ -456,7 +476,18 @@ void CPlayers::RenderPlayer(
 	if(Local && (!m_pClient->m_Snap.m_SpecInfo.m_Active || m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW) && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		// just use the direct input if it's the local player we are rendering
-		Angle = angle(m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy] * m_pClient->m_Camera.m_Zoom);
+		vec2 Pos = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy];
+		const int MaxDistance = g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance;
+		if(MaxDistance > 5) // Only multiply mouse coords if not angle bind
+		{
+			if(g_Config.m_ClImproveMousePrecision && MaxDistance < 1000) // Don't scale if it would reduce precision
+				Pos *= length(Pos) * 1000.0f / (float)MaxDistance;
+			if(!m_pClient->m_Snap.m_SpecInfo.m_Active && !g_Config.m_ClOldMouseZoom)
+				Pos *= m_pClient->m_Camera.m_Zoom;
+		}
+		Pos.x = (int)Pos.x;
+		Pos.y = (int)Pos.y;
+		Angle = angle(Pos);
 	}
 	else
 	{
@@ -469,6 +500,14 @@ void CPlayers::RenderPlayer(
 		Position = m_pClient->m_aClients[ClientId].m_RenderPos;
 	else
 		Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), IntraTick);
+
+	if(g_Config.m_ClSwapGhosts && g_Config.m_ClShowOthersGhosts && !Local && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		if(ClientId >= 0)
+			Position = mix(
+				vec2(m_pClient->m_Snap.m_aCharacters[ClientId].m_Prev.m_X, m_pClient->m_Snap.m_aCharacters[ClientId].m_Prev.m_Y),
+				vec2(m_pClient->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, m_pClient->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y),
+				Client()->IntraGameTick(g_Config.m_ClDummy));
+
 	vec2 Vel = mix(vec2(Prev.m_VelX / 256.0f, Prev.m_VelY / 256.0f), vec2(Player.m_VelX / 256.0f, Player.m_VelY / 256.0f), IntraTick);
 
 	m_pClient->m_Flow.Add(Position, Vel * 100.0f, 10.0f);
@@ -537,6 +576,7 @@ void CPlayers::RenderPlayer(
 			Alpha);
 	}
 
+	vec2 GhostWeaponPos = vec2(0, 0);
 	// draw gun
 	if(Player.m_Weapon >= 0)
 	{
@@ -565,21 +605,25 @@ void CPlayers::RenderPlayer(
 				// static position for hammer
 				WeaponPosition = Position + vec2(State.GetAttach()->m_X, State.GetAttach()->m_Y);
 				WeaponPosition.y += g_pData->m_Weapons.m_aId[CurrentWeapon].m_Offsety;
-				if(Direction.x < 0)
+				if(Direction.x < 0.0f)
 					WeaponPosition.x -= g_pData->m_Weapons.m_aId[CurrentWeapon].m_Offsetx;
 				if(IsSit)
 					WeaponPosition.y += 3.0f;
 
-				// if active and attack is under way, bash stuffs
-				if(!Inactive || LastAttackTime < m_pClient->m_aTuning[g_Config.m_ClDummy].GetWeaponFireDelay(Player.m_Weapon))
+				// set rotation
+				float QuadsRotation = -pi / 2.0f;
+				QuadsRotation += State.GetAttach()->m_Angle * (Direction.x < 0 ? -1 : 1) * pi * 2;
+				if(g_Config.m_ClHammerRotatesWithCursor)
 				{
-					if(Direction.x < 0)
-						Graphics()->QuadsSetRotation(-pi / 2 - State.GetAttach()->m_Angle * pi * 2);
-					else
-						Graphics()->QuadsSetRotation(-pi / 2 + State.GetAttach()->m_Angle * pi * 2);
+					QuadsRotation += Angle;
+					if(Direction.x < 0.0f)
+						QuadsRotation += pi;
 				}
-				else
-					Graphics()->QuadsSetRotation(Direction.x < 0 ? 100.0f : 500.0f);
+				else if(Inactive && LastAttackTime > m_pClient->m_aTuning[g_Config.m_ClDummy].GetWeaponFireDelay(Player.m_Weapon))
+				{
+					QuadsRotation = Direction.x < 0 ? 100.0f : 500.0f;
+				}
+				Graphics()->QuadsSetRotation(QuadsRotation);
 
 				Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, WeaponPosition.x, WeaponPosition.y);
 			}
@@ -718,6 +762,7 @@ void CPlayers::RenderPlayer(
 			case WEAPON_SHOTGUN: RenderHand(&RenderInfo, WeaponPosition, Direction, -pi / 2, vec2(-5, 4), Alpha); break;
 			case WEAPON_GRENADE: RenderHand(&RenderInfo, WeaponPosition, Direction, -pi / 2, vec2(-4, 7), Alpha); break;
 			}
+			GhostWeaponPos = WeaponPosition;
 		}
 	}
 
@@ -813,6 +858,438 @@ void CPlayers::RenderPlayer(
 	}
 }
 
+void CPlayers::RenderPlayerGhost(
+	const CNetObj_Character *pPrevChar,
+	const CNetObj_Character *pPlayerChar,
+	const CTeeRenderInfo *pRenderInfo,
+	int ClientId,
+	float Intra)
+{
+	CNetObj_Character Prev;
+	CNetObj_Character Player;
+	Prev = *pPrevChar;
+	Player = *pPlayerChar;
+
+	CTeeRenderInfo RenderInfo = *pRenderInfo;
+
+	bool Local = m_pClient->m_Snap.m_LocalClientId == ClientId;
+	bool OtherTeam = m_pClient->IsOtherTeam(ClientId);
+	float Alpha = 1.0f;
+
+	bool FrozenSwappingHide = (m_pClient->m_aClients[ClientId].m_FreezeEnd > 0) && g_Config.m_ClHideFrozenGhosts && g_Config.m_ClSwapGhosts;
+
+	if(OtherTeam || ClientId < 0)
+		Alpha = g_Config.m_ClShowOthersAlpha / 100.0f;
+	else
+		Alpha = g_Config.m_ClUnpredGhostsAlpha / 100.0f;
+
+	if(!OtherTeam && FrozenSwappingHide)
+		Alpha = 1.0f;
+
+	// set size
+	RenderInfo.m_Size = 64.0f;
+
+	float IntraTick = Intra;
+	if(ClientId >= 0)
+		IntraTick = m_pClient->m_aClients[ClientId].m_IsPredicted ? Client()->PredIntraGameTick(g_Config.m_ClDummy) : Client()->IntraGameTick(g_Config.m_ClDummy);
+
+	static float s_LastGameTickTime = Client()->GameTickTime(g_Config.m_ClDummy);
+	static float s_LastPredIntraTick = Client()->PredIntraGameTick(g_Config.m_ClDummy);
+	if(m_pClient->m_Snap.m_pGameInfoObj && !(m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED))
+	{
+		s_LastGameTickTime = Client()->GameTickTime(g_Config.m_ClDummy);
+		s_LastPredIntraTick = Client()->PredIntraGameTick(g_Config.m_ClDummy);
+	}
+
+	bool PredictLocalWeapons = false;
+	float AttackTime = (Client()->PrevGameTick(g_Config.m_ClDummy) - Player.m_AttackTick) / (float)SERVER_TICK_SPEED + Client()->GameTickTime(g_Config.m_ClDummy);
+	float LastAttackTime = (Client()->PrevGameTick(g_Config.m_ClDummy) - Player.m_AttackTick) / (float)SERVER_TICK_SPEED + s_LastGameTickTime;
+	if(ClientId >= 0 && m_pClient->m_aClients[ClientId].m_IsPredictedLocal && m_pClient->AntiPingGunfire())
+	{
+		PredictLocalWeapons = true;
+		AttackTime = (Client()->PredIntraGameTick(g_Config.m_ClDummy) + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)SERVER_TICK_SPEED;
+		LastAttackTime = (s_LastPredIntraTick + (Client()->PredGameTick(g_Config.m_ClDummy) - 1 - Player.m_AttackTick)) / (float)SERVER_TICK_SPEED;
+	}
+	float AttackTicksPassed = AttackTime * (float)SERVER_TICK_SPEED;
+
+	float Angle;
+	if(Local && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		// just use the direct input if it's the local player we are rendering
+		vec2 Pos = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy];
+		const int MaxDistance = g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance;
+		if(MaxDistance > 5) // Only multiply mouse coords if not angle bind
+		{
+			if(g_Config.m_ClImproveMousePrecision && MaxDistance < 1000) // Don't scale if it would reduce precision
+				Pos *= length(Pos) * 1000.0f / (float)MaxDistance;
+			if(!m_pClient->m_Snap.m_SpecInfo.m_Active && !g_Config.m_ClOldMouseZoom)
+				Pos *= m_pClient->m_Camera.m_Zoom;
+		}
+		Pos.x = (int)Pos.x;
+		Pos.y = (int)Pos.y;
+		Angle = angle(Pos);
+	}
+	else
+	{
+		Angle = GetPlayerTargetAngle(&Prev, &Player, ClientId, IntraTick);
+	}
+
+	vec2 Direction = direction(Angle);
+	vec2 Position;
+	if(in_range(ClientId, MAX_CLIENTS - 1))
+		Position = m_pClient->m_aClients[ClientId].m_RenderPos;
+	else
+		Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), IntraTick);
+
+	if(g_Config.m_ClSwapGhosts)
+	{
+		Position = GameClient()->GetSmoothPos(ClientId);
+	}
+	else
+	{
+		if(ClientId >= 0)
+			Position = mix(
+				vec2(m_pClient->m_Snap.m_aCharacters[ClientId].m_Prev.m_X, m_pClient->m_Snap.m_aCharacters[ClientId].m_Prev.m_Y),
+				vec2(m_pClient->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, m_pClient->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y),
+				Client()->IntraGameTick(g_Config.m_ClDummy));
+	}
+
+	if(g_Config.m_ClRenderGhostAsCircle && !FrozenSwappingHide)
+	{
+		Graphics()->TextureClear();
+		Graphics()->QuadsBegin();
+		Graphics()->SetColor(RenderInfo.m_ColorBody.r, RenderInfo.m_ColorBody.g, RenderInfo.m_ColorBody.b, Alpha);
+		Graphics()->DrawCircle(Position.x, Position.y, 22.0f, 24);
+		Graphics()->QuadsEnd();
+		return;
+	}
+
+	vec2 Vel = mix(vec2(Prev.m_VelX / 256.0f, Prev.m_VelY / 256.0f), vec2(Player.m_VelX / 256.0f, Player.m_VelY / 256.0f), IntraTick);
+
+	m_pClient->m_Flow.Add(Position, Vel * 100.0f, 10.0f);
+
+	RenderInfo.m_GotAirJump = Player.m_Jumped & 2 ? false : true;
+
+	RenderInfo.m_FeetFlipped = false;
+
+	bool Stationary = Player.m_VelX <= 1 && Player.m_VelX >= -1;
+	bool InAir = !Collision()->CheckPoint(Player.m_X, Player.m_Y + 16);
+	bool Running = Player.m_VelX >= 5000 || Player.m_VelX <= -5000;
+	bool WantOtherDir = (Player.m_Direction == -1 && Vel.x > 0) || (Player.m_Direction == 1 && Vel.x < 0);
+	bool Inactive = m_pClient->m_aClients[ClientId].m_Afk || m_pClient->m_aClients[ClientId].m_Paused;
+
+	// evaluate animation
+	float WalkTime = std::fmod(Position.x, 100.0f) / 100.0f;
+	float RunTime = std::fmod(Position.x, 200.0f) / 200.0f;
+
+	// Don't do a moon walk outside the left border
+	if(WalkTime < 0)
+		WalkTime += 1;
+	if(RunTime < 0)
+		RunTime += 1;
+
+	CAnimState State;
+	State.Set(&g_pData->m_aAnimations[ANIM_BASE], 0);
+
+	if(InAir)
+		State.Add(&g_pData->m_aAnimations[ANIM_INAIR], 0, 1.0f); // TODO: some sort of time here
+	else if(Stationary)
+	{
+		if(Inactive)
+		{
+			State.Add(Direction.x < 0 ? &g_pData->m_aAnimations[ANIM_SIT_LEFT] : &g_pData->m_aAnimations[ANIM_SIT_RIGHT], 0, 1.0f); // TODO: some sort of time here
+			RenderInfo.m_FeetFlipped = true;
+		}
+		else
+			State.Add(&g_pData->m_aAnimations[ANIM_IDLE], 0, 1.0f); // TODO: some sort of time here
+	}
+	else if(!WantOtherDir)
+	{
+		if(Running)
+			State.Add(Player.m_VelX < 0 ? &g_pData->m_aAnimations[ANIM_RUN_LEFT] : &g_pData->m_aAnimations[ANIM_RUN_RIGHT], RunTime, 1.0f);
+		else
+			State.Add(&g_pData->m_aAnimations[ANIM_WALK], WalkTime, 1.0f);
+	}
+
+	if(Player.m_Weapon == WEAPON_HAMMER)
+		State.Add(&g_pData->m_aAnimations[ANIM_HAMMER_SWING], clamp(LastAttackTime * 5.0f, 0.0f, 1.0f), 1.0f);
+	if(Player.m_Weapon == WEAPON_NINJA)
+		State.Add(&g_pData->m_aAnimations[ANIM_NINJA_SWING], clamp(LastAttackTime * 2.0f, 0.0f, 1.0f), 1.0f);
+
+	// do skidding
+	if(!InAir && WantOtherDir && length(Vel * 50) > 500.0f)
+	{
+		static int64_t s_SkidSoundTime = 0;
+		if(time() - s_SkidSoundTime > time_freq() / 10)
+		{
+			if(g_Config.m_SndGame)
+				m_pClient->m_Sounds.PlayAt(CSounds::CHN_WORLD, SOUND_PLAYER_SKID, 0.25f, Position);
+			s_SkidSoundTime = time();
+		}
+
+		m_pClient->m_Effects.SkidTrail(
+			Position + vec2(-Player.m_Direction * 6, 12),
+			vec2(-Player.m_Direction * 100 * length(Vel), -50));
+	}
+
+	vec2 GhostWeaponPos = vec2(0, 0);
+	// draw gun
+	{
+		if(!(RenderInfo.m_TeeRenderFlags & TEE_NO_WEAPON))
+		{
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+			Graphics()->QuadsSetRotation(State.GetAttach()->m_Angle * pi * 2 + Angle);
+
+			if(ClientId < 0)
+				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.5f);
+
+			// normal weapons
+			int CurrentWeapon = clamp(Player.m_Weapon, 0, NUM_WEAPONS - 1);
+			Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpriteWeapons[CurrentWeapon]);
+			int QuadOffset = CurrentWeapon * 2 + (Direction.x < 0 ? 1 : 0);
+
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+
+			vec2 Dir = Direction;
+			float Recoil = 0.0f;
+			vec2 WeaponPosition;
+			bool IsSit = Inactive && !InAir && Stationary;
+
+			if(Player.m_Weapon == WEAPON_HAMMER)
+			{
+				// static position for hammer
+				WeaponPosition = Position + vec2(State.GetAttach()->m_X, State.GetAttach()->m_Y);
+				WeaponPosition.y += g_pData->m_Weapons.m_aId[CurrentWeapon].m_Offsety;
+				if(Direction.x < 0)
+					WeaponPosition.x -= g_pData->m_Weapons.m_aId[CurrentWeapon].m_Offsetx;
+				if(IsSit)
+					WeaponPosition.y += 3.0f;
+
+				// if active and attack is under way, bash stuffs
+				if(!Inactive || LastAttackTime < m_pClient->m_aTuning[g_Config.m_ClDummy].GetWeaponFireDelay(Player.m_Weapon))
+				{
+					if(Direction.x < 0)
+						Graphics()->QuadsSetRotation(-pi / 2 - State.GetAttach()->m_Angle * pi * 2);
+					else
+						Graphics()->QuadsSetRotation(-pi / 2 + State.GetAttach()->m_Angle * pi * 2);
+				}
+				else
+					Graphics()->QuadsSetRotation(Direction.x < 0 ? 100.0f : 500.0f);
+
+				Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, WeaponPosition.x, WeaponPosition.y);
+			}
+			else if(Player.m_Weapon == WEAPON_NINJA)
+			{
+				WeaponPosition = Position;
+				WeaponPosition.y += g_pData->m_Weapons.m_aId[CurrentWeapon].m_Offsety;
+				if(IsSit)
+					WeaponPosition.y += 3.0f;
+
+				if(Direction.x < 0)
+				{
+					Graphics()->QuadsSetRotation(-pi / 2 - State.GetAttach()->m_Angle * pi * 2);
+					WeaponPosition.x -= g_pData->m_Weapons.m_aId[CurrentWeapon].m_Offsetx;
+					m_pClient->m_Effects.PowerupShine(WeaponPosition + vec2(32, 0), vec2(32, 12));
+				}
+				else
+				{
+					Graphics()->QuadsSetRotation(-pi / 2 + State.GetAttach()->m_Angle * pi * 2);
+					m_pClient->m_Effects.PowerupShine(WeaponPosition - vec2(32, 0), vec2(32, 12));
+				}
+				Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, WeaponPosition.x, WeaponPosition.y);
+
+				// HADOKEN
+				if(AttackTime <= 1 / 6.f && g_pData->m_Weapons.m_aId[CurrentWeapon].m_NumSpriteMuzzles)
+				{
+					int IteX = rand() % g_pData->m_Weapons.m_aId[CurrentWeapon].m_NumSpriteMuzzles;
+					static int s_LastIteX = IteX;
+					if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
+					{
+						const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
+						if(pInfo->m_Paused)
+							IteX = s_LastIteX;
+						else
+							s_LastIteX = IteX;
+					}
+					else
+					{
+						if(m_pClient->m_Snap.m_pGameInfoObj && m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED)
+							IteX = s_LastIteX;
+						else
+							s_LastIteX = IteX;
+					}
+					if(g_pData->m_Weapons.m_aId[CurrentWeapon].m_aSpriteMuzzles[IteX])
+					{
+						if(PredictLocalWeapons)
+							Dir = vec2(pPlayerChar->m_X, pPlayerChar->m_Y) - vec2(pPrevChar->m_X, pPrevChar->m_Y);
+						else
+							Dir = vec2(m_pClient->m_Snap.m_aCharacters[ClientId].m_Cur.m_X, m_pClient->m_Snap.m_aCharacters[ClientId].m_Cur.m_Y) - vec2(m_pClient->m_Snap.m_aCharacters[ClientId].m_Prev.m_X, m_pClient->m_Snap.m_aCharacters[ClientId].m_Prev.m_Y);
+						float HadOkenAngle = 0;
+						if(absolute(Dir.x) > 0.0001f || absolute(Dir.y) > 0.0001f)
+						{
+							Dir = normalize(Dir);
+							HadOkenAngle = angle(Dir);
+						}
+						else
+						{
+							Dir = vec2(1, 0);
+						}
+						Graphics()->QuadsSetRotation(HadOkenAngle);
+						QuadOffset = IteX * 2;
+						vec2 DirY(-Dir.y, Dir.x);
+						WeaponPosition = Position;
+						float OffsetX = g_pData->m_Weapons.m_aId[CurrentWeapon].m_Muzzleoffsetx;
+						WeaponPosition -= Dir * OffsetX;
+						Graphics()->TextureSet(GameClient()->m_GameSkin.m_aaSpriteWeaponsMuzzles[CurrentWeapon][IteX]);
+						Graphics()->RenderQuadContainerAsSprite(m_aWeaponSpriteMuzzleQuadContainerIndex[CurrentWeapon], QuadOffset, WeaponPosition.x, WeaponPosition.y);
+					}
+				}
+			}
+			else
+			{
+				// TODO: should be an animation
+				Recoil = 0;
+				float a = AttackTicksPassed / 5.0f;
+				if(a < 1)
+					Recoil = std::sin(a * pi);
+				WeaponPosition = Position + Dir * g_pData->m_Weapons.m_aId[CurrentWeapon].m_Offsetx - Dir * Recoil * 10.0f;
+				WeaponPosition.y += g_pData->m_Weapons.m_aId[CurrentWeapon].m_Offsety;
+				if(IsSit)
+					WeaponPosition.y += 3.0f;
+				if(Player.m_Weapon == WEAPON_GUN && g_Config.m_ClOldGunPosition)
+					WeaponPosition.y -= 8;
+				Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, WeaponPosition.x, WeaponPosition.y);
+			}
+
+			if(Player.m_Weapon == WEAPON_GUN || Player.m_Weapon == WEAPON_SHOTGUN)
+			{
+				// check if we're firing stuff
+				if(g_pData->m_Weapons.m_aId[CurrentWeapon].m_NumSpriteMuzzles) // prev.attackticks)
+				{
+					float AlphaMuzzle = 0.0f;
+					if(AttackTicksPassed < g_pData->m_Weapons.m_aId[CurrentWeapon].m_Muzzleduration + 3)
+					{
+						float t = AttackTicksPassed / g_pData->m_Weapons.m_aId[CurrentWeapon].m_Muzzleduration;
+						AlphaMuzzle = mix(2.0f, 0.0f, minimum(1.0f, maximum(0.0f, t)));
+					}
+
+					int IteX = rand() % g_pData->m_Weapons.m_aId[CurrentWeapon].m_NumSpriteMuzzles;
+					static int s_LastIteX = IteX;
+					if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
+					{
+						const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
+						if(pInfo->m_Paused)
+							IteX = s_LastIteX;
+						else
+							s_LastIteX = IteX;
+					}
+					else
+					{
+						if(m_pClient->m_Snap.m_pGameInfoObj && m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_PAUSED)
+							IteX = s_LastIteX;
+						else
+							s_LastIteX = IteX;
+					}
+					if(AlphaMuzzle > 0.0f && g_pData->m_Weapons.m_aId[CurrentWeapon].m_aSpriteMuzzles[IteX])
+					{
+						float OffsetY = -g_pData->m_Weapons.m_aId[CurrentWeapon].m_Muzzleoffsety;
+						QuadOffset = IteX * 2 + (Direction.x < 0 ? 1 : 0);
+						if(Direction.x < 0)
+							OffsetY = -OffsetY;
+
+						vec2 DirY(-Dir.y, Dir.x);
+						vec2 MuzzlePos = WeaponPosition + Dir * g_pData->m_Weapons.m_aId[CurrentWeapon].m_Muzzleoffsetx + DirY * OffsetY;
+						Graphics()->TextureSet(GameClient()->m_GameSkin.m_aaSpriteWeaponsMuzzles[CurrentWeapon][IteX]);
+						Graphics()->RenderQuadContainerAsSprite(m_aWeaponSpriteMuzzleQuadContainerIndex[CurrentWeapon], QuadOffset, MuzzlePos.x, MuzzlePos.y);
+					}
+				}
+			}
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+			Graphics()->QuadsSetRotation(0);
+
+			switch(Player.m_Weapon)
+			{
+			case WEAPON_GUN: RenderHand(&RenderInfo, WeaponPosition, Direction, -3 * pi / 4, vec2(-15, 4), Alpha); break;
+			case WEAPON_SHOTGUN: RenderHand(&RenderInfo, WeaponPosition, Direction, -pi / 2, vec2(-5, 4), Alpha); break;
+			case WEAPON_GRENADE: RenderHand(&RenderInfo, WeaponPosition, Direction, -pi / 2, vec2(-4, 7), Alpha); break;
+			}
+			GhostWeaponPos = WeaponPosition;
+		}
+	}
+
+	RenderTools()->RenderTee(&State, &RenderInfo, Player.m_Emote, Direction, Position, Alpha);
+
+	float TeeAnimScale, TeeBaseSize;
+	CRenderTools::GetRenderTeeAnimScaleAndBaseSize(&RenderInfo, TeeAnimScale, TeeBaseSize);
+	vec2 BodyPos = Position + vec2(State.GetBody()->m_X, State.GetBody()->m_Y) * TeeAnimScale;
+	if(RenderInfo.m_TeeRenderFlags & TEE_EFFECT_FROZEN)
+	{
+		GameClient()->m_Effects.FreezingFlakes(BodyPos, vec2(32, 32));
+	}
+
+	int QuadOffsetToEmoticon = NUM_WEAPONS * 2 + 2 + 2;
+	if((Player.m_PlayerFlags & PLAYERFLAG_CHATTING) && !m_pClient->m_aClients[ClientId].m_Afk)
+	{
+		int CurEmoticon = (SPRITE_DOTDOT - SPRITE_OOP);
+		Graphics()->TextureSet(GameClient()->m_EmoticonsSkin.m_aSpriteEmoticons[CurEmoticon]);
+		int QuadOffset = QuadOffsetToEmoticon + CurEmoticon;
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+		Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, Position.x + 24.f, Position.y - 40.f);
+
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+		Graphics()->QuadsSetRotation(0);
+	}
+
+	if(ClientId < 0)
+		return;
+
+	if(g_Config.m_ClAfkEmote && m_pClient->m_aClients[ClientId].m_Afk && !(Client()->DummyConnected() && ClientId == m_pClient->m_aLocalIds[!g_Config.m_ClDummy]))
+	{
+		int CurEmoticon = (SPRITE_ZZZ - SPRITE_OOP);
+		Graphics()->TextureSet(GameClient()->m_EmoticonsSkin.m_aSpriteEmoticons[CurEmoticon]);
+		int QuadOffset = QuadOffsetToEmoticon + CurEmoticon;
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+		Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, Position.x + 24.f, Position.y - 40.f);
+
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+		Graphics()->QuadsSetRotation(0);
+	}
+
+	if(g_Config.m_ClShowEmotes && !m_pClient->m_aClients[ClientId].m_EmoticonIgnore && m_pClient->m_aClients[ClientId].m_EmoticonStartTick != -1)
+	{
+		float SinceStart = (Client()->GameTick(g_Config.m_ClDummy) - m_pClient->m_aClients[ClientId].m_EmoticonStartTick) + (Client()->IntraGameTickSincePrev(g_Config.m_ClDummy) - m_pClient->m_aClients[ClientId].m_EmoticonStartFraction);
+		float FromEnd = (2 * Client()->GameTickSpeed()) - SinceStart;
+
+		if(0 <= SinceStart && FromEnd > 0)
+		{
+			float a = 1;
+
+			if(FromEnd < Client()->GameTickSpeed() / 5)
+				a = FromEnd / (Client()->GameTickSpeed() / 5.0f);
+
+			float h = 1;
+			if(SinceStart < Client()->GameTickSpeed() / 10)
+				h = SinceStart / (Client()->GameTickSpeed() / 10.0f);
+
+			float Wiggle = 0;
+			if(SinceStart < Client()->GameTickSpeed() / 5)
+				Wiggle = SinceStart / (Client()->GameTickSpeed() / 5.0f);
+
+			float WiggleAngle = std::sin(5 * Wiggle);
+
+			Graphics()->QuadsSetRotation(pi / 6 * WiggleAngle);
+
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, a * Alpha);
+			// client_datas::emoticon is an offset from the first emoticon
+			int QuadOffset = QuadOffsetToEmoticon + m_pClient->m_aClients[ClientId].m_Emoticon;
+			Graphics()->TextureSet(GameClient()->m_EmoticonsSkin.m_aSpriteEmoticons[m_pClient->m_aClients[ClientId].m_Emoticon]);
+			Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, Position.x, Position.y - 23.f - 32.f * h, 1.f, (64.f * h) / 64.f);
+
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+			Graphics()->QuadsSetRotation(0);
+		}
+	}
+}
 inline bool CPlayers::IsPlayerInfoAvailable(int ClientId) const
 {
 	const void *pPrevInfo = Client()->SnapFindItem(IClient::SNAP_PREV, NETOBJTYPE_PLAYERINFO, ClientId);
@@ -844,7 +1321,8 @@ void CPlayers::OnRender()
 
 		const CGameClient::CSnapState::CCharacterInfo &CharacterInfo = m_pClient->m_Snap.m_aCharacters[i];
 		const bool Frozen = CharacterInfo.m_HasExtendedData && CharacterInfo.m_ExtendedData.m_FreezeEnd != 0;
-		if((CharacterInfo.m_Cur.m_Weapon == WEAPON_NINJA || (Frozen && !m_pClient->m_GameInfo.m_NoSkinChangeForFrozen)) && g_Config.m_ClShowNinja)
+
+		if(((CharacterInfo.m_Cur.m_Weapon == WEAPON_NINJA || Frozen) && g_Config.m_ClShowNinja) || (g_Config.m_ClAmIFrozen && g_Config.m_ClFreezeUpdateFix && m_pClient->m_Snap.m_LocalClientId == i && g_Config.m_ClShowNinja) || (Frozen && !m_pClient->m_GameInfo.m_NoSkinChangeForFrozen && g_Config.m_ClShowNinja))
 		{
 			// change the skin for the player to the ninja
 			const auto *pSkin = m_pClient->m_Skins.FindOrNullptr("x_ninja");
@@ -858,6 +1336,14 @@ void CPlayers::OnRender()
 				{
 					aRenderInfo[i].m_ColorBody = ColorRGBA(1, 1, 1);
 					aRenderInfo[i].m_ColorFeet = ColorRGBA(1, 1, 1);
+				}
+				if(!IsTeamplay && g_Config.m_ClColorFreeze)
+				{
+					aRenderInfo[i].m_CustomColoredSkin = m_pClient->m_aClients[i].m_RenderInfo.m_CustomColoredSkin;
+					aRenderInfo[i].m_ColorFeet = g_Config.m_ClColorFreezeFeet ? m_pClient->m_aClients[i].m_RenderInfo.m_ColorFeet : ColorRGBA(1, 1, 1);
+					float Darken = (g_Config.m_ClColorFreezeDarken / 100.0f) * 0.5f + 0.5f;
+					aRenderInfo[i].m_ColorBody = m_pClient->m_aClients[i].m_RenderInfo.m_ColorBody;
+					aRenderInfo[i].m_ColorBody = ColorRGBA(aRenderInfo[i].m_ColorBody.r * Darken, aRenderInfo[i].m_ColorBody.g * Darken, aRenderInfo[i].m_ColorBody.b * Darken, 1.0);
 				}
 			}
 		}
@@ -921,8 +1407,28 @@ void CPlayers::OnRender()
 		vec2 *pRenderPos = &m_pClient->m_aClients[ClientId].m_RenderPos;
 		if(pRenderPos->x < ScreenX0 || pRenderPos->x > ScreenX1 || pRenderPos->y < ScreenY0 || pRenderPos->y > ScreenY1)
 		{
-			continue;
+			if(!(g_Config.m_ClShowOthersGhosts && g_Config.m_ClSwapGhosts))
+				continue;
 		}
+
+		bool Frozen = (m_pClient->m_aClients[ClientId].m_FreezeEnd > 0) && g_Config.m_ClHideFrozenGhosts;
+		bool RenderGhost = true;
+		if(g_Config.m_ClHideFrozenGhosts && Frozen && g_Config.m_ClShowOthersGhosts)
+		{
+			if(!g_Config.m_ClSwapGhosts)
+				RenderGhost = false;
+		}
+		if(g_Config.m_ClUnpredOthersInFreeze && g_Config.m_ClAmIFrozen && g_Config.m_ClShowOthersGhosts)
+		{
+			RenderGhost = false;
+		}
+
+		bool Spec = m_pClient->m_Snap.m_SpecInfo.m_Active;
+
+		// If we are frozen and hiding frozen ghosts and not swapping render only the regular player
+		if(RenderGhost && g_Config.m_ClShowOthersGhosts && !Spec && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+			RenderPlayerGhost(&m_pClient->m_aClients[ClientId].m_RenderPrev, &m_pClient->m_aClients[ClientId].m_RenderCur, &aRenderInfo[ClientId], ClientId);
+
 		RenderPlayer(&m_pClient->m_aClients[ClientId].m_RenderPrev, &m_pClient->m_aClients[ClientId].m_RenderCur, &aRenderInfo[ClientId], ClientId);
 	}
 	if(RenderLastId != -1 && m_pClient->m_Snap.m_aCharacters[RenderLastId].m_Active && IsPlayerInfoAvailable(RenderLastId))

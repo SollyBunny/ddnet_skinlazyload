@@ -3,8 +3,6 @@
 data/
 !/data/
 
-docs/
-
 bundle/
 !/other/bundle/
 
@@ -147,3 +145,4 @@ tags
 *.user
 *.vcxproj
 *.zip
+/build
