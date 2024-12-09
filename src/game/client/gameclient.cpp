@@ -1504,6 +1504,9 @@ static CGameInfo GetGameInfo(const CNetObj_GameInfoEx *pInfoEx, int InfoExSize, 
 		Info.m_NoSkinChangeForFrozen = Flags2 & GAMEINFOFLAG2_NO_SKIN_CHANGE_FOR_FROZEN;
 	}
 
+	Info.m_AllowEyeWheel = true;
+	Info.m_AllowHookColl = true;
+
 	return Info;
 }
 
