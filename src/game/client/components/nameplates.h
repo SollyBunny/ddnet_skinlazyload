@@ -12,15 +12,15 @@
 struct CNetObj_Character;
 struct CNetObj_PlayerInfo;
 
-class CNameplates;
+class CNamePlates;
 
-class CNameplate
+class CNamePlate
 {
 public:
-	class CNameplateName
+	class CNamePlateName
 	{
 	public:
-		CNameplateName()
+		CNamePlateName()
 		{
 			Reset();
 		}
@@ -32,17 +32,17 @@ public:
 			m_FriendMark = false;
 			m_FontSize = -INFINITY;
 		}
-		void Update(CNameplates &This, int Id, const char *pName, bool FriendMark, float FontSize, bool InGame);
+		void Update(CNamePlates &This, int Id, const char *pName, bool FriendMark, float FontSize, bool InGame);
 		STextContainerIndex m_TextContainerIndex;
 		char m_aName[MAX_NAME_LENGTH];
 		int m_Id;
 		bool m_FriendMark;
 		float m_FontSize;
 	};
-	class CNameplateClan
+	class CNamePlateClan
 	{
 	public:
-		CNameplateClan()
+		CNamePlateClan()
 		{
 			Reset();
 		}
@@ -52,15 +52,15 @@ public:
 			m_aClan[0] = '\0';
 			m_FontSize = -INFINITY;
 		}
-		void Update(CNameplates &This, const char *pClan, float FontSize, bool InGame);
+		void Update(CNamePlates &This, const char *pClan, float FontSize, bool InGame);
 		STextContainerIndex m_TextContainerIndex;
 		char m_aClan[MAX_CLAN_LENGTH];
 		float m_FontSize;
 	};
-	class CNameplateHookWeakStrongId
+	class CNamePlateHookWeakStrongId
 	{
 	public:
-		CNameplateHookWeakStrongId()
+		CNamePlateHookWeakStrongId()
 		{
 			Reset();
 		}
@@ -70,12 +70,12 @@ public:
 			m_Id = -1;
 			m_FontSize = -INFINITY;
 		}
-		void Update(CNameplates &This, int Id, float FontSize, bool InGame);
+		void Update(CNamePlates &This, int Id, float FontSize, bool InGame);
 		STextContainerIndex m_TextContainerIndex;
 		int m_Id;
 		float m_FontSize;
 	};
-	CNameplate()
+	CNamePlate()
 	{
 		Reset();
 	}
@@ -91,23 +91,23 @@ public:
 		TextRender.DeleteTextContainer(m_Clan.m_TextContainerIndex);
 		TextRender.DeleteTextContainer(m_WeakStrongId.m_TextContainerIndex);
 	}
-	CNameplateName m_Name;
-	CNameplateClan m_Clan;
-	CNameplateHookWeakStrongId m_WeakStrongId;
+	CNamePlateName m_Name;
+	CNamePlateClan m_Clan;
+	CNamePlateHookWeakStrongId m_WeakStrongId;
 };
 
-class CNameplates : public CComponent
+class CNamePlates : public CComponent
 {
-	friend class CNameplate::CNameplateName;
-	friend class CNameplate::CNameplateClan;
-	friend class CNameplate::CNameplateHookWeakStrongId;
+	friend class CNamePlate::CNamePlateName;
+	friend class CNamePlate::CNamePlateClan;
+	friend class CNamePlate::CNamePlateHookWeakStrongId;
 
-	CNameplate m_aNameplates[MAX_CLIENTS];
+	CNamePlate m_aNamePlates[MAX_CLIENTS];
 
-	void ResetNameplates();
+	void ResetNamePlates();
 
 	int m_DirectionQuadContainerIndex;
-	class CRenderNameplateData
+	class CRenderNamePlateData
 	{
 	public:
 		vec2 m_Position;
@@ -132,11 +132,11 @@ class CNameplates : public CComponent
 		int m_HookWeakStrongId;
 		float m_FontSizeHookWeakStrong;
 	};
-	void RenderNameplate(CNameplate &Nameplate, const CRenderNameplateData &Data);
+	void RenderNamePlate(CNamePlate &NamePlate, const CRenderNamePlateData &Data);
 
 public:
-	void RenderNameplateGame(vec2 Position, const CNetObj_PlayerInfo *pPlayerInfo, float Alpha, bool ForceAlpha);
-	void RenderNameplatePreview(vec2 Position);
+	void RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *pPlayerInfo, float Alpha, bool ForceAlpha);
+	void RenderNamePlatePreview(vec2 Position);
 	virtual int Sizeof() const override { return sizeof(*this); }
 	virtual void OnWindowResize() override;
 	virtual void OnInit() override;

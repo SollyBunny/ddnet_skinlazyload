@@ -163,7 +163,7 @@ public:
 	CSpectator m_Spectator;
 
 	CPlayers m_Players;
-	CNameplates m_Nameplates;
+	CNamePlates m_NamePlates;
 	CFreezeBars m_FreezeBars;
 	CItems m_Items;
 	CMapImages m_MapImages;

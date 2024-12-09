@@ -137,7 +137,7 @@ void CGameClient::OnConsoleInit()
 					      &m_MapLayersForeground,
 					      &m_Outlines,
 					      &m_Particles.m_RenderExplosions,
-					      &m_Nameplates,
+					      &m_NamePlates,
 					      &m_Particles.m_RenderExtra,
 					      &m_Particles.m_RenderGeneral,
 					      &m_FreezeBars,
