@@ -32,7 +32,7 @@ public:
 			m_FriendMark = false;
 			m_FontSize = -INFINITY;
 		}
-		void Update(CNamePlates &This, int Id, const char *pName, bool FriendMark, float FontSize, bool InGame);
+		void Update(CNamePlates &This, int Id, const char *pName, bool FriendMark, float FontSize);
 		STextContainerIndex m_TextContainerIndex;
 		char m_aName[MAX_NAME_LENGTH];
 		int m_Id;
@@ -52,7 +52,7 @@ public:
 			m_aClan[0] = '\0';
 			m_FontSize = -INFINITY;
 		}
-		void Update(CNamePlates &This, const char *pClan, float FontSize, bool InGame);
+		void Update(CNamePlates &This, const char *pClan, float FontSize);
 		STextContainerIndex m_TextContainerIndex;
 		char m_aClan[MAX_CLAN_LENGTH];
 		float m_FontSize;
@@ -70,7 +70,7 @@ public:
 			m_Id = -1;
 			m_FontSize = -INFINITY;
 		}
-		void Update(CNamePlates &This, int Id, float FontSize, bool InGame);
+		void Update(CNamePlates &This, int Id, float FontSize);
 		STextContainerIndex m_TextContainerIndex;
 		int m_Id;
 		float m_FontSize;
@@ -111,7 +111,6 @@ class CNamePlates : public CComponent
 	{
 	public:
 		vec2 m_Position;
-		bool m_InGame;
 		ColorRGBA m_Color;
 		ColorRGBA m_OutlineColor;
 		float m_Alpha;

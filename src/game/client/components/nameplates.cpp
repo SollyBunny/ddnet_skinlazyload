@@ -14,7 +14,7 @@
 #include "controls.h"
 #include "nameplates.h"
 
-void CNamePlate::CNamePlateName::Update(CNamePlates &This, int Id, const char *pName, bool FriendMark, float FontSize, bool InGame)
+void CNamePlate::CNamePlateName::Update(CNamePlates &This, int Id, const char *pName, bool FriendMark, float FontSize)
 {
 	if(Id == m_Id &&
 		str_comp(m_aName, pName) == 0 &&
@@ -25,13 +25,10 @@ void CNamePlate::CNamePlateName::Update(CNamePlates &This, int Id, const char *p
 	m_FriendMark = FriendMark;
 	m_FontSize = FontSize;
 
+	// create namePlates at standard zoom
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	if(InGame)
-	{
-		// create namePlates at standard zoom
-		This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
-	}
+	This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
 
 	CTextCursor Cursor;
 	This.TextRender()->SetCursor(&Cursor, 0.0f, 0.0f, FontSize, TEXTFLAG_RENDER);
@@ -56,11 +53,10 @@ void CNamePlate::CNamePlateName::Update(CNamePlates &This, int Id, const char *p
 	if(pName[0] != '\0')
 		This.TextRender()->CreateOrAppendTextContainer(m_TextContainerIndex, &Cursor, pName);
 
-	if(InGame)
-		This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 }
 
-void CNamePlate::CNamePlateClan::Update(CNamePlates &This, const char *pClan, float FontSize, bool InGame)
+void CNamePlate::CNamePlateClan::Update(CNamePlates &This, const char *pClan, float FontSize)
 {
 	if(str_comp(m_aClan, pClan) == 0 &&
 		m_FontSize == FontSize)
@@ -68,36 +64,29 @@ void CNamePlate::CNamePlateClan::Update(CNamePlates &This, const char *pClan, fl
 	str_copy(m_aClan, pClan);
 	m_FontSize = FontSize;
 
+	// create namePlates at standard zoom
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	if(InGame)
-	{
-		// create namePlates at standard zoom
-		This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
-	}
+	This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
 
 	CTextCursor Cursor;
 	This.TextRender()->SetCursor(&Cursor, 0.0f, 0.0f, FontSize, TEXTFLAG_RENDER);
 	This.TextRender()->RecreateTextContainer(m_TextContainerIndex, &Cursor, m_aClan);
 
-	if(InGame)
-		This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 }
 
-void CNamePlate::CNamePlateHookWeakStrongId::Update(CNamePlates &This, int Id, float FontSize, bool InGame)
+void CNamePlate::CNamePlateHookWeakStrongId::Update(CNamePlates &This, int Id, float FontSize)
 {
 	if(Id == m_Id && m_FontSize == FontSize)
 		return;
 	m_Id = Id;
 	m_FontSize = FontSize;
 
+	// create namePlates at standard zoom
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-	if(InGame)
-	{
-		// create namePlates at standard zoom
-		This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-		This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
-	}
+	This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	This.RenderTools()->MapScreenToInterface(This.m_pClient->m_Camera.m_Center.x, This.m_pClient->m_Camera.m_Center.y);
 
 	char aBuf[8];
 	str_format(aBuf, sizeof(aBuf), "%d", m_Id);
@@ -106,8 +95,7 @@ void CNamePlate::CNamePlateHookWeakStrongId::Update(CNamePlates &This, int Id, f
 	This.TextRender()->SetCursor(&Cursor, 0.0f, 0.0f, FontSize, TEXTFLAG_RENDER);
 	This.TextRender()->RecreateTextContainer(m_TextContainerIndex, &Cursor, aBuf);
 
-	if(InGame)
-		This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 }
 
 void CNamePlates::RenderNamePlate(CNamePlate &NamePlate, const CRenderNamePlateData &Data)
@@ -149,14 +137,14 @@ void CNamePlates::RenderNamePlate(CNamePlate &NamePlate, const CRenderNamePlateD
 	if((Data.m_pName && Data.m_pName[0] != '\0') || Data.m_ClientId >= 0 || Data.m_ShowFriendMark)
 	{
 		YOffset -= Data.m_FontSize;
-		NamePlate.m_Name.Update(*this, Data.m_ClientId, Data.m_pName, Data.m_ShowFriendMark, Data.m_FontSize, Data.m_InGame);
+		NamePlate.m_Name.Update(*this, Data.m_ClientId, Data.m_pName, Data.m_ShowFriendMark, Data.m_FontSize);
 		if(NamePlate.m_Name.m_TextContainerIndex.Valid())
 			TextRender()->RenderTextContainer(NamePlate.m_Name.m_TextContainerIndex, Color, OutlineColor, Data.m_Position.x - TextRender()->GetBoundingBoxTextContainer(NamePlate.m_Name.m_TextContainerIndex).m_W / 2.0f, YOffset);
 	}
 	if(Data.m_pClan && Data.m_pClan[0] != '\0')
 	{
 		YOffset -= Data.m_FontSizeClan;
-		NamePlate.m_Clan.Update(*this, Data.m_pClan, Data.m_FontSizeClan, Data.m_InGame);
+		NamePlate.m_Clan.Update(*this, Data.m_pClan, Data.m_FontSizeClan);
 		if(NamePlate.m_Clan.m_TextContainerIndex.Valid())
 			TextRender()->RenderTextContainer(NamePlate.m_Clan.m_TextContainerIndex, Color, OutlineColor, Data.m_Position.x - TextRender()->GetBoundingBoxTextContainer(NamePlate.m_Clan.m_TextContainerIndex).m_W / 2.0f, YOffset);
 	}
@@ -189,7 +177,7 @@ void CNamePlates::RenderNamePlate(CNamePlate &NamePlate, const CRenderNamePlateD
 		float ShowHookWeakStrongIdSize = 0.0f;
 		if(Data.m_ShowHookWeakStrongId)
 		{
-			NamePlate.m_WeakStrongId.Update(*this, Data.m_HookWeakStrongId, Data.m_FontSizeHookWeakStrong, Data.m_InGame);
+			NamePlate.m_WeakStrongId.Update(*this, Data.m_HookWeakStrongId, Data.m_FontSizeHookWeakStrong);
 			if(NamePlate.m_WeakStrongId.m_TextContainerIndex.Valid())
 			{
 				ShowHookWeakStrongIdSize = TextRender()->GetBoundingBoxTextContainer(NamePlate.m_WeakStrongId.m_TextContainerIndex).m_W;
@@ -233,7 +221,6 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	bool ShowNamePlate = pPlayerInfo->m_Local ? g_Config.m_ClNamePlatesOwn : g_Config.m_ClNamePlates;
 
 	Data.m_Position = Position;
-	Data.m_InGame = true;
 	Data.m_ClientId = ShowNamePlate && g_Config.m_ClNamePlatesIds ? pPlayerInfo->m_ClientId : -1;
 	Data.m_pName = ShowNamePlate ? m_pClient->m_aClients[pPlayerInfo->m_ClientId].m_aName : nullptr;
 	Data.m_ShowFriendMark = ShowNamePlate && g_Config.m_ClNamePlatesFriendMark && m_pClient->m_aClients[pPlayerInfo->m_ClientId].m_Friend;
@@ -300,7 +287,15 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	}
 	if(Data.m_ShowDirection)
 	{
-		if(Client()->State() != IClient::STATE_DEMOPLAYBACK && pPlayerInfo->m_Local) // always render local input when not in demo playback
+		if(Client()->State() != IClient::STATE_DEMOPLAYBACK &&
+			Client()->DummyConnected() && pPlayerInfo->m_ClientId == m_pClient->m_aLocalIds[!g_Config.m_ClDummy])
+		{
+			const auto &InputData = m_pClient->m_Controls.m_aInputData[!g_Config.m_ClDummy];
+			Data.m_DirLeft = InputData.m_Direction == -1;
+			Data.m_DirJump = InputData.m_Jump == 1;
+			Data.m_DirRight = InputData.m_Direction == 1;
+		}
+		else if(Client()->State() != IClient::STATE_DEMOPLAYBACK && pPlayerInfo->m_Local) // always render local input when not in demo playback
 		{
 			const auto &InputData = m_pClient->m_Controls.m_aInputData[g_Config.m_ClDummy];
 			Data.m_DirLeft = InputData.m_Direction == -1;
@@ -353,7 +348,6 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position)
 	CRenderNamePlateData Data;
 
 	Data.m_Position = Position;
-	Data.m_InGame = true;
 	Data.m_Color = g_Config.m_ClNamePlatesTeamcolors ? m_pClient->GetDDTeamColor(13, 0.75f) : TextRender()->DefaultTextColor();
 	Data.m_OutlineColor = TextRender()->DefaultTextOutlineColor();
 	Data.m_Alpha = 1.0f;
