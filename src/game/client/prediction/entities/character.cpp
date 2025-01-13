@@ -1003,6 +1003,14 @@ void CCharacter::DDRaceTick()
 			break;
 		}
 	}
+	if(m_Core.m_IsInFreeze && IsGrounded())
+	{
+		m_FreezeAccumulation = std::min(m_FreezeAccumulation + 1, g_Config.m_ClUnfreezeLagDelayTicks);
+	}
+	else
+	{
+		m_FreezeAccumulation = std::min(m_FreezeAccumulation, m_FreezeTime);
+	}
 	m_Core.m_IsInFreeze |= (Collision()->GetCollisionAt(m_Pos.x + GetProximityRadius() / 3.f, m_Pos.y - GetProximityRadius() / 3.f) == TILE_DEATH ||
 				Collision()->GetCollisionAt(m_Pos.x + GetProximityRadius() / 3.f, m_Pos.y + GetProximityRadius() / 3.f) == TILE_DEATH ||
 				Collision()->GetCollisionAt(m_Pos.x - GetProximityRadius() / 3.f, m_Pos.y - GetProximityRadius() / 3.f) == TILE_DEATH ||

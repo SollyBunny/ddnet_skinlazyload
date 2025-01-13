@@ -75,7 +75,7 @@ static void ConKeyInputCounter(IConsole::IResult *pResult, void *pUserData)
 {
 	CInputState *pState = (CInputState *)pUserData;
 
-	if(pState->m_pControls->GameClient()->m_GameInfo.m_BugDDRaceInput && pState->m_pControls->GameClient()->m_Snap.m_SpecInfo.m_Active)
+	if((pState->m_pControls->GameClient()->m_GameInfo.m_BugDDRaceInput && pState->m_pControls->GameClient()->m_Snap.m_SpecInfo.m_Active) || pState->m_pControls->GameClient()->m_Spectator.IsActive())
 		return;
 
 	int *pVariable = pState->m_apVariables[g_Config.m_ClDummy];
@@ -188,7 +188,7 @@ int CControls::SnapInput(int *pData)
 	else
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_PLAYING;
 
-	if(m_pClient->m_Scoreboard.Active() || g_Config.m_ClPingNameCircle)
+	if(m_pClient->m_Scoreboard.Active() || g_Config.m_ClPingNameCircle || GameClient()->m_StatusBar.m_PingActive)
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags |= PLAYERFLAG_SCOREBOARD;
 
 	if(Client()->ServerCapAnyPlayerFlag() && m_pClient->m_Controls.m_aShowHookColl[g_Config.m_ClDummy])
@@ -215,7 +215,7 @@ int CControls::SnapInput(int *pData)
 		const int MaxDistance = g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance;
 		if(!m_pClient->m_Snap.m_SpecInfo.m_Active && MaxDistance > 5) // Only multiply mouse coords if not angle bind
 		{
-			if(g_Config.m_ClImproveMousePrecision && MaxDistance < 1000) // Don't scale if it would reduce precision
+			if(g_Config.m_ClScaleMouseDistance && MaxDistance < 1000) // Don't scale if it would reduce precision
 				Pos *= length(Pos) * 1000.0f / (float)MaxDistance;
 		}
 		m_aInputData[g_Config.m_ClDummy].m_TargetX = (int)Pos.x;
@@ -237,14 +237,12 @@ int CControls::SnapInput(int *pData)
 		}
 		else
 
-		Pos = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy];
+			Pos = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy];
 		const int MaxDistance = g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance;
 		if(!m_pClient->m_Snap.m_SpecInfo.m_Active && MaxDistance > 5) // Only multiply mouse coords if not angle bind
 		{
-			if(g_Config.m_ClImproveMousePrecision && MaxDistance < 1000) // Don't scale if it would reduce precision
+			if(g_Config.m_ClScaleMouseDistance && MaxDistance < 1000) // Don't scale if it would reduce precision
 				Pos *= length(Pos) * 1000.0f / (float)(g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance);
-			if(!g_Config.m_ClOldMouseZoom)
-				Pos *= m_pClient->m_Camera.m_Zoom;
 		}
 		m_aInputData[g_Config.m_ClDummy].m_TargetX = (int)Pos.x;
 		m_aInputData[g_Config.m_ClDummy].m_TargetY = (int)Pos.y;
@@ -503,11 +501,6 @@ bool CControls::CheckNewInput()
 	{
 		TestInput.m_TargetX = (int)m_aMousePos[g_Config.m_ClDummy].x;
 		TestInput.m_TargetY = (int)m_aMousePos[g_Config.m_ClDummy].y;
-		if(!g_Config.m_ClOldMouseZoom)
-		{
-			TestInput.m_TargetX *= m_pClient->m_Camera.m_Zoom;
-			TestInput.m_TargetY *= m_pClient->m_Camera.m_Zoom;
-		}
 	}
 
 	m_FastInput = TestInput;

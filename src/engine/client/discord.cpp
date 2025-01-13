@@ -3,7 +3,6 @@
 
 #if defined(CONF_DISCORD)
 #include <discord_game_sdk.h>
-
 typedef enum EDiscordResult DISCORD_API (*FDiscordCreate)(DiscordVersion, struct DiscordCreateParams *, struct IDiscordCore **);
 
 #if defined(CONF_DISCORD_DYNAMIC)
@@ -40,7 +39,7 @@ public:
 		DiscordCreateParams Params;
 		DiscordCreateParamsSetDefault(&Params);
 
-		Params.client_id = 752165779117441075; // DDNet
+		Params.client_id = 1325361453988970527; // TClient
 		Params.flags = EDiscordCreateFlags::DiscordCreateFlags_NoRequireDiscord;
 		Params.event_data = this;
 		Params.activity_events = &m_ActivityEvents;
@@ -63,20 +62,20 @@ public:
 	{
 		DiscordActivity Activity;
 		mem_zero(&Activity, sizeof(DiscordActivity));
-		str_copy(Activity.assets.large_image, "ddnet_logo", sizeof(Activity.assets.large_image));
-		str_copy(Activity.assets.large_text, "DDNet logo", sizeof(Activity.assets.large_text));
+		str_copy(Activity.assets.large_image, "tclient", sizeof(Activity.assets.large_image));
+		str_copy(Activity.assets.large_text, "TClient", sizeof(Activity.assets.large_text));
 		Activity.timestamps.start = time_timestamp();
-		str_copy(Activity.details, "Offline", sizeof(Activity.details));
+		str_copy(Activity.details, "In-Menus", sizeof(Activity.details));
 		m_pActivityManager->update_activity(m_pActivityManager, &Activity, 0, 0);
 	}
 	void SetGameInfo(const NETADDR &ServerAddr, const char *pMapName, bool AnnounceAddr) override
 	{
 		DiscordActivity Activity;
 		mem_zero(&Activity, sizeof(DiscordActivity));
-		str_copy(Activity.assets.large_image, "ddnet_logo", sizeof(Activity.assets.large_image));
-		str_copy(Activity.assets.large_text, "DDNet logo", sizeof(Activity.assets.large_text));
+		str_copy(Activity.assets.large_image, "tclient", sizeof(Activity.assets.large_image));
+		str_copy(Activity.assets.large_text, "TClient", sizeof(Activity.assets.large_text));
 		Activity.timestamps.start = time_timestamp();
-		str_copy(Activity.details, "Online", sizeof(Activity.details));
+		str_copy(Activity.details, "In-Game", sizeof(Activity.details));
 		str_copy(Activity.state, pMapName, sizeof(Activity.state));
 		m_pActivityManager->update_activity(m_pActivityManager, &Activity, 0, 0);
 	}
@@ -111,10 +110,10 @@ class CDiscordStub : public IDiscord
 	void SetGameInfo(const NETADDR &ServerAddr, const char *pMapName, bool AnnounceAddr) override {}
 };
 
-IDiscord *CreateDiscord()
+IDiscord *CreateDiscord(bool UseStub)
 {
 	IDiscord *pDiscord = CreateDiscordImpl();
-	if(pDiscord)
+	if(pDiscord && !UseStub)
 	{
 		return pDiscord;
 	}

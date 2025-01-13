@@ -108,9 +108,9 @@ option(ANTIBOT "Enable support for a dynamic anticheat library (not provided, se
 option(HEADLESS_CLIENT "Build the client without graphics" OFF)
 option(CLIENT "Compile client" ON)
 option(SERVER "Compile server" ON)
-option(TOOLS "Compile tools" ON)
+option(TOOLS "Compile tools" OFF)
 option(DOWNLOAD_GTEST "Download and compile GTest" ${AUTO_DEPENDENCIES_DEFAULT})
-option(STEAM "Build the Steam release version" OFF)
+option(STEAM "Build the Steam release version" ON)
 option(DISCORD "Enable Discord rich presence support" OFF)
 option(DISCORD_DYNAMIC "Enable discovering Discord rich presence libraries at runtime (Linux only)" OFF)
 option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AUTO_DEPENDENCIES_DEFAULT})
@@ -121,6 +121,15 @@ option(EXCEPTION_HANDLING "Enable exception handling (only works with Windows as
 option(IPO "Enable interprocedural optimizations" OFF)
 option(FUSE_LD "Linker to use" OFF)
 option(SECURITY_COMPILER_FLAGS "Whether to set security-relevant compiler flags like -D_FORTIFY_SOURCE=2 and -fstack-protector-strong" ON)
+
+if(TARGET_OS STREQUAL "mac")
+    set(TOOLS ON)
+endif()
+
+if(TARGET_OS STREQUAL "android")
+    set(DISCORD OFF)
+    set(STEAM OFF)
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   include(${PROJECT_SOURCE_DIR}/cmake/toolchains/Emscripten.toolchain)
@@ -689,8 +698,8 @@ endif()
 if(CLIENT AND NOT(SDL2_FOUND))
   message(SEND_ERROR "You must install SDL2 to compile the ${CMAKE_PROJECT_NAME} client")
 endif()
-if(TARGET_OS STREQUAL "android" AND CLIENT AND NOT(CRYPTO_FOUND))
-  message(SEND_ERROR "You must install OpenSSL to compile the ${CMAKE_PROJECT_NAME} client")
+if(TARGET_OS STREQUAL "android" AND NOT(CRYPTO_FOUND))
+  message(SEND_ERROR "You must install OpenSSL to compile ${CMAKE_PROJECT_NAME}")
 endif()
 if(NOT(GTEST_FOUND))
   if(DOWNLOAD_GTEST)
@@ -741,7 +750,7 @@ elseif(TARGET_OS STREQUAL "android")
       src/android/android_main.cpp
     )
     set(PLATFORM_LIBS ${TW_ANDROID_LIBS})
-    set(PLATFORM_CLIENT_LIBS ${PLATFORM_LIBS})
+    set(PLATFORM_CLIENT_LIBS ${TW_ANDROID_LIBS_CLIENT})
     set(PLATFORM_CLIENT_INCLUDE_DIRS)
 else()
   find_package(Notify)
@@ -1829,6 +1838,14 @@ set(EXPECTED_DATA
   skins7/x_ninja.json
   skins7/xmas_hat.png
   strong_weak.png
+  tclient/fonts/Cabin-Regular.ttf
+  tclient/fonts/GoogleSans-Regular.ttf
+  tclient/fonts/Inter_24pt-Regular.ttf
+  tclient/fonts/Inter_24pt-SemiBold.ttf
+  tclient/fonts/Montserrat-Regular.ttf
+  tclient/fonts/Nunito-Black.ttf
+  tclient/fonts/Rubik-Regular.ttf
+  tclient/fonts/minecraft_font.ttf
   themes/auto.png
   themes/autumn.png
   themes/autumn_day.map
@@ -2418,8 +2435,12 @@ if(CLIENT)
     components/tclient/rainbow.h
     components/tclient/skinprofiles.cpp
     components/tclient/skinprofiles.h
+    components/tclient/statusbar.cpp
+    components/tclient/statusbar.h
     components/tclient/tater.cpp
     components/tclient/tater.h
+    components/tclient/trails.cpp
+    components/tclient/trails.h
     components/tclient/verify.cpp
     components/tclient/verify.h
     components/tclient/warlist.cpp
@@ -2806,14 +2827,25 @@ if(SERVER)
   )
 
   # Target
-  add_executable(game-server
-    ${DEPS}
-    ${SERVER_SRC}
-    ${SERVER_ICON}
-    $<TARGET_OBJECTS:engine-shared>
-    $<TARGET_OBJECTS:game-shared>
-    $<TARGET_OBJECTS:rust-bridge-shared>
-  )
+  if(TARGET_OS STREQUAL "android")
+    add_library(game-server SHARED
+      ${DEPS}
+      ${SERVER_SRC}
+      ${SERVER_ICON}
+      $<TARGET_OBJECTS:engine-shared>
+      $<TARGET_OBJECTS:game-shared>
+      $<TARGET_OBJECTS:rust-bridge-shared>
+    )
+  else()
+    add_executable(game-server
+      ${DEPS}
+      ${SERVER_SRC}
+      ${SERVER_ICON}
+      $<TARGET_OBJECTS:engine-shared>
+      $<TARGET_OBJECTS:game-shared>
+      $<TARGET_OBJECTS:rust-bridge-shared>
+    )
+  endif()
   set_property(TARGET game-server
       PROPERTY OUTPUT_NAME ${SERVER_EXECUTABLE}
   )
@@ -3270,6 +3302,7 @@ set(CPACK_DIRS
 set(CPACK_FILES
   license.txt
   storage.cfg
+  steam_appid.txt
   ${COPY_FILES}
 )
 
@@ -3430,7 +3463,7 @@ foreach(ext zip tar.gz tar.xz)
   endforeach()
   foreach(target ${CPACK_TARGETS})
     list(APPEND COPY_TARGET_COMMANDS COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${target}> ${TMPDIR}/)
-    if(NOT TARGET_OS STREQUAL "mac" AND NOT (TARGET_OS STREQUAL "windows" AND TARGET_CPU_ARCHITECTURE STREQUAL "arm64"))
+    if(NOT TARGET_OS STREQUAL "mac" AND NOT (TARGET_OS STREQUAL "windows" AND TARGET_CPU_ARCHITECTURE STREQUAL "arm64") AND NOT TARGET_OS STREQUAL "windows")
       list(APPEND STRIP_TARGET_COMMANDS COMMAND strip -s ${TMPDIR}/$<TARGET_FILE_NAME:${target}>)
     endif()
   endforeach()
@@ -3575,6 +3608,7 @@ foreach(target ${TARGETS_OWN})
   target_compile_definitions(${target} PRIVATE $<$<CONFIG:Debug>:CONF_DEBUG>)
   target_include_directories(${target} SYSTEM PRIVATE ${CURL_INCLUDE_DIRS} ${SQLite3_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
   target_compile_definitions(${target} PRIVATE GLEW_STATIC)
+  target_compile_definitions(${target} PRIVATE _FILE_OFFSET_BITS=64) # Ensure off_t is 64 bit for ftello and fseeko functions
   if(CRYPTO_FOUND)
     target_compile_definitions(${target} PRIVATE CONF_OPENSSL)
     target_include_directories(${target} SYSTEM PRIVATE ${CRYPTO_INCLUDE_DIRS})
@@ -3624,6 +3658,13 @@ foreach(target ${TARGETS_OWN})
   if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
    target_compile_definitions(${target} PRIVATE CONF_WEBASM)
   endif()
+  if(TARGET_OS STREQUAL "android")
+    if(ANDROID_PACKAGE_NAME)
+      target_compile_definitions(${target} PRIVATE ANDROID_PACKAGE_NAME=${ANDROID_PACKAGE_NAME})
+    else()
+      message(FATAL_ERROR "ANDROID_PACKAGE_NAME must define the package name when compiling for Android (using underscores instead of dots, e.g. org_example_app)")
+    endif()
+  endif()
 endforeach()
 
 foreach(target ${TARGETS_DEP})
@@ -3634,3 +3675,15 @@ foreach(target ${TARGETS_DEP})
     target_compile_options(${target} PRIVATE ${OUR_FLAGS_DEP})
   endif()
 endforeach()
+
+if(TARGET_OS STREQUAL "windows" AND STEAM AND NOT CMAKE_BUILD_TYPE STREQUAL Debug)
+    add_custom_command(
+        TARGET game-client POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/steam_api.dll"
+            "$<TARGET_FILE_DIR:game-client>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/steam_appid.txt"
+            "$<TARGET_FILE_DIR:game-client>"
+    )
+endif()

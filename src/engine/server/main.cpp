@@ -17,10 +17,13 @@
 
 #include <game/version.h>
 
+#include <mutex>
 #include <vector>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
+#elif defined(CONF_PLATFORM_ANDROID)
+#include <jni.h>
 #endif
 
 #include <csignal>
@@ -46,6 +49,8 @@ int main(int argc, const char **argv)
 	const int64_t MainStart = time_get();
 
 	CCmdlineFix CmdlineFix(&argc, &argv);
+
+#if !defined(CONF_PLATFORM_ANDROID)
 	bool Silent = false;
 
 	for(int i = 1; i < argc; i++)
@@ -59,6 +64,7 @@ int main(int argc, const char **argv)
 			break;
 		}
 	}
+#endif
 
 #if defined(CONF_FAMILY_WINDOWS)
 	CWindowsComLifecycle WindowsComLifecycle(false);
@@ -114,7 +120,12 @@ int main(int argc, const char **argv)
 	IEngine *pEngine = CreateEngine(GAME_NAME, pFutureConsoleLogger, 2 * std::thread::hardware_concurrency() + 2);
 	pKernel->RegisterInterface(pEngine);
 
-	IStorage *pStorage = CreateStorage(IStorage::STORAGETYPE_SERVER, argc, argv);
+	IStorage *pStorage = CreateStorage(IStorage::EInitializationType::SERVER, argc, argv);
+	if(!pStorage)
+	{
+		log_error("server", "failed to initialize storage");
+		return -1;
+	}
 	pKernel->RegisterInterface(pStorage);
 
 	pFutureAssertionLogger->Set(CreateAssertionLogger(pStorage, GAME_NAME));
@@ -206,3 +217,76 @@ int main(int argc, const char **argv)
 
 	return Ret;
 }
+
+#if defined(CONF_PLATFORM_ANDROID)
+#if !defined(ANDROID_PACKAGE_NAME)
+#error "ANDROID_PACKAGE_NAME must define the package name when compiling for Android (using underscores instead of dots, e.g. org_example_app)"
+#endif
+// Helpers to force macro expansion else the ANDROID_PACKAGE_NAME macro is not expanded
+#define EXPAND_MACRO(x) x
+#define JNI_MAKE_NAME(PACKAGE, CLASS, FUNCTION) Java_##PACKAGE##_##CLASS##_##FUNCTION
+#define JNI_EXPORTED_FUNCTION(PACKAGE, CLASS, FUNCTION, RETURN_TYPE, ...) \
+	extern "C" JNIEXPORT RETURN_TYPE JNICALL EXPAND_MACRO(JNI_MAKE_NAME(PACKAGE, CLASS, FUNCTION))(__VA_ARGS__)
+
+std::mutex AndroidNativeMutex;
+std::vector<std::string> vAndroidCommandQueue;
+
+std::vector<std::string> FetchAndroidServerCommandQueue()
+{
+	std::vector<std::string> vResult;
+	{
+		const std::unique_lock Lock(AndroidNativeMutex);
+		vResult.swap(vAndroidCommandQueue);
+	}
+	return vResult;
+}
+
+JNI_EXPORTED_FUNCTION(ANDROID_PACKAGE_NAME, NativeServer, runServer, jint, JNIEnv *pEnv, jobject Object, jstring WorkingDirectory, jobjectArray ArgumentsArray)
+{
+	// Set working directory to external storage location. This is not possible
+	// in Java so we pass the intended working directory to the native code.
+	const char *pWorkingDirectory = pEnv->GetStringUTFChars(WorkingDirectory, nullptr);
+	const bool WorkingDirectoryError = fs_chdir(pWorkingDirectory) != 0;
+	pEnv->ReleaseStringUTFChars(WorkingDirectory, pWorkingDirectory);
+	if(WorkingDirectoryError)
+	{
+		return -1001;
+	}
+
+	const jsize NumArguments = pEnv->GetArrayLength(ArgumentsArray);
+
+	std::vector<std::string> vArguments;
+	vArguments.reserve(NumArguments + 1);
+	vArguments.push_back(std::string(pWorkingDirectory) + "/" + GAME_NAME "-Server");
+	for(jsize ArgumentIndex = 0; ArgumentIndex < NumArguments; ArgumentIndex++)
+	{
+		jstring ArgumentString = (jstring)pEnv->GetObjectArrayElement(ArgumentsArray, ArgumentIndex);
+		const char *pArgumentString = pEnv->GetStringUTFChars(ArgumentString, nullptr);
+		vArguments.emplace_back(pArgumentString);
+		pEnv->ReleaseStringUTFChars(ArgumentString, pArgumentString);
+	}
+
+	std::vector<const char *> vpArguments;
+	vpArguments.reserve(vArguments.size());
+	for(const std::string &Argument : vArguments)
+	{
+		vpArguments.emplace_back(Argument.c_str());
+	}
+
+	return main(vpArguments.size(), vpArguments.data());
+}
+
+JNI_EXPORTED_FUNCTION(ANDROID_PACKAGE_NAME, NativeServer, executeCommand, void, JNIEnv *pEnv, jobject Object, jstring Command)
+{
+	const char *pCommand = pEnv->GetStringUTFChars(Command, nullptr);
+	{
+		const std::unique_lock Lock(AndroidNativeMutex);
+		vAndroidCommandQueue.emplace_back(pCommand);
+	}
+	pEnv->ReleaseStringUTFChars(Command, pCommand);
+}
+
+#undef EXPAND_MACRO
+#undef JNI_MAKE_NAME
+#undef JNI_EXPORTED_FUNCTION
+#endif

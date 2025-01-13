@@ -247,6 +247,7 @@ public:
 	unsigned m_aCurrentMapCrc[NUM_MAP_TYPES];
 	unsigned char *m_apCurrentMapData[NUM_MAP_TYPES];
 	unsigned int m_aCurrentMapSize[NUM_MAP_TYPES];
+	char m_aMapDownloadUrl[256];
 
 	CDemoRecorder m_aDemoRecorder[NUM_RECORDERS];
 	CAuthManager m_AuthManager;
@@ -281,7 +282,8 @@ public:
 
 	void Kick(int ClientId, const char *pReason) override;
 	void Ban(int ClientId, int Seconds, const char *pReason, bool VerbatimReason) override;
-	void RedirectClient(int ClientId, int Port, bool Verbose = false) override;
+	void ReconnectClient(int ClientId);
+	void RedirectClient(int ClientId, int Port) override;
 
 	void DemoRecorder_HandleAutoStart() override;
 

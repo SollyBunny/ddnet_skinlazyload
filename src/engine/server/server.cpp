@@ -48,6 +48,10 @@
 
 extern bool IsInterrupted();
 
+#if defined(CONF_PLATFORM_ANDROID)
+extern std::vector<std::string> FetchAndroidServerCommandQueue();
+#endif
+
 void CServerBan::InitServerBan(IConsole *pConsole, IStorage *pStorage, CServer *pServer)
 {
 	CNetBan::Init(pConsole, pStorage);
@@ -247,6 +251,7 @@ CServer::CServer()
 	m_ReloadedWhenEmpty = false;
 	m_aCurrentMap[0] = '\0';
 	m_pCurrentMapName = m_aCurrentMap;
+	m_aMapDownloadUrl[0] = '\0';
 
 	m_RconClientId = IServer::RCON_CID_SERV;
 	m_RconAuthLevel = AUTHED_ADMIN;
@@ -483,22 +488,36 @@ void CServer::Ban(int ClientId, int Seconds, const char *pReason, bool VerbatimR
 	m_NetServer.NetBan()->BanAddr(&Addr, Seconds, pReason, VerbatimReason);
 }
 
-void CServer::RedirectClient(int ClientId, int Port, bool Verbose)
+void CServer::ReconnectClient(int ClientId)
 {
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
-		return;
+	dbg_assert(0 <= ClientId && ClientId < MAX_CLIENTS, "invalid client id");
 
-	char aBuf[512];
-	bool SupportsRedirect = GetClientVersion(ClientId) >= VERSION_DDNET_REDIRECT;
-	if(Verbose)
+	if(GetClientVersion(ClientId) < VERSION_DDNET_RECONNECT)
 	{
-		str_format(aBuf, sizeof(aBuf), "redirecting '%s' to port %d supported=%d", ClientName(ClientId), Port, SupportsRedirect);
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "redirect", aBuf);
+		RedirectClient(ClientId, m_NetServer.Address().port);
+		return;
 	}
+	log_info("server", "telling client to reconnect, cid=%d", ClientId);
+
+	CMsgPacker Msg(NETMSG_RECONNECT, true);
+	SendMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_FLUSH, ClientId);
+
+	m_aClients[ClientId].m_RedirectDropTime = time_get() + time_freq() * 10;
+	m_aClients[ClientId].m_State = CClient::STATE_REDIRECTED;
+}
+
+void CServer::RedirectClient(int ClientId, int Port)
+{
+	dbg_assert(0 <= ClientId && ClientId < MAX_CLIENTS, "invalid client id");
+
+	bool SupportsRedirect = GetClientVersion(ClientId) >= VERSION_DDNET_REDIRECT;
+
+	log_info("server", "redirecting client, cid=%d port=%d supported=%d", ClientId, Port, SupportsRedirect);
 
 	if(!SupportsRedirect)
 	{
-		bool SamePort = Port == m_NetServer.Address().port;
+		char aBuf[128];
+		bool SamePort = Port == this->Port();
 		str_format(aBuf, sizeof(aBuf), "Redirect unsupported: please connect to port %d", Port);
 		Kick(ClientId, SamePort ? "Redirect unsupported: please reconnect" : aBuf);
 		return;
@@ -616,8 +635,9 @@ void CServer::SetClientDDNetVersion(int ClientId, int DDNetVersion)
 
 void CServer::GetClientAddr(int ClientId, char *pAddrStr, int Size) const
 {
-	if(ClientId >= 0 && ClientId < MAX_CLIENTS && m_aClients[ClientId].m_State == CClient::STATE_INGAME)
-		net_addr_str(m_NetServer.ClientAddr(ClientId), pAddrStr, Size, false);
+	NETADDR Addr;
+	GetClientAddr(ClientId, &Addr);
+	net_addr_str(&Addr, pAddrStr, Size, false);
 }
 
 const char *CServer::ClientName(int ClientId) const
@@ -1210,7 +1230,14 @@ void CServer::SendMap(int ClientId)
 		Msg.AddRaw(&m_aCurrentMapSha256[MapType].data, sizeof(m_aCurrentMapSha256[MapType].data));
 		Msg.AddInt(m_aCurrentMapCrc[MapType]);
 		Msg.AddInt(m_aCurrentMapSize[MapType]);
-		Msg.AddString("", 0); // HTTPS map download URL
+		if(m_aMapDownloadUrl[0])
+		{
+			Msg.AddString(m_aMapDownloadUrl, 0);
+		}
+		else
+		{
+			Msg.AddString("", 0);
+		}
 		SendMsg(&Msg, MSGFLAG_VITAL, ClientId);
 	}
 	{
@@ -2587,6 +2614,16 @@ int CServer::LoadMap(const char *pMapName)
 		m_apCurrentMapData[MAP_TYPE_SIX] = (unsigned char *)pData;
 	}
 
+	if(Config()->m_SvMapsBaseUrl[0])
+	{
+		str_format(aBuf, sizeof(aBuf), "%s%s_%s.map", Config()->m_SvMapsBaseUrl, pMapName, aSha256);
+		EscapeUrl(m_aMapDownloadUrl, aBuf);
+	}
+	else
+	{
+		m_aMapDownloadUrl[0] = '\0';
+	}
+
 	// load sixup version of the map
 	if(Config()->m_SvSixup)
 	{
@@ -2936,6 +2973,14 @@ int CServer::Run()
 				UpdateClientRconCommands();
 
 				m_Fifo.Update();
+
+#if defined(CONF_PLATFORM_ANDROID)
+				std::vector<std::string> vAndroidCommandQueue = FetchAndroidServerCommandQueue();
+				for(const std::string &Command : vAndroidCommandQueue)
+				{
+					Console()->ExecuteLineFlag(Command.c_str(), CFGFLAG_SERVER, -1);
+				}
+#endif
 
 				// master server stuff
 				m_pRegister->Update();
@@ -3938,10 +3983,9 @@ CServer *CreateServer() { return new CServer(); }
 
 void CServer::GetClientAddr(int ClientId, NETADDR *pAddr) const
 {
-	if(ClientId >= 0 && ClientId < MAX_CLIENTS && m_aClients[ClientId].m_State == CClient::STATE_INGAME)
-	{
-		*pAddr = *m_NetServer.ClientAddr(ClientId);
-	}
+	dbg_assert(ClientId >= 0 && ClientId < MAX_CLIENTS, "ClientId is not valid");
+	dbg_assert(m_aClients[ClientId].m_State != CServer::CClient::STATE_EMPTY, "Client slot is empty");
+	*pAddr = *m_NetServer.ClientAddr(ClientId);
 }
 
 void CServer::ReadAnnouncementsFile()

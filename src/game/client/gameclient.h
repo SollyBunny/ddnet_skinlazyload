@@ -57,16 +57,18 @@
 #include "components/sounds.h"
 #include "components/spectator.h"
 #include "components/statboard.h"
-#include "components/tooltips.h"
 #include "components/tclient/bindchat.h"
 #include "components/tclient/bindwheel.h"
 #include "components/tclient/outlines.h"
 #include "components/tclient/player_indicator.h"
 #include "components/tclient/rainbow.h"
 #include "components/tclient/skinprofiles.h"
+#include "components/tclient/statusbar.h"
 #include "components/tclient/tater.h"
+#include "components/tclient/trails.h"
 #include "components/tclient/verify.h"
 #include "components/tclient/warlist.h"
+#include "components/tooltips.h"
 #include "components/touch_controls.h"
 #include "components/voting.h"
 
@@ -155,7 +157,6 @@ public:
 	CStatboard m_Statboard;
 	CSounds m_Sounds;
 	CEmoticon m_Emoticon;
-	
 	CDamageInd m_DamageInd;
 	CTouchControls m_TouchControls;
 	CVoting m_Voting;
@@ -182,9 +183,11 @@ public:
 
 	// TClient Components
 	CSkinProfiles m_SkinProfiles;
+	CStatusBar m_StatusBar;
 	CBindchat m_Bindchat;
 	CBindwheel m_Bindwheel;
 	CTater m_Tater;
+	CTrails m_Trails;
 	CPlayerIndicator m_PlayerIndicator;
 	COutlines m_Outlines;
 	CRainbow m_Rainbow;
@@ -352,12 +355,18 @@ public:
 		int m_HighestClientId;
 
 		// spectate data
-		struct CSpectateInfo
+		class CSpectateInfo
 		{
+		public:
 			bool m_Active;
 			int m_SpectatorId;
 			bool m_UsePosition;
 			vec2 m_Position;
+
+			bool m_HasCameraInfo;
+			float m_Zoom;
+			int m_Deadzone;
+			int m_FollowFactor;
 		} m_SpecInfo;
 
 		//
@@ -387,6 +396,35 @@ public:
 	int m_aExpectingTuningForZone[NUM_DUMMIES];
 	int m_aExpectingTuningSince[NUM_DUMMIES];
 	CTuningParams m_aTuning[NUM_DUMMIES];
+
+	// spectate cursor data
+	class CCursorInfo
+	{
+		friend class CGameClient;
+		static constexpr int CURSOR_SAMPLES = 8; // how many samples to keep
+		static constexpr int SAMPLE_FRAME_WINDOW = 3; // how many samples should be used for polynomial interpolation
+		static constexpr int SAMPLE_FRAME_OFFSET = 2; // how many samples in the past should be included
+		static constexpr double INTERP_DELAY = 4.25; // how many ticks in the past to show, enables extrapolation with smaller value (<= SAMPLE_FRAME_WINDOW - SAMPLE_FRAME_OFFSET + 3)
+		static constexpr double REST_THRESHOLD = 3.0; // how many ticks of the same samples are considered to be resting
+
+		int m_CursorOwnerId;
+		double m_aTargetSamplesTime[CURSOR_SAMPLES];
+		vec2 m_aTargetSamplesData[CURSOR_SAMPLES];
+		int m_NumSamples;
+
+		bool m_Available;
+		int m_Weapon;
+		vec2 m_Target;
+		vec2 m_WorldTarget;
+		vec2 m_Position;
+
+	public:
+		bool IsAvailable() const { return m_Available; }
+		int Weapon() const { return m_Weapon; }
+		vec2 Target() const { return m_Target; }
+		vec2 WorldTarget() const { return m_WorldTarget; }
+		vec2 Position() const { return m_Position; }
+	} m_CursorInfo;
 
 	// client data
 	struct CClientData
@@ -426,6 +464,14 @@ public:
 
 		CCharacterCore m_Predicted;
 		CCharacterCore m_PrevPredicted;
+
+		// TClient
+		vec2 m_ImprovedPredPos = vec2(0, 0);
+		vec2 m_PrevImprovedPredPos = vec2(0, 0);
+		//vec2 m_DebugVector = vec2(0, 0);
+		//vec2 m_DebugVector2 = vec2(0, 0);
+		//vec2 m_DebugVector3 = vec2(0, 0);
+		float m_Uncertainty = 0.0f;
 
 		CTeeRenderInfo m_SkinInfo; // this is what the server reports
 		CTeeRenderInfo m_RenderInfo; // this is what we use
@@ -479,6 +525,10 @@ public:
 	};
 
 	CClientData m_aClients[MAX_CLIENTS];
+
+	// TClient
+	int m_SmoothTick[2] = {};
+	float m_SmoothIntraTick[2] = {};
 
 	class CClientStats
 	{
@@ -620,7 +670,9 @@ public:
 	CGameWorld m_GameWorld;
 	CGameWorld m_PredictedWorld;
 	CGameWorld m_PrevPredictedWorld;
+	// TClient
 	CGameWorld m_ExtraPredictedWorld;
+	CGameWorld m_PredSmoothingWorld;
 
 	std::vector<SSwitchers> &Switchers() { return m_GameWorld.m_Core.m_vSwitchers; }
 	std::vector<SSwitchers> &PredSwitchers() { return m_PredictedWorld.m_Core.m_vSwitchers; }
@@ -825,6 +877,7 @@ private:
 	int m_aShowOthers[NUM_DUMMIES];
 
 	void UpdatePrediction();
+	void UpdateSpectatorCursor();
 	void UpdateRenderedCharacters();
 
 	int m_aLastUpdateTick[MAX_CLIENTS] = {0};

@@ -627,6 +627,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	{
 		GameClient()->m_Skins.RandomizeSkin(m_Dummy);
 		SetNeedSendInfo();
+		m_SkinListScrollToSelected = true;
 		s_CurrentDie = rand() % std::size(s_apDice);
 	}
 	TextRender()->SetRenderFlags(0);
@@ -748,7 +749,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 				return false;
 
 			// no special skins
-			if((pSkinToBeSelected->GetName()[0] == 'x' && pSkinToBeSelected->GetName()[1] == '_'))
+			if(CSkins::IsSpecialSkin(pSkinToBeSelected->GetName()))
 				return false;
 
 			return true;
@@ -3272,7 +3273,7 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 
 	Right.HSplitTop(20.0f, &Button, &Right);
 	if(Ui()->DoScrollbarOption(&g_Config.m_ClDefaultZoom, &g_Config.m_ClDefaultZoom, &Button, Localize("Default zoom"), 0, 20))
-		m_pClient->m_Camera.SetZoom(std::pow(CCamera::ZOOM_STEP, g_Config.m_ClDefaultZoom - 10), g_Config.m_ClSmoothZoomTime);
+		m_pClient->m_Camera.SetZoom(CCamera::ZoomStepsToValue(g_Config.m_ClDefaultZoom - 10), g_Config.m_ClSmoothZoomTime, true);
 
 	Right.HSplitTop(20.0f, &Button, &Right);
 	if(DoButton_CheckBox(&g_Config.m_ClAntiPing, Localize("AntiPing"), g_Config.m_ClAntiPing, &Button))
@@ -3343,7 +3344,6 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 		static SPopupMenuId s_PopupMapPickerId;
 		static CPopupMapPickerContext s_PopupMapPickerContext;
 		s_PopupMapPickerContext.m_pMenus = this;
-
 		s_PopupMapPickerContext.MapListPopulate();
 		Ui()->DoPopupMenu(&s_PopupMapPickerId, Ui()->MouseX(), Ui()->MouseY(), 300.0f, 250.0f, &s_PopupMapPickerContext, PopupMapPicker);
 	}
@@ -3446,7 +3446,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPicker(void *pContext, CUIRect Vie
 
 	static CListBox s_ListBox;
 	s_ListBox.SetActive(Active);
-	s_ListBox.DoStart(20.0f, pPopupContext->m_vMaps.size(), 1, 1, -1, &View, false);
+	s_ListBox.DoStart(20.0f, pPopupContext->m_vMaps.size(), 1, 3, -1, &View, false);
 
 	int MapIndex = 0;
 	for(auto &Map : pPopupContext->m_vMaps)
@@ -3490,7 +3490,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPicker(void *pContext, CUIRect Vie
 	pPopupContext->m_Selection = NewSelected >= 0 ? NewSelected : -1;
 	if(s_ListBox.WasItemSelected() || s_ListBox.WasItemActivated())
 	{
-		const CMapListItem SelectedItem = pPopupContext->m_vMaps[pPopupContext->m_Selection];
+		const CMapListItem &SelectedItem = pPopupContext->m_vMaps[pPopupContext->m_Selection];
 
 		if(SelectedItem.m_IsDirectory)
 		{
@@ -3523,6 +3523,7 @@ void CMenus::CPopupMapPickerContext::MapListPopulate()
 	str_format(aTemp, sizeof(aTemp), "maps/%s", m_aCurrentMapFolder);
 	m_pMenus->Storage()->ListDirectoryInfo(IStorage::TYPE_ALL, aTemp, MapListFetchCallback, this);
 	std::stable_sort(m_vMaps.begin(), m_vMaps.end(), CompareFilenameAscending);
+	m_Selection = -1;
 }
 
 int CMenus::CPopupMapPickerContext::MapListFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)

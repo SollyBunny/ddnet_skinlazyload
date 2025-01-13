@@ -328,9 +328,7 @@ void CRenderTools::RenderTee7(const CAnimState *pAnim, const CTeeRenderInfo *pIn
 					SelectSprite7(client_data7::SPRITE_TEE_BOT_FOREGROUND);
 					Item = BotItem;
 					Graphics()->QuadsDraw(&Item, 1);
-					ColorRGBA Color = pInfo->m_aSixup[g_Config.m_ClDummy].m_BotColor;
-					Color.a = Alpha;
-					Graphics()->SetColor(Color);
+					Graphics()->SetColor(pInfo->m_aSixup[g_Config.m_ClDummy].m_BotColor.WithAlpha(Alpha));
 					SelectSprite7(client_data7::SPRITE_TEE_BOT_GLOW);
 					Item = BotItem;
 					Graphics()->QuadsDraw(&Item, 1);
@@ -343,9 +341,7 @@ void CRenderTools::RenderTee7(const CAnimState *pAnim, const CTeeRenderInfo *pIn
 					Graphics()->TextureSet(pInfo->m_aSixup[g_Config.m_ClDummy].m_aTextures[protocol7::SKINPART_DECORATION]);
 					Graphics()->QuadsBegin();
 					Graphics()->QuadsSetRotation(pAnim->GetBody()->m_Angle * pi * 2);
-					ColorRGBA Color = pInfo->m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_DECORATION];
-					Color.a = Alpha;
-					Graphics()->SetColor(Color);
+					Graphics()->SetColor(pInfo->m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_DECORATION].WithAlpha(Alpha));
 					SelectSprite7(OutLine ? client_data7::SPRITE_TEE_DECORATION_OUTLINE : client_data7::SPRITE_TEE_DECORATION);
 					Item = BodyItem;
 					Graphics()->QuadsDraw(&Item, 1);
@@ -363,9 +359,7 @@ void CRenderTools::RenderTee7(const CAnimState *pAnim, const CTeeRenderInfo *pIn
 				}
 				else
 				{
-					ColorRGBA Color = pInfo->m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_BODY];
-					Color.a = Alpha;
-					Graphics()->SetColor(Color);
+					Graphics()->SetColor(pInfo->m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_BODY].WithAlpha(Alpha));
 					SelectSprite7(client_data7::SPRITE_TEE_BODY);
 				}
 				Item = BodyItem;
@@ -408,16 +402,12 @@ void CRenderTools::RenderTee7(const CAnimState *pAnim, const CTeeRenderInfo *pIn
 				Graphics()->QuadsSetRotation(pAnim->GetBody()->m_Angle * pi * 2);
 				if(IsBot)
 				{
-					ColorRGBA Color = pInfo->m_aSixup[g_Config.m_ClDummy].m_BotColor;
-					Color.a = Alpha;
-					Graphics()->SetColor(Color);
+					Graphics()->SetColor(pInfo->m_aSixup[g_Config.m_ClDummy].m_BotColor.WithAlpha(Alpha));
 					Emote = EMOTE_SURPRISE;
 				}
 				else
 				{
-					ColorRGBA Color = pInfo->m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_EYES];
-					Color.a = Alpha;
-					Graphics()->SetColor(Color);
+					Graphics()->SetColor(pInfo->m_aSixup[g_Config.m_ClDummy].m_aColors[protocol7::SKINPART_EYES].WithAlpha(Alpha));
 				}
 				if(Pass == 1)
 				{
@@ -517,6 +507,12 @@ void CRenderTools::RenderTee6(const CAnimState *pAnim, const CTeeRenderInfo *pIn
 	vec2 Direction = Dir;
 	vec2 Position = Pos;
 
+	const float TinyBodyScale = 0.7f;
+	const float TinyFeetScale = 0.85f;
+	bool TinyTee = g_Config.m_ClTinyTees;
+	if(!m_LocalTeeRender && !g_Config.m_ClTinyTeesOthers)
+		TinyTee = false;
+
 	const CSkin::SSkinTextures *pSkinTextures = pInfo->m_CustomColoredSkin ? &pInfo->m_ColorableRenderSkin : &pInfo->m_OriginalRenderSkin;
 
 	// first pass we draw the outline
@@ -529,6 +525,13 @@ void CRenderTools::RenderTee6(const CAnimState *pAnim, const CTeeRenderInfo *pIn
 		{
 			float AnimScale, BaseSize;
 			GetRenderTeeAnimScaleAndBaseSize(pInfo, AnimScale, BaseSize);
+
+			if(TinyTee)
+			{
+				BaseSize *= TinyBodyScale;
+				AnimScale *= TinyBodyScale;
+			}
+
 			if(Filling == 1)
 			{
 				Graphics()->QuadsSetRotation(pAnim->GetBody()->m_Angle * pi * 2);
@@ -582,11 +585,23 @@ void CRenderTools::RenderTee6(const CAnimState *pAnim, const CTeeRenderInfo *pIn
 				}
 			}
 
+			if(TinyTee)
+			{
+				BaseSize /= TinyBodyScale;
+				AnimScale /= TinyBodyScale;
+			}
+
 			// draw feet
 			const CAnimKeyframe *pFoot = Filling ? pAnim->GetFrontFoot() : pAnim->GetBackFoot();
 
 			float w = BaseSize;
 			float h = BaseSize / 2;
+
+			if(TinyTee)
+			{
+				w *= TinyFeetScale;
+				h *= TinyFeetScale;
+			}
 
 			int QuadOffset = 7;
 			if(Dir.x < 0 && pInfo->m_FeetFlipped)

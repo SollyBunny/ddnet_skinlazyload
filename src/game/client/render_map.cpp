@@ -124,16 +124,6 @@ const CEnvPointBezier *CMapBasedEnvelopePointAccess::GetBezier(int Index) const
 	return nullptr;
 }
 
-static double CubicRoot(double x)
-{
-	if(x == 0.0)
-		return 0.0;
-	else if(x < 0.0)
-		return -std::exp(std::log(-x) / 3.0);
-	else
-		return std::exp(std::log(x) / 3.0);
-}
-
 static float SolveBezier(float x, float p0, float p1, float p2, float p3)
 {
 	const double x3 = -p0 + 3.0 * p1 - 3.0 * p2 + p3;
@@ -193,12 +183,12 @@ static float SolveBezier(float x, float p0, float p1, float p2, float p3)
 		{
 			// only one 'real' solution
 			const double s = std::sqrt(D);
-			return CubicRoot(s - q) - CubicRoot(s + q) - sub;
+			return std::cbrt(s - q) - std::cbrt(s + q) - sub;
 		}
 		else if(D == 0.0)
 		{
 			// one single, one double solution or triple solution
-			const double s = CubicRoot(-q);
+			const double s = std::cbrt(-q);
 			const double t = 2.0 * s - sub;
 
 			if(0.0 <= t && t <= 1.0001)
@@ -702,6 +692,9 @@ void CRenderTools::RenderGameTileOutlines(CTile *pTiles, int w, int h, float Sca
 		Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOutlineColorSolid));
 	else if(TileType == TILE_UNFREEZE)
 		Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOutlineColorUnfreeze));
+	else if(TileType == TILE_DEATH)
+		Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOutlineColorKill));
+
 	Graphics()->SetColor(Col.r, Col.g, Col.b, Alpha);
 
 	for(int y = StartY; y < EndY; y++)
@@ -717,14 +710,17 @@ void CRenderTools::RenderGameTileOutlines(CTile *pTiles, int w, int h, float Sca
 			bool IsFreeze = Index == TILE_FREEZE || Index == TILE_DFREEZE;
 			bool IsUnFreeze = Index == TILE_UNFREEZE || Index == TILE_DUNFREEZE;
 			bool IsSolid = Index == TILE_SOLID || Index == TILE_NOHOOK;
+			bool IsKill = Index == TILE_DEATH;
 
-			if(!(IsSolid || IsFreeze || IsUnFreeze)) // Not an tile we care about
+			if(!(IsSolid || IsFreeze || IsUnFreeze || IsKill)) // Not an tile we care about
 				continue;
 			if(IsSolid && !(TileType == TILE_SOLID))
 				continue;
 			if(IsFreeze && !(TileType == TILE_FREEZE))
 				continue;
 			if(IsUnFreeze && !(TileType == TILE_UNFREEZE))
+				continue;
+			if(IsKill && !(TileType == TILE_DEATH))
 				continue;
 
 			IGraphics::CQuadItem Array[8];
@@ -769,6 +765,26 @@ void CRenderTools::RenderGameTileOutlines(CTile *pTiles, int w, int h, float Sca
 				Neighbors[6] = IndexN != TILE_NOHOOK && IndexN != Index;
 				IndexN = pTiles[ClampedIndex(mx + 1, my + 1, w, h)].m_Index;
 				Neighbors[7] = IndexN != TILE_NOHOOK && IndexN != Index;
+			}
+			else if(IsKill && TileType == TILE_DEATH)
+			{
+				int IndexN;
+				IndexN = pTiles[ClampedIndex(mx - 1, my - 1, w, h)].m_Index;
+				Neighbors[0] = IndexN != TILE_DEATH && IndexN != Index;
+				IndexN = pTiles[ClampedIndex(mx - 0, my - 1, w, h)].m_Index;
+				Neighbors[1] = IndexN != TILE_DEATH && IndexN != Index;
+				IndexN = pTiles[ClampedIndex(mx + 1, my - 1, w, h)].m_Index;
+				Neighbors[2] = IndexN != TILE_DEATH && IndexN != Index;
+				IndexN = pTiles[ClampedIndex(mx - 1, my + 0, w, h)].m_Index;
+				Neighbors[3] = IndexN != TILE_DEATH && IndexN != Index;
+				IndexN = pTiles[ClampedIndex(mx + 1, my + 0, w, h)].m_Index;
+				Neighbors[4] = IndexN != TILE_DEATH && IndexN != Index;
+				IndexN = pTiles[ClampedIndex(mx - 1, my + 1, w, h)].m_Index;
+				Neighbors[5] = IndexN != TILE_DEATH && IndexN != Index;
+				IndexN = pTiles[ClampedIndex(mx + 0, my + 1, w, h)].m_Index;
+				Neighbors[6] = IndexN != TILE_DEATH && IndexN != Index;
+				IndexN = pTiles[ClampedIndex(mx + 1, my + 1, w, h)].m_Index;
+				Neighbors[7] = IndexN != TILE_DEATH && IndexN != Index;
 			}
 			else
 			{

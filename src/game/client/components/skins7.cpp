@@ -34,6 +34,11 @@ int unsigned *CSkins7::ms_apColorVariables[NUM_DUMMIES][protocol7::NUM_SKINPARTS
 // TODO: uncomment
 // const float MIN_EYE_BODY_COLOR_DIST = 80.f; // between body and eyes (LAB color space)
 
+bool CSkins7::IsSpecialSkin(const char *pName)
+{
+	return str_startswith(pName, "x_") != nullptr;
+}
+
 int CSkins7::SkinPartScan(const char *pName, int IsDir, int DirType, void *pUser)
 {
 	CSkins7 *pSelf = (CSkins7 *)pUser;
@@ -96,7 +101,7 @@ int CSkins7::SkinPartScan(const char *pName, int IsDir, int DirType, void *pUser
 
 	// set skin part data
 	Part.m_Flags = 0;
-	if(pName[0] == 'x' && pName[1] == '_')
+	if(IsSpecialSkin(pName))
 		Part.m_Flags |= SKINFLAG_SPECIAL;
 	if(DirType != IStorage::TYPE_SAVE)
 		Part.m_Flags |= SKINFLAG_STANDARD;
@@ -130,7 +135,7 @@ int CSkins7::SkinScan(const char *pName, int IsDir, int DirType, void *pUser)
 	// init
 	CSkin Skin;
 	str_copy(Skin.m_aName, pName, 1 + str_length(pName) - str_length(".json"));
-	const bool SpecialSkin = pName[0] == 'x' && pName[1] == '_';
+	const bool SpecialSkin = IsSpecialSkin(pName);
 	Skin.m_Flags = SpecialSkin ? SKINFLAG_SPECIAL : 0;
 	if(DirType != IStorage::TYPE_SAVE)
 		Skin.m_Flags |= SKINFLAG_STANDARD;
@@ -430,7 +435,7 @@ const CSkins7::CSkinPart *CSkins7::FindSkinPartOrNullptr(int Part, const char *p
 
 const CSkins7::CSkinPart *CSkins7::FindDefaultSkinPart(int Part) const
 {
-	const char *pDefaultPartName = Part == protocol7::SKINPART_MARKING || Part == protocol7::SKINPART_DECORATION ? "" : "default";
+	const char *pDefaultPartName = Part == protocol7::SKINPART_MARKING || Part == protocol7::SKINPART_DECORATION ? "" : "standard";
 	const CSkinPart *pDefault = FindSkinPartOrNullptr(Part, pDefaultPartName, false);
 	if(pDefault != nullptr)
 	{
@@ -466,21 +471,21 @@ void CSkins7::RandomizeSkin(int Dummy) const
 
 	for(int Part = 0; Part < protocol7::NUM_SKINPARTS; Part++)
 	{
-		std::vector<const CSkins7::CSkinPart *> vConsideredSkinParts;
+		std::vector<const CSkins7::CSkinPart *> vpConsideredSkinParts;
 		for(const CSkinPart &SkinPart : GetSkinParts(Part))
 		{
 			if((SkinPart.m_Flags & CSkins7::SKINFLAG_SPECIAL) != 0)
 				continue;
-			vConsideredSkinParts.push_back(&SkinPart);
+			vpConsideredSkinParts.push_back(&SkinPart);
 		}
 		const CSkins7::CSkinPart *pRandomPart;
-		if(vConsideredSkinParts.empty())
+		if(vpConsideredSkinParts.empty())
 		{
 			pRandomPart = FindDefaultSkinPart(Part);
 		}
 		else
 		{
-			pRandomPart = vConsideredSkinParts[rand() % vConsideredSkinParts.size()];
+			pRandomPart = vpConsideredSkinParts[rand() % vpConsideredSkinParts.size()];
 		}
 		str_copy(CSkins7::ms_apSkinVariables[Dummy][Part], pRandomPart->m_aName, protocol7::MAX_SKIN_ARRAY_SIZE);
 	}
@@ -538,8 +543,7 @@ bool CSkins7::ValidateSkinParts(char *apPartNames[protocol7::NUM_SKINPARTS], int
 
 bool CSkins7::SaveSkinfile(const char *pName, int Dummy)
 {
-	const bool SpecialSkin = pName[0] == 'x' && pName[1] == '_';
-	dbg_assert(!SpecialSkin, "Cannot save special skins");
+	dbg_assert(!IsSpecialSkin(pName), "Cannot save special skins");
 
 	char aBuf[IO_MAX_PATH_LENGTH];
 	str_format(aBuf, sizeof(aBuf), SKINS_DIR "/%s.json", pName);

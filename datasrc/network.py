@@ -316,6 +316,13 @@ Objects = [
 		NetIntAny("m_SwitchNumber"),
 	]),
 
+	NetObjectEx("DDNetSpectatorInfo", "spectator-info@netobj.ddnet.org", [
+		NetBool("m_HasCameraInfo"),
+		NetIntRange("m_Zoom", 0, 'max_int'),
+		NetIntRange("m_Deadzone", 0, 'max_int'),
+		NetIntRange("m_FollowFactor", 0, 'max_int'),
+	]),
+
 	## Events
 
 	NetEvent("Common", [
@@ -400,7 +407,7 @@ Messages = [
 	NetMessage("Sv_KillMsg", [
 		NetIntRange("m_Killer", 0, 'MAX_CLIENTS-1'),
 		NetIntRange("m_Victim", 0, 'MAX_CLIENTS-1'),
-		NetIntRange("m_Weapon", -3, 'NUM_WEAPONS-1'),
+		NetIntRange("m_Weapon", 'WEAPON_GAME', 'NUM_WEAPONS-1'),
 		NetIntAny("m_ModeSpecial"),
 	]),
 

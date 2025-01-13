@@ -1,5 +1,3 @@
-/* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
-/* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <game/generated/protocol.h>
@@ -86,6 +84,11 @@ void CTater::ConchainRandomColor(IConsole::IResult *pResult, void *pUserData, IC
 	if(RandomizeFlag)
 		RandomFlag(pUserData);
 	pThis->m_pClient->SendInfo(false);
+}
+
+void CTater::OnInit()
+{
+	TextRender()->SetCustomFace(g_Config.m_ClCustomFont);
 }
 
 void CTater::OnConsoleInit()

@@ -153,6 +153,7 @@ function build_for_type() {
 		-DANDROID_NDK="$ANDROID_NDK_HOME" \
 		-DANDROID_ABI="${2}" \
 		-DANDROID_ARM_NEON=TRUE \
+		-DANDROID_PACKAGE_NAME="${PACKAGE_NAME//./_}" \
 		-DCMAKE_ANDROID_NDK="$ANDROID_NDK_HOME" \
 		-DCMAKE_SYSTEM_NAME=Android \
 		-DCMAKE_SYSTEM_VERSION="$ANDROID_API_LEVEL" \
@@ -160,7 +161,7 @@ function build_for_type() {
 		-DCARGO_NDK_TARGET="${3}" \
 		-DCARGO_NDK_API="$ANDROID_API_LEVEL" \
 		-B"${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1" \
-		-DSERVER=OFF \
+		-DSERVER=ON \
 		-DTOOLS=OFF \
 		-DDEV=TRUE \
 		-DCMAKE_CROSSCOMPILING=ON \
@@ -170,7 +171,7 @@ function build_for_type() {
 		cd "${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1" || exit 1
 		# We want word splitting
 		# shellcheck disable=SC2086
-		cmake --build . --target game-client $BUILD_FLAGS
+		cmake --build . --target game-client game-server $BUILD_FLAGS
 	)
 }
 
@@ -201,9 +202,6 @@ log_info "Copying project files..."
 cd "${BUILD_FOLDER}" || exit 1
 
 mkdir -p src/main
-mkdir -p src/main/res/values
-mkdir -p src/main/res/xml
-mkdir -p src/main/res/mipmap
 
 function copy_dummy_files() {
 	rm -f ./"$2"
@@ -218,16 +216,19 @@ copy_dummy_files scripts/android/files/gradle.properties gradle.properties
 copy_dummy_files scripts/android/files/proguard-rules.pro proguard-rules.pro
 copy_dummy_files scripts/android/files/settings.gradle settings.gradle
 copy_dummy_files scripts/android/files/AndroidManifest.xml src/main/AndroidManifest.xml
-copy_dummy_files scripts/android/files/res/values/strings.xml src/main/res/values/strings.xml
-copy_dummy_files scripts/android/files/res/xml/shortcuts.xml src/main/res/xml/shortcuts.xml
-copy_dummy_files other/icons/DDNet_256x256x32.png src/main/res/mipmap/ic_launcher.png
-copy_dummy_files other/icons/DDNet_256x256x32.png src/main/res/mipmap/ic_launcher_round.png
+
+rm -R -f src/main/res
+cp -R ../scripts/android/files/res src/main/
+mkdir -p src/main/res/mipmap
+cp ../other/icons/DDNet_256x256x32.png src/main/res/mipmap/ic_launcher.png
+cp ../other/icons/DDNet_256x256x32.png src/main/res/mipmap/ic_launcher_round.png
 
 log_info "Copying libraries..."
 
 function copy_libs() {
 	mkdir -p "lib/$2"
 	cp "$ANDROID_SUB_BUILD_DIR/$1/libDDNet.so" "lib/$2" || exit 1
+	cp "$ANDROID_SUB_BUILD_DIR/$1/libDDNet-Server.so" "lib/$2" || exit 1
 }
 
 if [[ "${ANDROID_BUILD}" == "arm" || "${ANDROID_BUILD}" == "all" ]]; then

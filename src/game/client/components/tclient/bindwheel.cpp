@@ -33,7 +33,7 @@ void CBindwheel::ConOpenBindwheel(IConsole::IResult *pResult, void *pUserData)
 void CBindwheel::ConAddBindwheelLegacy(IConsole::IResult *pResult, void *pUserData)
 {
 	int BindPos = pResult->GetInteger(0);
-	if (BindPos < 0 || BindPos >= BINDWHEEL_MAX_BINDS)
+	if(BindPos < 0 || BindPos >= BINDWHEEL_MAX_BINDS)
 		return;
 
 	const char *aName = pResult->GetString(1);

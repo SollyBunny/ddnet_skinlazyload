@@ -6,13 +6,7 @@
 #include <game/client/prediction/entity.h>
 
 #include <game/gamecore.h>
-
-enum
-{
-	WEAPON_GAME = -3, // team switching etc
-	WEAPON_SELF = -2, // console kill command
-	WEAPON_WORLD = -1, // death tiles etc
-};
+#include <game/generated/protocol.h>
 
 enum
 {
@@ -142,6 +136,8 @@ public:
 	bool IsSuper() { return m_Core.m_Super; }
 	int m_FreezeAccumulation;
 	int m_AliveAccumulation;
+	// TClient
+	CNetObj_PlayerInput *LatestInput() { return &m_LatestInput; };
 
 private:
 	// weapon info
