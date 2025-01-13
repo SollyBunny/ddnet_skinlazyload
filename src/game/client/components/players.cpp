@@ -182,8 +182,31 @@ void CPlayers::RenderHookCollLine(
 
 	bool Local = m_pClient->m_Snap.m_LocalClientId == ClientId;
 	bool OtherTeam = m_pClient->IsOtherTeam(ClientId);
-	float Alpha = (OtherTeam || ClientId < 0) ? g_Config.m_ClShowOthersAlpha / 100.0f : 1.0f;
-	Alpha *= (float)g_Config.m_ClHookCollAlpha / 100;
+
+	bool Aim = (Player.m_PlayerFlags & PLAYERFLAG_AIM);
+	if(!Client()->ServerCapAnyPlayerFlag())
+	{
+		for(int i = 0; i < NUM_DUMMIES; i++)
+		{
+			if(ClientId == m_pClient->m_aLocalIds[i])
+			{
+				Aim = GameClient()->m_Controls.m_aShowHookColl[i];
+				break;
+			}
+		}
+	}
+
+	bool AlwaysRenderHookColl = GameClient()->m_GameInfo.m_AllowHookColl && (Local ? g_Config.m_ClShowHookCollOwn : g_Config.m_ClShowHookCollOther) == 2;
+	bool RenderHookCollPlayer = ClientId >= 0 && Aim && (Local ? g_Config.m_ClShowHookCollOwn : g_Config.m_ClShowHookCollOther) > 0;
+	if(Local && GameClient()->m_GameInfo.m_AllowHookColl && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		RenderHookCollPlayer = GameClient()->m_Controls.m_aShowHookColl[g_Config.m_ClDummy] && g_Config.m_ClShowHookCollOwn > 0;
+
+	bool RenderHookCollVideo = true;
+#if defined(CONF_VIDEORECORDER)
+	RenderHookCollVideo = !IVideo::Current() || g_Config.m_ClVideoShowHookCollOther || Local;
+#endif
+	if(!((AlwaysRenderHookColl || RenderHookCollPlayer) && RenderHookCollVideo))
+		return;
 
 	float IntraTick = Intra;
 	if(ClientId >= 0)
@@ -197,8 +220,8 @@ void CPlayers::RenderHookCollLine(
 		if(g_Config.m_ClScaleMouseDistance)
 		{
 			const int MaxDistance = g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance;
-			if(MaxDistance > 5 && MaxDistance < 1000) // Don't scale if angle bind or reduces precision
-				Pos *= 1000.0f / (float)MaxDistance;
+			if(MaxDistance > 5 && MaxDistance < 2000) // Don't scale if angle bind or reduces precision
+				Pos *= 2000.0f / (float)MaxDistance;
 		}
 		Pos.x = (int)Pos.x;
 		Pos.y = (int)Pos.y;
@@ -215,154 +238,116 @@ void CPlayers::RenderHookCollLine(
 		Position = m_pClient->m_aClients[ClientId].m_RenderPos;
 	else
 		Position = mix(vec2(Prev.m_X, Prev.m_Y), vec2(Player.m_X, Player.m_Y), IntraTick);
-	// draw hook collision line
+
+	Graphics()->TextureClear();
+	vec2 InitPos = Position;
+	vec2 FinishPos = InitPos + ExDirection * (m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength - 42.0f);
+
+	ColorRGBA HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl));
+
+	vec2 OldPos = InitPos + ExDirection * CCharacterCore::PhysicalSize() * 1.5f;
+	vec2 NewPos = OldPos;
+
+	bool DoBreak = false;
+
+	std::vector<std::pair<vec2, vec2>> vLineSegments;
+
+	do
 	{
-		bool Aim = (Player.m_PlayerFlags & PLAYERFLAG_AIM);
-		if(!Client()->ServerCapAnyPlayerFlag())
+		OldPos = NewPos;
+		NewPos = OldPos + ExDirection * m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookFireSpeed;
+
+		if(distance(InitPos, NewPos) > m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength)
 		{
-			for(int i = 0; i < NUM_DUMMIES; i++)
+			NewPos = InitPos + normalize(NewPos - InitPos) * m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength;
+			DoBreak = true;
+		}
+
+		int Tele;
+		int Hit = Collision()->IntersectLineTeleHook(OldPos, NewPos, &FinishPos, 0x0, &Tele);
+		if(!DoBreak && Hit == TILE_TELEINHOOK)
+		{
+			if(Collision()->TeleOuts(Tele - 1).size() != 1)
 			{
-				if(ClientId == m_pClient->m_aLocalIds[i])
-				{
-					Aim = GameClient()->m_Controls.m_aShowHookColl[i];
+				Hit = Collision()->IntersectLineTeleHook(OldPos, NewPos, &FinishPos, 0x0);
+			}
+			else
+			{
+				std::pair<vec2, vec2> NewPair = std::make_pair(InitPos, FinishPos);
+				if(std::find(vLineSegments.begin(), vLineSegments.end(), NewPair) != vLineSegments.end())
 					break;
-				}
+				vLineSegments.push_back(NewPair);
+				InitPos = NewPos = Collision()->TeleOuts(Tele - 1)[0];
 			}
 		}
 
-		bool AlwaysRenderHookColl = GameClient()->m_GameInfo.m_AllowHookColl && (Local ? g_Config.m_ClShowHookCollOwn : g_Config.m_ClShowHookCollOther) == 2;
-		bool RenderHookCollPlayer = ClientId >= 0 && Aim && (Local ? g_Config.m_ClShowHookCollOwn : g_Config.m_ClShowHookCollOther) > 0;
-		if(Local && GameClient()->m_GameInfo.m_AllowHookColl && Client()->State() != IClient::STATE_DEMOPLAYBACK)
-			RenderHookCollPlayer = GameClient()->m_Controls.m_aShowHookColl[g_Config.m_ClDummy] && g_Config.m_ClShowHookCollOwn > 0;
-
-		bool RenderHookCollVideo = true;
-#if defined(CONF_VIDEORECORDER)
-		RenderHookCollVideo = !IVideo::Current() || g_Config.m_ClVideoShowHookCollOther || Local;
-#endif
-		if((AlwaysRenderHookColl || RenderHookCollPlayer) && RenderHookCollVideo)
+		if(!DoBreak && Hit && Hit != TILE_TELEINHOOK)
 		{
-			if(Local && !m_pClient->m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+			if(Hit != TILE_NOHOOK)
 			{
-				ExDirection = normalize(vec2((int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].x, (int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].y));
-
-				// fix direction if mouse is exactly in the center
-				if(!(int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].x && !(int)m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy].y)
-					ExDirection = vec2(1, 0);
+				HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
 			}
-			Graphics()->TextureClear();
-			vec2 InitPos = Position;
-			vec2 FinishPos = InitPos + ExDirection * (m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength - 42.0f);
+		}
 
-			const int HookCollSize = Local ? g_Config.m_ClHookCollSize : g_Config.m_ClHookCollSizeOther;
-			if(HookCollSize > 0)
-				Graphics()->QuadsBegin();
-			else
-				Graphics()->LinesBegin();
+		if(ClientId >= 0 && m_pClient->IntersectCharacter(OldPos, FinishPos, FinishPos, ClientId) != -1)
+		{
+			HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl));
+			break;
+		}
 
-			ColorRGBA HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorNoColl));
+		if(Hit && Hit != TILE_TELEINHOOK)
+			break;
 
-			vec2 OldPos = InitPos + ExDirection * CCharacterCore::PhysicalSize() * 1.5f;
-			vec2 NewPos = OldPos;
+		NewPos.x = round_to_int(NewPos.x);
+		NewPos.y = round_to_int(NewPos.y);
 
-			bool DoBreak = false;
+		if(OldPos == NewPos)
+			break;
 
-			std::vector<std::pair<vec2, vec2>> vLineSegments;
+		ExDirection.x = round_to_int(ExDirection.x * 256.0f) / 256.0f;
+		ExDirection.y = round_to_int(ExDirection.y * 256.0f) / 256.0f;
+	} while(!DoBreak);
 
-			do
-			{
-				OldPos = NewPos;
-				NewPos = OldPos + ExDirection * m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookFireSpeed;
+	std::pair<vec2, vec2> NewPair = std::make_pair(InitPos, FinishPos);
+	if(std::find(vLineSegments.begin(), vLineSegments.end(), NewPair) == vLineSegments.end())
+		vLineSegments.push_back(NewPair);
 
-				if(distance(InitPos, NewPos) > m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength)
-				{
-					NewPos = InitPos + normalize(NewPos - InitPos) * m_pClient->m_aTuning[g_Config.m_ClDummy].m_HookLength;
-					DoBreak = true;
-				}
+	// invert the hook coll colors when using cl_show_hook_coll_always and +showhookcoll is pressed
+	if(AlwaysRenderHookColl && RenderHookCollPlayer)
+		HookCollColor = color_invert(HookCollColor);
 
-				int Tele;
-				int Hit = Collision()->IntersectLineTeleHook(OldPos, NewPos, &FinishPos, 0x0, &Tele);
-				if(!DoBreak && Hit == TILE_TELEINHOOK)
-				{
-					if(Collision()->TeleOuts(Tele - 1).size() != 1)
-					{
-						Hit = Collision()->IntersectLineTeleHook(OldPos, NewPos, &FinishPos, 0x0);
-					}
-					else
-					{
-						std::pair<vec2, vec2> NewPair = std::make_pair(InitPos, FinishPos);
-						if(std::find(vLineSegments.begin(), vLineSegments.end(), NewPair) != vLineSegments.end())
-							break;
-						vLineSegments.push_back(NewPair);
-						InitPos = NewPos = Collision()->TeleOuts(Tele - 1)[0];
-					}
-				}
+	float Alpha = (OtherTeam || ClientId < 0) ? g_Config.m_ClShowOthersAlpha / 100.0f : 1.0f;
+	Alpha *= (float)g_Config.m_ClHookCollAlpha / 100;
 
-				if(!DoBreak && Hit && Hit != TILE_TELEINHOOK)
-				{
-					if(Hit != TILE_NOHOOK)
-					{
-						HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorHookableColl));
-					}
-				}
-
-				if(ClientId >= 0 && m_pClient->IntersectCharacter(OldPos, FinishPos, FinishPos, ClientId) != -1)
-				{
-					HookCollColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClHookCollColorTeeColl));
-					break;
-				}
-
-				if(Hit && Hit != TILE_TELEINHOOK)
-					break;
-
-				NewPos.x = round_to_int(NewPos.x);
-				NewPos.y = round_to_int(NewPos.y);
-
-				if(OldPos == NewPos)
-					break;
-
-				ExDirection.x = round_to_int(ExDirection.x * 256.0f) / 256.0f;
-				ExDirection.y = round_to_int(ExDirection.y * 256.0f) / 256.0f;
-			} while(!DoBreak);
-
-			std::pair<vec2, vec2> NewPair = std::make_pair(InitPos, FinishPos);
-			if(std::find(vLineSegments.begin(), vLineSegments.end(), NewPair) == vLineSegments.end())
-				vLineSegments.push_back(NewPair);
-
-			if(AlwaysRenderHookColl && RenderHookCollPlayer)
-			{
-				// invert the hook coll colors when using cl_show_hook_coll_always and +showhookcoll is pressed
-				HookCollColor = color_invert(HookCollColor);
-			}
-			Graphics()->SetColor(HookCollColor.WithAlpha(Alpha));
-			for(const auto &[DrawInitPos, DrawFinishPos] : vLineSegments)
-			{
-				if(HookCollSize > 0)
-				{
-					float LineWidth = 0.5f + (float)(HookCollSize - 1) * 0.25f;
-					vec2 PerpToAngle = normalize(vec2(ExDirection.y, -ExDirection.x)) * GameClient()->m_Camera.m_Zoom;
-					vec2 Pos0 = DrawFinishPos + PerpToAngle * -LineWidth;
-					vec2 Pos1 = DrawFinishPos + PerpToAngle * LineWidth;
-					vec2 Pos2 = DrawInitPos + PerpToAngle * -LineWidth;
-					vec2 Pos3 = DrawInitPos + PerpToAngle * LineWidth;
-					IGraphics::CFreeformItem FreeformItem(Pos0.x, Pos0.y, Pos1.x, Pos1.y, Pos2.x, Pos2.y, Pos3.x, Pos3.y);
-					Graphics()->QuadsDrawFreeform(&FreeformItem, 1);
-				}
-				else
-				{
-					IGraphics::CLineItem LineItem(DrawInitPos.x, DrawInitPos.y, DrawFinishPos.x, DrawFinishPos.y);
-					Graphics()->LinesDraw(&LineItem, 1);
-				}
-			}
-			if(HookCollSize > 0)
-			{
-				Graphics()->QuadsEnd();
-			}
-			else
-			{
-				Graphics()->LinesEnd();
-			}
+	const int HookCollSize = Local ? g_Config.m_ClHookCollSize : g_Config.m_ClHookCollSizeOther;
+	if(HookCollSize > 0)
+		Graphics()->QuadsBegin();
+	else
+		Graphics()->LinesBegin();
+	Graphics()->SetColor(HookCollColor.WithAlpha(Alpha));
+	for(const auto &[DrawInitPos, DrawFinishPos] : vLineSegments)
+	{
+		if(HookCollSize > 0)
+		{
+			float LineWidth = 0.5f + (float)(HookCollSize - 1) * 0.25f;
+			vec2 PerpToAngle = normalize(vec2(ExDirection.y, -ExDirection.x)) * GameClient()->m_Camera.m_Zoom;
+			vec2 Pos0 = DrawFinishPos + PerpToAngle * -LineWidth;
+			vec2 Pos1 = DrawFinishPos + PerpToAngle * LineWidth;
+			vec2 Pos2 = DrawInitPos + PerpToAngle * -LineWidth;
+			vec2 Pos3 = DrawInitPos + PerpToAngle * LineWidth;
+			IGraphics::CFreeformItem FreeformItem(Pos0.x, Pos0.y, Pos1.x, Pos1.y, Pos2.x, Pos2.y, Pos3.x, Pos3.y);
+			Graphics()->QuadsDrawFreeform(&FreeformItem, 1);
+		}
+		else
+		{
+			IGraphics::CLineItem LineItem(DrawInitPos.x, DrawInitPos.y, DrawFinishPos.x, DrawFinishPos.y);
+			Graphics()->LinesDraw(&LineItem, 1);
 		}
 	}
+	if(HookCollSize > 0)
+		Graphics()->QuadsEnd();
+	else
+		Graphics()->LinesEnd();
 }
 void CPlayers::RenderHook(
 	const CNetObj_Character *pPrevChar,
@@ -529,8 +514,8 @@ void CPlayers::RenderPlayer(
 		if(g_Config.m_ClScaleMouseDistance)
 		{
 			const int MaxDistance = g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance;
-			if(MaxDistance > 5 && MaxDistance < 1000) // Don't scale if angle bind or reduces precision
-				Pos *= 1000.0f / (float)MaxDistance;
+			if(MaxDistance > 5 && MaxDistance < 2000) // Don't scale if angle bind or reduces precision
+				Pos *= 2000.0f / (float)MaxDistance;
 		}
 		Pos.x = (int)Pos.x;
 		Pos.y = (int)Pos.y;
@@ -976,8 +961,8 @@ void CPlayers::RenderPlayerGhost(
 		if(g_Config.m_ClScaleMouseDistance)
 		{
 			const int MaxDistance = g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance;
-			if(MaxDistance > 5 && MaxDistance < 1000) // Don't scale if angle bind or reduces precision
-				Pos *= 1000.0f / (float)MaxDistance;
+			if(MaxDistance > 5 && MaxDistance < 2000) // Don't scale if angle bind or reduces precision
+				Pos *= 2000.0f / (float)MaxDistance;
 		}
 		Pos.x = (int)Pos.x;
 		Pos.y = (int)Pos.y;

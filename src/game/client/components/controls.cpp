@@ -215,8 +215,8 @@ int CControls::SnapInput(int *pData)
 		if(g_Config.m_ClScaleMouseDistance && !m_pClient->m_Snap.m_SpecInfo.m_Active)
 		{
 			const int MaxDistance = g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance;
-			if(MaxDistance > 5 && MaxDistance < 1000) // Don't scale if angle bind or reduces precision
-				Pos *= 1000.0f / (float)MaxDistance;
+			if(MaxDistance > 5 && MaxDistance < 2000) // Don't scale if angle bind or reduces precision
+				Pos *= 2000.0f / (float)MaxDistance;
 		}
 		m_aInputData[g_Config.m_ClDummy].m_TargetX = (int)Pos.x;
 		m_aInputData[g_Config.m_ClDummy].m_TargetY = (int)Pos.y;
@@ -236,13 +236,13 @@ int CControls::SnapInput(int *pData)
 			m_aMousePosOnAction[g_Config.m_ClDummy] = vec2(0.0f, 0.0f);
 		}
 		else
-
 			Pos = m_pClient->m_Controls.m_aMousePos[g_Config.m_ClDummy];
+
 		if(g_Config.m_ClScaleMouseDistance && !m_pClient->m_Snap.m_SpecInfo.m_Active)
 		{
 			const int MaxDistance = g_Config.m_ClDyncam ? g_Config.m_ClDyncamMaxDistance : g_Config.m_ClMouseMaxDistance;
-			if(MaxDistance > 5 && MaxDistance < 1000) // Don't scale if angle bind or reduces precision
-				Pos *= 1000.0f / (float)MaxDistance;
+			if(MaxDistance > 5 && MaxDistance < 2000) // Don't scale if angle bind or reduces precision
+				Pos *= 2000.0f / (float)MaxDistance;
 		}
 		m_aInputData[g_Config.m_ClDummy].m_TargetX = (int)Pos.x;
 		m_aInputData[g_Config.m_ClDummy].m_TargetY = (int)Pos.y;
