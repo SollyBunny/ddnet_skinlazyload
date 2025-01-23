@@ -174,7 +174,7 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 	if(g_Config.m_ClSpectatorMouseclicks)
 	{
 		if(m_pClient->m_Snap.m_SpecInfo.m_Active && !IsActive() && !GameClient()->m_MultiViewActivated &&
-			!Ui()->IsPopupOpen() && m_pClient->m_GameConsole.IsClosed() && !m_pClient->m_Menus.IsActive())
+			!Ui()->IsPopupOpen() && !m_pClient->m_GameConsole.IsActive() && !m_pClient->m_Menus.IsActive())
 		{
 			if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_MOUSE_1)
 			{
@@ -525,6 +525,13 @@ void CSpectator::OnRender()
 			GameClient()->FormatClientId(m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
 			TextRender()->TextEx(&NameCursor, aClientId);
 		}
+
+		// TClient
+		if(g_Config.m_ClWarList && g_Config.m_ClWarListSpectate && GameClient()->m_WarList.GetAnyWar(i)) 
+		{
+			TextRender()->TextColor(GameClient()->m_WarList.GetPriorityColor(i));
+		}
+
 		TextRender()->TextEx(&NameCursor, m_pClient->m_aClients[m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId].m_aName);
 
 		if(GameClient()->m_MultiViewActivated)

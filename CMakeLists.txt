@@ -40,7 +40,7 @@ else()
   set(TARGET_BITS "64")
 endif()
 
-if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "arm" 
+if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "arm"
   OR "${CMAKE_SYSTEM_PROCESSOR}" MATCHES "aarch64"
   OR "${CMAKE_SYSTEM_PROCESSOR}" MATCHES "ARM64")
   if(TARGET_BITS STREQUAL "32")
@@ -873,6 +873,7 @@ set_src(RUST_BRIDGE_SHARED GLOB_RECURSE src/rust-bridge
 
 set_glob(RUST_MASTERSRV GLOB "rs;toml" src/mastersrv/src
   addr.rs
+  config.rs
   locations.rs
   main.rs
 )
@@ -1840,6 +1841,7 @@ set(EXPECTED_DATA
   strong_weak.png
   tclient/fonts/Cabin-Regular.ttf
   tclient/fonts/GoogleSans-Regular.ttf
+  tclient/fonts/FreeSansBold.ttf
   tclient/fonts/Inter_24pt-Regular.ttf
   tclient/fonts/Inter_24pt-SemiBold.ttf
   tclient/fonts/Montserrat-Regular.ttf
@@ -2480,6 +2482,7 @@ if(CLIENT)
     render.cpp
     render.h
     render_map.cpp
+    sixup_translate_connless.cpp
     sixup_translate_game.cpp
     sixup_translate_snapshot.cpp
     skin.h
