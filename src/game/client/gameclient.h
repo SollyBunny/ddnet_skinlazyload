@@ -68,6 +68,7 @@
 #include "components/tclient/trails.h"
 #include "components/tclient/verify.h"
 #include "components/tclient/warlist.h"
+#include "components/tclient/tci.h"
 #include "components/tooltips.h"
 #include "components/touch_controls.h"
 #include "components/voting.h"
@@ -193,6 +194,7 @@ public:
 	COutlines m_Outlines;
 	CRainbow m_Rainbow;
 	CWarList m_WarList;
+	CTCI m_TCI;
 
 private:
 	std::vector<class CComponent *> m_vpAll;

@@ -152,6 +152,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Bindchat,
 					      &m_Bindwheel,
 					      &m_WarList,
+					      &m_TCI,
 					      &m_StatusBar,
 					      &m_InfoMessages,
 					      &m_Chat,

@@ -2441,6 +2441,8 @@ if(CLIENT)
     components/tclient/statusbar.h
     components/tclient/tater.cpp
     components/tclient/tater.h
+    components/tclient/tci.cpp
+    components/tclient/tci.h
     components/tclient/trails.cpp
     components/tclient/trails.h
     components/tclient/verify.cpp
