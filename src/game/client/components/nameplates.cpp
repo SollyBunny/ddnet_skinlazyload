@@ -35,19 +35,19 @@ protected:
 
 public:
 	friend class CGameClient;
-	virtual void Update(CGameClient &This, const CNamePlateRenderData &Data){}
+	virtual void Update(CGameClient &This, const CNamePlateRenderData &Data) {}
 	virtual void Reset(CGameClient &This){};
 	virtual void Render(CGameClient &This, float X, float Y){};
-	float Width() { return m_Width; }
-	float Height() { return m_Height; }
-	float PaddingX() { return m_PaddingX; }
-	float PaddingY() { return m_PaddingY; }
-	float OffsetX() { return m_OffsetX; }
-	float OffsetY() { return m_OffsetY; }
-	bool NewLine() { return m_NewLine; }
-	bool Visible() { return m_Visible; }
-	bool ShiftOnInvis() { return m_ShiftOnInvis; }
-	virtual ~CNamePlatePart() {}
+	float Width() const { return m_Width; }
+	float Height() const { return m_Height; }
+	float PaddingX() const { return m_PaddingX; }
+	float PaddingY() const { return m_PaddingY; }
+	float OffsetX() const { return m_OffsetX; }
+	float OffsetY() const { return m_OffsetY; }
+	bool NewLine() const { return m_NewLine; }
+	bool Visible() const { return m_Visible; }
+	bool ShiftOnInvis() const { return m_ShiftOnInvis; }
+	virtual ~CNamePlatePart() = default;
 };
 
 using PartsVector = std::vector<std::unique_ptr<CNamePlatePart>>;
@@ -146,7 +146,7 @@ protected:
 	int m_SpriteFlags = 0;
 	float m_Rotation = 0.0f;
 	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-	void Create(CGameClient &This){}
+	void Create(CGameClient &This) {}
 
 public:
 	friend class CGameClient;
@@ -169,7 +169,7 @@ public:
 class CNamePlatePartNewLine : public CNamePlatePart
 {
 public:
-	void Create(CGameClient &This){}
+	void Create(CGameClient &This) {}
 	CNamePlatePartNewLine()
 	{
 		m_NewLine = true;
@@ -203,30 +203,28 @@ public:
 	}
 	void Update(CGameClient &This, const CNamePlateRenderData &Data) override
 	{
-		m_Width = m_Height = Data.m_FontSizeDirection;
-		m_PaddingY = -m_Height; // Remove all height
-		if(m_Height > 20.0f)
-			m_PaddingY += (m_Height - 20.0f) * 0.75f; // If its just too big
-		m_OffsetY = m_Height / 2.0f + 10.0f;
-
-		if(Data.m_ShowDirection)
+		if(!Data.m_ShowDirection)
 		{
-			switch(m_Direction)
-			{
-			case 0:
-				m_Visible = Data.m_DirLeft;
-				break;
-			case 1:
-				m_Visible = Data.m_DirJump;
-				m_OffsetY -= 10.0f;
-				break;
-			case 2:
-				m_Visible = Data.m_DirRight;
-				break;
-			}
-		}
-		else
+			m_Width = m_Height = 0;
 			m_Visible = false;
+			return;
+		}
+		m_Width = m_Height = Data.m_FontSizeDirection;
+		switch(m_Direction)
+		{
+		case 0:
+			m_Visible = Data.m_DirLeft;
+			m_OffsetY = m_Height / 2.0f;
+			break;
+		case 1:
+			m_Visible = Data.m_DirJump;
+			m_OffsetY = m_Height / -2.0f;
+			break;
+		case 2:
+			m_Visible = Data.m_DirRight;
+			m_OffsetY = m_Height / 2.0f;
+			break;
+		}
 	}
 };
 
@@ -432,7 +430,7 @@ public:
 class CNamePlate
 {
 private:
-	bool Inited = false;
+	bool m_Inited = false;
 	PartsVector m_vpParts;
 	void RenderLine(CGameClient &This, const CNamePlateRenderData &Data,
 		float X, float Y, float W, float H,
@@ -461,16 +459,15 @@ private:
 	template<typename PartType, typename... ArgsType>
 	void AddPart(CGameClient &This, ArgsType &&... Args)
 	{
-
 		std::unique_ptr<PartType> Part = std::make_unique<PartType>();
 		Part->Create(This, std::forward<ArgsType>(Args)...);
 		m_vpParts.push_back(std::unique_ptr<CNamePlatePart>(std::move(Part)));
 	}
 	void Init(CGameClient &This)
 	{
-		if(Inited)
+		if(m_Inited)
 			return;
-		Inited = true;
+		m_Inited = true;
 
 		AddPart<CNamePlatePartDirection>(This, 0);
 		AddPart<CNamePlatePartDirection>(This, 1);
@@ -522,15 +519,11 @@ public:
 				W = 0.0f;
 				H = 0.0f;
 			}
-			else
+			else if((*Part)->Visible() || (*Part)->ShiftOnInvis())
 			{
-				if((*Part)->Visible())
-					Empty = false;
-				if((*Part)->Visible() || (*Part)->ShiftOnInvis())
-				{
-					W += (*Part)->Width() + (*Part)->PaddingX();
-					H = std::max(H, (*Part)->Height() + (*Part)->PaddingY());
-				}
+				Empty = false;
+				W += (*Part)->Width() + (*Part)->PaddingX();
+				H = std::max(H, (*Part)->Height() + (*Part)->PaddingY());
 			}
 		}
 		RenderLine(This, Data, X, Y, W, H, Start, m_vpParts.end());
@@ -562,8 +555,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 
 	Data.m_ClientId = pPlayerInfo->m_ClientId;
 	Data.m_ClientIdNewLine = g_Config.m_ClNamePlatesIdsNewLine;
-	Data.m_FontSizeClientId = Data.m_ClientIdNewLine
-		? (18.0f + 20.0f * g_Config.m_ClNamePlatesIdsSize / 100.0f) : Data.m_FontSize;
+	Data.m_FontSizeClientId = Data.m_ClientIdNewLine ? (18.0f + 20.0f * g_Config.m_ClNamePlatesIdsSize / 100.0f) : Data.m_FontSize;
 
 	Data.m_ShowClan = ShowNamePlate && g_Config.m_ClNamePlatesClan;
 	Data.m_pClan = GameClient()->m_aClients[pPlayerInfo->m_ClientId].m_aClan;
@@ -704,8 +696,7 @@ void CNamePlates::RenderNamePlatePreview(vec2 Position, int Dummy)
 	Data.m_ShowClientId = g_Config.m_ClNamePlates && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds);
 	Data.m_ClientId = Dummy + 1;
 	Data.m_ClientIdNewLine = g_Config.m_ClNamePlatesIdsNewLine;
-	Data.m_FontSizeClientId = Data.m_ClientIdNewLine
-		? (18.0f + 20.0f * g_Config.m_ClNamePlatesIdsSize / 100.0f) : Data.m_FontSize;
+	Data.m_FontSizeClientId = Data.m_ClientIdNewLine ? (18.0f + 20.0f * g_Config.m_ClNamePlatesIdsSize / 100.0f) : Data.m_FontSize;
 
 	Data.m_ShowClan = g_Config.m_ClNamePlates && g_Config.m_ClNamePlatesClan;
 	Data.m_pClan = Dummy == 0 ? g_Config.m_PlayerClan : g_Config.m_ClDummyClan;
@@ -774,7 +765,7 @@ void CNamePlates::OnRender()
 
 		if(GameClient()->m_aClients[i].m_SpecCharPresent)
 		{
-			// Each player can also have a spec char whose namePlate is displayed independently
+			// Each player can also have a spec char whose name plate is displayed independently
 			const vec2 RenderPos = GameClient()->m_aClients[i].m_SpecChar;
 			// don't render offscreen
 			if(in_range(RenderPos.x, ScreenX0, ScreenX1) && in_range(RenderPos.y, ScreenY0, ScreenY1))
@@ -782,7 +773,7 @@ void CNamePlates::OnRender()
 		}
 		if(GameClient()->m_Snap.m_aCharacters[i].m_Active)
 		{
-			// Only render namePlates for active characters
+			// Only render name plates for active characters
 			const vec2 RenderPos = GameClient()->m_aClients[i].m_RenderPos;
 			// don't render offscreen
 			if(in_range(RenderPos.x, ScreenX0, ScreenX1) && in_range(RenderPos.y, ScreenY0, ScreenY1))
